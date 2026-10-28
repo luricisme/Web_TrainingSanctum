@@ -1,0 +1,38 @@
+# Team overrides for bmad-ux (Sally's UX workflow).
+# Committed to the repo — applies to every developer on the project.
+# Merge rules: scalars override, arrays append (see base customize.toml).
+
+[workflow]
+
+# design-dna: extracts a structured Design DNA profile (design system tokens,
+# qualitative style, visual-effects layer) from reference images/screenshots/URLs,
+# and can generate a design from a saved profile + content. Invoke during
+# Discovery whenever the user supplies visual references to anchor DESIGN.md's
+# tokens, and again at Finalize if key-screen mocks need to stay on-profile.
+creative_tools = [
+  "skill:design-dna",
+]
+
+# threejs-* skills: implementation-accurate guidance for Canvas/WebGL/3D/shader/
+# particle/scroll-driven visual effects (fundamentals, materials, lighting,
+# shaders, postprocessing, interaction, animation, geometry, textures, loaders,
+# performance, asset-pipeline, react-three-fiber). Consult whenever the UX
+# concerns a 3D scene, WebGL canvas, particle system, shader-driven effect, or
+# scroll-triggered animation — both to scope what's feasible during Discovery's
+# concern scan, and to keep DESIGN.md's visual-effects section implementation-
+# grounded rather than aspirational.
+external_sources = [
+  "skill:threejs-fundamentals — scene/camera/renderer setup, when the UX introduces any 3D or WebGL surface.",
+  "skill:threejs-materials — material/shading choices (PBR, toon, unlit), when visual style for 3D objects is being decided.",
+  "skill:threejs-lighting — light rigs, shadows, HDR/IBL, when a 3D scene's mood or realism is being decided.",
+  "skill:threejs-shaders — custom GLSL/TSL effects, when a bespoke visual effect is requested that built-in materials can't cover.",
+  "skill:threejs-postprocessing — bloom, DOF, color grading, screen-space effects, when a 'polish pass' or cinematic look is requested.",
+  "skill:threejs-interaction — raycasting, camera controls, drag/hover/selection, when 3D objects need to respond to pointer/touch/keyboard input.",
+  "skill:threejs-animation — keyframe/skeletal/morph animation and clip blending, when 3D objects or characters need motion.",
+  "skill:threejs-geometry — built-in/custom shapes, instancing, point clouds, when defining what 3D forms appear on screen.",
+  "skill:threejs-textures — image/UV/render-target/texture-memory concerns, when surfaces need imagery beyond flat color.",
+  "skill:threejs-loaders — loading glTF/models/textures/HDR with progress and disposal, when assets come from external files.",
+  "skill:threejs-performance — draw calls, memory, fill rate, frame budget, when a 3D/WebGL concern (device reach, battery, frame rate) surfaces.",
+  "skill:threejs-asset-pipeline — glTF compression/optimization (Draco, meshopt, KTX2), when 3D asset size/load time is a stated concern.",
+  "skill:threejs-react-three-fiber — React Three Fiber/drei patterns, when the implementation stack is React.",
+]
