@@ -1,0 +1,265 @@
+{
+  "meta": {
+    "name": "Training Sanctum — Flashcards UX Design DNA",
+    "description": "Synthesized design identity for Training Sanctum's flashcard/spaced-repetition app: color palette and editorial grid rhythm drawn from the official Spy x Family anime portal (spy-family.net), app structure and component shapes drawn from Quizlet's library and flashcard-study surfaces, reconciled against PRD non-goals (no gamification, no illustration, dark-mode default).",
+    "source_references": [
+      "spy-family.net official anime portal (screenshot) — color palette + editorial grid layout",
+      "Quizlet library/folder view (screenshot) — sidebar nav, list-row structure",
+      "Quizlet flashcard/study view (screenshot) — review card shape, progress counter, control row"
+    ],
+    "created_at": "2026-10-30"
+  },
+  "design_system": {
+    "color": {
+      "palette_type": "complementary",
+      "primary": {
+        "hex": "#14151f",
+        "role": "dark-mode default background (near-black charcoal-navy)"
+      },
+      "secondary": {
+        "hex": "#8ea89b",
+        "role": "light-mode default background (sage/olive green, measured from spy-family.net)"
+      },
+      "accent": {
+        "hex": "#b74242",
+        "role": "single pop accent across both modes — primary actions, 'Again' danger grade, section-marker bullets"
+      },
+      "neutral": {
+        "scale": ["#faf7f0", "#ecf1f2", "#c6c9d2", "#9b9fae", "#6b6f80", "#3a3d4d", "#262838", "#1a1b24", "#0e0e12"],
+        "usage": "Lightest two (#faf7f0 off-white, #ecf1f2 near-white) are text/card-surface colors in dark mode and card-surface in light mode; mid tones are borders/secondary text/disabled states; darkest three (#262838 card, #1a1b24 elevated, #0e0e12 text-on-light/ink) anchor dark-mode surfaces and light-mode text."
+      },
+      "semantic": {
+        "success": "#5c8a68",
+        "warning": "#c98a3a",
+        "error": "#b74242",
+        "info": "#6a8a99"
+      },
+      "surface": {
+        "background": "#14151f",
+        "card": "#1f2130",
+        "elevated": "#262838"
+      },
+      "contrast_strategy": "Dual-theme, dark-mode default per PRD §7. DARK (default): background #14151f, card #1f2130, elevated #262838, text #ecf1f2/#faf7f0 — sage is intentionally near-absent (appears only as a muted border/structure tint, not a visible fill). LIGHT (toggle): background #8ea89b (sage, measured from spy-family.net), card #faf7f0 (white, measured), text #0e0e12 (charcoal/ink, measured). The accent #b74242 (measured red) is identical in both modes and is the only saturated color either theme relies on — semantic success/warning/info are desaturated so the accent stays singular.",
+      "measurement": {
+        "k": 8,
+        "sampling": {
+          "method": "deterministic_stratified",
+          "max_pixels": 160000,
+          "sampled_pixels": 160000
+        }
+      },
+      "measured_palette": [
+        { "hex": "#8ea89b", "coverage": 0.5045, "role": "light-mode background (spy-family.net)" },
+        { "hex": "#6a7c72", "coverage": 0.1883, "role": "muted sage secondary (spy-family.net)" },
+        { "hex": "#0e0e12", "coverage": 0.0906, "role": "ink/text (spy-family.net)" },
+        { "hex": "#faf7f0", "coverage": 0.0878, "role": "light-mode card surface (spy-family.net)" },
+        { "hex": "#404344", "coverage": 0.0399, "role": "charcoal sidebar/navy (spy-family.net)" },
+        { "hex": "#b74242", "coverage": 0.024, "role": "accent (spy-family.net)" },
+        { "hex": "#0a092d", "coverage": 0.921, "role": "dark-mode background reference (Quizlet)" },
+        { "hex": "#2d3658", "coverage": 0.055, "role": "dark-mode card-surface reference (Quizlet)" },
+        { "hex": "#edf0f2", "coverage": 0.0081, "role": "dark-mode text reference (Quizlet)" }
+      ]
+    },
+    "typography": {
+      "type_scale": {
+        "display": { "size": "2.5rem", "weight": 700, "line_height": "1.15", "tracking": "-0.01em" },
+        "heading_1": { "size": "2rem", "weight": 700, "line_height": "1.2", "tracking": "-0.01em" },
+        "heading_2": { "size": "1.5rem", "weight": 600, "line_height": "1.25", "tracking": "normal" },
+        "heading_3": { "size": "1.25rem", "weight": 600, "line_height": "1.3", "tracking": "normal" },
+        "body": { "size": "1rem", "weight": 400, "line_height": "1.5", "tracking": "normal" },
+        "body_small": { "size": "0.875rem", "weight": 400, "line_height": "1.45", "tracking": "normal" },
+        "caption": { "size": "0.75rem", "weight": 500, "line_height": "1.4", "tracking": "0.01em" },
+        "overline": { "size": "0.6875rem", "weight": 600, "line_height": "1.3", "tracking": "0.08em" }
+      },
+      "font_families": {
+        "heading": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        "body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        "mono": "SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace"
+      },
+      "font_style_notes": "System sans-serif throughout, no custom webfonts (locked decision). Headers lean bold/black-weight to echo spy-family.net's masthead confidence; body stays regular-weight for readability during long review sessions. Mono reserved for numeric displays (progress counter 'X / Y', streak count, stats figures)."
+    },
+    "spacing": {
+      "base_unit": "4px",
+      "scale": "4 / 8 / 12 / 16 / 24 / 32 / 48 / 64",
+      "content_density": "comfortable",
+      "section_rhythm": "Generous gaps (32–48px) between major page sections and around the review card; tighter, list-like rhythm (8–12px) within folder/card-management rows, matching Quizlet's library density."
+    },
+    "layout": {
+      "grid_system": "12-column responsive grid for folder/stats/import screens; single-column, centered focal layout for the review session",
+      "max_content_width": "1200px for app shell content; review card constrained to ~640px centered",
+      "columns": "Sidebar (fixed ~240px) + fluid content area on desktop; single column with bottom/collapsed nav on mobile",
+      "gutter": "16–24px",
+      "breakpoints": "mobile <640px, tablet 640–1024px, desktop >1024px",
+      "alignment_tendency": "strict grid for list/grid views (folders, stats, import mapping table); centered for the review session's focal card"
+    },
+    "shape": {
+      "border_radius": {
+        "small": "6px",
+        "medium": "12px",
+        "large": "20px",
+        "pill": "999px"
+      },
+      "border_usage": "subtle 1px borders on inputs and card edges; most separation comes from surface-color contrast rather than borders (dark mode) or shadow (light mode)",
+      "divider_style": "thin 1px hairline, low-contrast, used sparingly between list rows and under section headers"
+    },
+    "elevation": {
+      "shadow_style": "soft diffused, low elevation",
+      "levels": {
+        "low": "0 1px 2px rgba(0,0,0,0.15)",
+        "medium": "0 4px 12px rgba(0,0,0,0.25)",
+        "high": "0 8px 24px rgba(0,0,0,0.35)"
+      },
+      "depth_cues": "shadows plus surface-color layering — card surfaces are a lighter step than the page background rather than relying on heavy shadow"
+    },
+    "iconography": {
+      "style": "line icons, minimal, consistent stroke",
+      "stroke_weight": "1.5–2px",
+      "size_scale": "16 / 20 / 24px",
+      "preferred_set": "Lucide/Feather-style outline icon set"
+    },
+    "motion": {
+      "easing": "ease-out for entrances, ease-in-out for state transitions",
+      "duration_scale": {
+        "micro": "100–120ms",
+        "normal": "150–200ms",
+        "macro": "250–300ms"
+      },
+      "entrance_pattern": "fade + slight upward slide (8px)",
+      "exit_pattern": "fade out, no slide",
+      "philosophy": "minimal functional — motion exists only to clarify a state change (card reveal, grade feedback, row removal), never decorative. Review-loop transitions must stay under the PRD's sub-100ms perceived-latency NFR (FR-9)."
+    },
+    "components": {
+      "button_style": "soft-rounded filled primary button in accent red; ghost/outline secondary buttons; small tag-style chips use full pill radius, but primary/secondary buttons use medium radius (less pill-extreme than Quizlet's fully rounded buttons)",
+      "input_style": "rounded rectangle inputs, subtle 1px border, accent-colored focus ring",
+      "card_style": "large soft-rounded surface for the review card (elevated above background, center-aligned content, same bounds before/after reveal per locked decision); smaller rounded tiles for folder/library browsing",
+      "navigation_pattern": "left icon+label sidebar (Quizlet-derived structure), five flat sections: Review, Folders, Import, Stats, Settings",
+      "modal_style": "centered rounded modal with scrim overlay, used sparingly (e.g. folder-delete confirmation, restore-from-backup confirmation)",
+      "list_style": "rows grouped under section headers (Quizlet's date-grouping pattern, repurposed for folder/alphabetical grouping), hover-highlight state, trailing '...' overflow menu, small red square bullet as the section-header marker (spy-family.net motif)",
+      "component_notes": "Grade buttons (Again/Hard/Good/Easy) are flat/outline style, deliberately non-gamified — no badges, confetti, or mascot imagery; the accent red is reserved for the primary action and the 'Again' state, not spread evenly across all four grades, so the UI doesn't imply false symmetry between the grades (PRD FR-8 binding note)."
+    }
+  },
+  "design_style": {
+    "aesthetic": {
+      "mood": ["calm", "focused", "quietly confident", "editorial", "unfussy"],
+      "visual_metaphor": "a well-kept study journal / field notebook crossed with a focused reading app",
+      "era_influence": "contemporary developer-tool minimalism (2020s) with a single editorial-print accent",
+      "genre": "utilitarian productivity tool with editorial-accent branding",
+      "personality_traits": ["disciplined", "warm-but-restrained", "trustworthy", "unshowy"],
+      "adjectives": ["minimal", "grounded", "deliberate", "warm-neutral", "distraction-free"]
+    },
+    "visual_language": {
+      "complexity": "minimal",
+      "ornamentation": "subtle accents only (small red square bullets, thin dividers) — no decorative patterns or illustration",
+      "whitespace_usage": "generous around the review card and primary actions; tighter, denser list rows for browsing/management screens",
+      "visual_weight_distribution": "a single focal element dominates each screen — the card in review, the list in browsing — chrome recedes around it",
+      "focal_strategy": "single hero element",
+      "contrast_level": "moderate-to-high for text legibility; color contrast is concentrated in the one accent rather than spread across the UI",
+      "texture_usage": "none — flat color surfaces only"
+    },
+    "composition": {
+      "hierarchy_method": "spatial isolation plus color weight — the accent red marks the one actionable thing per screen",
+      "balance_type": "symmetric and centered in the review session; asymmetric sidebar+content split in browsing screens",
+      "flow_direction": "top-to-bottom, center-weighted in review; left-sidebar-to-content in browsing",
+      "grouping_strategy": "date-style or alphabetical section headers grouping list rows, consistent with Quizlet's library pattern",
+      "negative_space_role": "active — negative space is what signals 'focus mode' (FR-11): chrome is removed entirely during review, not merely minimized"
+    },
+    "imagery": {
+      "photo_treatment": "none",
+      "illustration_style": "none — no character art or illustration; this is a utilitarian app, not the promotional portal it draws color from",
+      "graphic_elements": "small red square bullet accents (lifted from spy-family.net) used only as section markers",
+      "pattern_usage": "none",
+      "image_shape": "n/a — no imagery used in the product UI"
+    },
+    "interaction_feel": {
+      "feedback_style": "immediate and understated — color/opacity shift on hover or state change, no bounce or elastic motion",
+      "hover_behavior": "row/card background lightens one step on hover; no scale transforms",
+      "transition_personality": "snappy (sub-100ms perceived) in the review loop; smooth fade elsewhere",
+      "loading_style": "skeleton or subtle fade-in, no personality-driven spinners",
+      "microinteraction_density": "low — motion is reserved for state changes that matter (reveal, grade, row delete), not used decoratively"
+    },
+    "brand_voice_in_ui": {
+      "tone": "quietly encouraging, never cheerleading",
+      "formality": "casual-professional, like a well-made developer tool",
+      "cta_style": "direct imperative, short labels ('Add card', 'Import', 'Grade')",
+      "empty_state_approach": "calm and informative — e.g. the empty due-queue state shows streak + a quick-add shortcut, not an apology or decoration",
+      "error_tone": "plain, specific, non-alarming — inline field errors, per-line import error reporting with line number + reason"
+    }
+  },
+  "visual_effects": {
+    "overview": {
+      "effect_intensity": "none",
+      "performance_tier": "lightweight",
+      "fallback_strategy": "n/a — no effects layer exists to disable; CSS-only throughout, by deliberate constraint (PRD non-goals rule out visual flourish)",
+      "primary_technology": "CSS only"
+    },
+    "background_effects": {
+      "type": "none",
+      "description": "Flat solid-color surfaces only; no gradients, noise, or animated backgrounds.",
+      "technology": "CSS",
+      "params": { "color_palette": [], "speed": "n/a", "density": "n/a", "opacity": "n/a", "blend_mode": "n/a" }
+    },
+    "particle_systems": {
+      "enabled": false,
+      "type": "none",
+      "description": "Not used.",
+      "technology": "n/a",
+      "params": { "count": "n/a", "shape": "n/a", "size_range": "n/a", "movement_pattern": "n/a", "color_behavior": "n/a", "interaction": "none", "spawn_area": "n/a" }
+    },
+    "3d_elements": {
+      "enabled": false,
+      "type": "none",
+      "description": "Not used — no 3D/WebGL surface anywhere in this product.",
+      "technology": "n/a",
+      "params": { "renderer": "n/a", "lighting": "n/a", "camera": "n/a", "materials": "n/a", "geometry": "n/a", "post_processing": [], "interaction_model": "n/a" }
+    },
+    "shader_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "Not used.",
+      "technology": "n/a",
+      "params": { "uniforms": "n/a", "vertex_manipulation": "n/a", "fragment_output": "n/a", "noise_type": "n/a", "distortion": "n/a" }
+    },
+    "scroll_effects": {
+      "parallax": { "enabled": false, "layers": "0", "depth_range": "n/a", "speed_curve": "n/a" },
+      "scroll_triggered_animations": { "enabled": false, "trigger_points": "none", "animation_type": "none", "scrub_behavior": "none" },
+      "scroll_morphing": { "enabled": false, "description": "Not used." }
+    },
+    "text_effects": {
+      "type": "none",
+      "description": "Static text only; no split-letter, typewriter, glitch, or gradient-fill effects.",
+      "technology": "n/a",
+      "params": { "split_strategy": "n/a", "animation_per_unit": "n/a", "stagger": "n/a", "effect_style": "n/a" }
+    },
+    "cursor_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "Default system cursor throughout.",
+      "params": { "shape": "n/a", "size": "n/a", "blend_mode": "n/a", "trail": "n/a", "interaction_zone": "n/a" }
+    },
+    "image_effects": {
+      "type": "none",
+      "description": "No imagery in the product UI, so no image effects apply.",
+      "technology": "n/a",
+      "params": { "filter_pipeline": "n/a", "hover_transform": "n/a", "reveal_animation": "n/a", "distortion_type": "n/a" }
+    },
+    "glassmorphism_neumorphism": {
+      "enabled": false,
+      "style": "none",
+      "params": { "blur_radius": "n/a", "transparency": "n/a", "border_treatment": "n/a", "shadow_type": "n/a", "light_source_angle": "n/a" }
+    },
+    "canvas_drawings": {
+      "enabled": false,
+      "type": "none",
+      "description": "Not used as a visual effect. Note: FR-15's interval-distribution bar chart is a standard data-visualization component (SVG or charting-library bar chart), not a 'visual effect' in this dimension's sense — it carries no bespoke rendering beyond a normal chart.",
+      "technology": "n/a",
+      "params": { "draw_method": "n/a", "animation_loop": "n/a", "color_scheme": "n/a", "responsiveness": "n/a", "interaction": "n/a" }
+    },
+    "svg_animations": {
+      "enabled": false,
+      "type": "none",
+      "description": "Not used.",
+      "params": { "animation_method": "n/a", "path_morphing": "n/a", "stroke_animation": "n/a", "filter_effects": "n/a" }
+    },
+    "composite_notes": "This product deliberately carries no visual-effects layer — the PRD rules out gamification and decorative flourish, and the brief's portfolio goal is algorithmic/testing rigor, not visual spectacle. The two source references diverge sharply in this dimension (spy-family.net is an image-heavy promotional portal; Quizlet's own site also uses none of these effects in the screens referenced), but neither contributes anything here since Training Sanctum only borrows their color/structure, not their media richness. Measured palettes above come from scripts/measure-colors.mjs run against the three reference screenshots (spy-family.net portal, Quizlet library view, Quizlet flashcard-study view)."
+  }
+}

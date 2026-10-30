@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en" class="theme-dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Training Sanctum — UI Design Direction Demo</title>
+<style>
+
+  /* ============================================================
+     DESIGN TOKENS — sourced verbatim from design-dna-profile.json
+     ============================================================ */
+  :root {
+    /* radius scale */
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-pill: 999px;
+
+    /* spacing scale (4 / 8 / 12 / 16 / 24 / 32 / 48 / 64) */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 24px;
+    --sp-6: 32px;
+    --sp-7: 48px;
+    --sp-8: 64px;
+
+    /* type scale */
+    --fs-display: 2.5rem;
+    --fs-h1: 2rem;
+    --fs-h2: 1.5rem;
+    --fs-h3: 1.25rem;
+    --fs-body: 1rem;
+    --fs-body-sm: 0.875rem;
+    --fs-caption: 0.75rem;
+    --fs-overline: 0.6875rem;
+
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+
+    /* shadows */
+    --shadow-low: 0 1px 2px rgba(0,0,0,0.15);
+    --shadow-medium: 0 4px 12px rgba(0,0,0,0.25);
+    --shadow-high: 0 8px 24px rgba(0,0,0,0.35);
+
+    /* accent + semantic — identical across both themes */
+    --accent: #b74242;
+    --accent-hover: #c65252;
+    --success: #5c8a68;
+    --warning: #c98a3a;
+    --error: #b74242;
+    --info: #6a8a99;
+
+    /* motion */
+    --dur-normal: 180ms;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: ease-in-out;
+  }
+
+  /* DARK (default) — background #14151f, card #1f2130, elevated #262838, text #ecf1f2/#faf7f0 */
+  html.theme-dark {
+    --bg: #14151f;
+    --card: #1f2130;
+    --elevated: #262838;
+    --text: #ecf1f2;
+    --text-soft: #faf7f0;
+    --text-secondary: #c6c9d2;
+    --text-tertiary: #9b9fae;
+    --border: #3a3d4d;
+    --divider: #2a2c3c;
+    --row-hover: #262838;
+  }
+
+  /* LIGHT — background #8ea89b (sage), card #faf7f0, text #0e0e12 (ink) */
+  html.theme-light {
+    --bg: #8ea89b;
+    --card: #faf7f0;
+    --elevated: #ecf1f2;
+    --text: #0e0e12;
+    --text-soft: #0e0e12;
+    --text-secondary: #3a3d4d;
+    --text-tertiary: #6b6f80;
+    --border: #c6c9d2;
+    --divider: #c6c9d2;
+    --row-hover: #ecf1f2;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100vh;
+    transition: background-color var(--dur-normal) var(--ease-in-out), color var(--dur-normal) var(--ease-in-out);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ============================================================
+     TOP CHROME — theme toggle + screen switcher
+     ============================================================ */
+  .demo-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-3) var(--sp-5);
+    background: var(--card);
+    border-bottom: 1px solid var(--divider);
+  }
+
+  .demo-topbar .brand {
+    font-weight: 700;
+    font-size: var(--fs-body-sm);
+    letter-spacing: 0.01em;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    font-size: var(--fs-overline);
+    letter-spacing: 0.08em;
+  }
+
+  .tab-pills {
+    display: flex;
+    gap: var(--sp-1);
+    background: var(--bg);
+    padding: 4px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--divider);
+  }
+
+  .tab-pill {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    padding: var(--sp-2) var(--sp-4);
+    border-radius: var(--radius-pill);
+    font-size: var(--fs-body-sm);
+    font-weight: 600;
+    transition: background-color var(--dur-normal) var(--ease-in-out), color var(--dur-normal) var(--ease-in-out);
+  }
+
+  .tab-pill:hover { color: var(--text); }
+
+  .tab-pill.active {
+    background: var(--accent);
+    color: #faf7f0;
+  }
+
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    border: 1px solid var(--border);
+    background: var(--elevated);
+    color: var(--text);
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius-pill);
+    font-size: var(--fs-body-sm);
+    font-weight: 600;
+    transition: background-color var(--dur-normal) var(--ease-in-out);
+  }
+  .theme-toggle:hover { background: var(--row-hover); }
+  .theme-toggle svg { width: 16px; height: 16px; }
+
+  /* ============================================================
+     SCREEN WRAPPER
+     ============================================================ */
+  .screen {
+    display: none;
+    min-height: calc(100vh - 57px);
+  }
+  .screen.active {
+    display: block;
+    animation: screenIn var(--dur-normal) var(--ease-out);
+  }
+
+  @keyframes screenIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ============================================================
+     SHARED APP SHELL (sidebar + content) — used by Folders screen
+     ============================================================ */
+  .app-shell {
+    display: flex;
+    min-height: calc(100vh - 57px);
+  }
+
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--card);
+    border-right: 1px solid var(--divider);
+    padding: var(--sp-5) var(--sp-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+  }
+
+  .sidebar .sidebar-title {
+    font-size: var(--fs-overline);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    padding: 0 var(--sp-3);
+    margin-bottom: var(--sp-3);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: var(--fs-body-sm);
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color var(--dur-normal) var(--ease-in-out), color var(--dur-normal) var(--ease-in-out);
+    cursor: pointer;
+  }
+  .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .nav-item:hover { background: var(--row-hover); color: var(--text); }
+  .nav-item.active {
+    background: var(--elevated);
+    color: var(--accent);
+  }
+
+  .content-area {
+    flex: 1;
+    padding: var(--sp-6) var(--sp-7);
+    max-width: 1200px;
+  }
+
+  /* ============================================================
+     SCREEN 1 — REVIEW SESSION (focus mode: no sidebar)
+     ============================================================ */
+  .review-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 57px);
+    padding: var(--sp-7) var(--sp-4);
+    gap: var(--sp-6);
+  }
+
+  /* Quizlet-style 3D flip: .review-card is the perspective stage (fixed bounds,
+     never resizes); .flip-inner rotates on Y; .card-face front/back are the two
+     faces, each the full size of the stage, back pre-rotated 180deg so it reads
+     correctly once the inner wrapper flips. */
+  .review-card {
+    width: 100%;
+    max-width: 640px;
+    min-height: 320px;
+    perspective: 1600px;
+    cursor: pointer;
+  }
+
+  .flip-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: inherit;
+    transition: transform 520ms var(--ease-out);
+    transform-style: preserve-3d;
+  }
+  .review-card.flipped .flip-inner {
+    transform: rotateY(180deg);
+  }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--divider);
+    box-shadow: var(--shadow-medium);
+    padding: var(--sp-6);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-face.back {
+    transform: rotateY(180deg);
+  }
+
+  .card-icon-row {
+    position: absolute;
+    top: var(--sp-5);
+    right: var(--sp-5);
+    display: flex;
+    gap: var(--sp-3);
+    z-index: 2;
+  }
+  .card-icon-row button {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    padding: var(--sp-1);
+    display: flex;
+    transition: color var(--dur-normal) var(--ease-in-out);
+  }
+  .card-icon-row button:hover { color: var(--text); }
+  .card-icon-row svg { width: 18px; height: 18px; }
+
+  .card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: var(--sp-4);
+    padding: var(--sp-6) 0;
+  }
+
+  .card-overline {
+    font-size: var(--fs-overline);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    font-weight: 600;
+  }
+
+  .card-prompt {
+    font-size: var(--fs-display);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    line-height: 1.15;
+  }
+
+  .card-answer {
+    font-size: var(--fs-h1);
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .card-hint {
+    font-size: var(--fs-caption);
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+
+  .card-answer-sub {
+    font-size: var(--fs-body-sm);
+    color: var(--text-tertiary);
+  }
+
+  /* grade buttons — live OUTSIDE the card, flat/outline, non-equal weight */
+  .grade-row {
+    display: none;
+    width: 100%;
+    max-width: 640px;
+    gap: var(--sp-3);
+  }
+  .review-card.flipped ~ .grade-row { display: flex; }
+
+  .grade-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: var(--sp-3) var(--sp-2);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-body-sm);
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    transition: background-color var(--dur-normal) var(--ease-in-out), border-color var(--dur-normal) var(--ease-in-out), color var(--dur-normal) var(--ease-in-out);
+  }
+  .grade-btn .grade-key {
+    font-size: var(--fs-caption);
+    font-family: var(--font-mono);
+    color: var(--text-tertiary);
+  }
+  .grade-btn:hover { background: var(--elevated); }
+
+  .grade-btn.again {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .grade-btn.again:hover { background: rgba(183, 66, 66, 0.12); }
+
+  .review-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+
+  .progress-counter {
+    font-family: var(--font-mono);
+    font-size: var(--fs-h3);
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  .streak-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+    font-size: var(--fs-caption);
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+  .streak-indicator svg { width: 14px; height: 14px; color: var(--accent); }
+
+  /* ============================================================
+     SCREEN 2 — FOLDER / LIBRARY VIEW
+     ============================================================ */
+  .page-header { margin-bottom: var(--sp-6); }
+  .page-title {
+    font-size: var(--fs-h1);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin: 0 0 var(--sp-1) 0;
+  }
+  .page-subtitle {
+    font-size: var(--fs-body-sm);
+    color: var(--text-tertiary);
+    margin: 0;
+  }
+  .page-subtitle .crumb-sep { margin: 0 var(--sp-1); color: var(--text-tertiary); }
+
+  .section-group { margin-bottom: var(--sp-6); }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+  }
+  .section-bullet {
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    flex-shrink: 0;
+    border-radius: 1px; /* square motif */
+  }
+  .section-header h2 {
+    font-size: var(--fs-overline);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .folder-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3);
+    border-radius: var(--radius-sm);
+    border-bottom: 1px solid var(--divider);
+    transition: background-color var(--dur-normal) var(--ease-in-out);
+    cursor: pointer;
+  }
+  .section-group .folder-row:last-child { border-bottom: none; }
+  .folder-row:hover { background: var(--row-hover); }
+
+  .folder-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: var(--elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+  }
+  .folder-icon svg { width: 18px; height: 18px; }
+
+  .folder-info { flex: 1; min-width: 0; }
+  .folder-name {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .folder-count {
+    font-size: var(--fs-caption);
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+
+  .folder-overflow {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    padding: var(--sp-2);
+    border-radius: var(--radius-sm);
+    display: flex;
+    transition: background-color var(--dur-normal) var(--ease-in-out), color var(--dur-normal) var(--ease-in-out);
+  }
+  .folder-overflow:hover { background: var(--elevated); color: var(--text); }
+  .folder-overflow svg { width: 16px; height: 16px; }
+
+  /* ============================================================
+     SCREEN 3 — EMPTY DUE-QUEUE STATE
+     ============================================================ */
+  .empty-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 57px);
+    text-align: center;
+    padding: var(--sp-7) var(--sp-4);
+    gap: var(--sp-4);
+  }
+
+  .empty-streak {
+    font-family: var(--font-mono);
+    font-size: var(--fs-display);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .empty-streak-label {
+    font-size: var(--fs-overline);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .empty-line {
+    font-size: var(--fs-body);
+    color: var(--text-secondary);
+    max-width: 360px;
+    margin: var(--sp-2) 0 var(--sp-5) 0;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #faf7f0;
+    border: none;
+    padding: var(--sp-3) var(--sp-6);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-body);
+    font-weight: 700;
+    transition: background-color var(--dur-normal) var(--ease-in-out);
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+
+  /* small helper for section eyebrow label */
+  .eyebrow {
+    font-size: var(--fs-overline);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+
+  @media (max-width: 640px) {
+    .sidebar { display: none; }
+    .content-area { padding: var(--sp-5); }
+    .grade-row { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="demo-topbar">
+    <div class="brand">Training Sanctum — Design Direction</div>
+    <div class="tab-pills" role="tablist" aria-label="Screen selector">
+      <button class="tab-pill active" data-screen="review">Review Session</button>
+      <button class="tab-pill" data-screen="folders">Folders</button>
+      <button class="tab-pill" data-screen="empty">Empty Queue</button>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode">
+      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
+      <span id="themeLabel">Light mode</span>
+    </button>
+  </div>
+
+  <!-- ============================================================
+       SCREEN 1 — REVIEW SESSION (focus mode, no sidebar)
+       ============================================================ -->
+  <section class="screen active" id="screen-review">
+    <div class="review-screen">
+
+      <div class="review-card" id="reviewCard">
+        <div class="flip-inner">
+
+          <div class="card-face front">
+            <div class="card-icon-row">
+              <button aria-label="Pin card" onclick="event.stopPropagation()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>
+              </button>
+              <button aria-label="Play audio" onclick="event.stopPropagation()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              </button>
+              <button aria-label="Star card" onclick="event.stopPropagation()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </button>
+            </div>
+            <div class="card-body">
+              <div class="card-overline">English Idioms · Term → Definition</div>
+              <div class="card-prompt">procrastinate</div>
+              <div class="card-hint">Click the card, or press Space, to reveal</div>
+            </div>
+          </div>
+
+          <div class="card-face back">
+            <div class="card-body">
+              <div class="card-overline">English Idioms · Term → Definition</div>
+              <div class="card-answer">trì hoãn</div>
+              <div class="card-answer-sub">to delay or postpone action; to put things off</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="grade-row" id="gradeRow">
+        <button class="grade-btn again" data-grade="again">
+          Again
+          <span class="grade-key">1</span>
+        </button>
+        <button class="grade-btn" data-grade="hard">
+          Hard
+          <span class="grade-key">2</span>
+        </button>
+        <button class="grade-btn" data-grade="good">
+          Good
+          <span class="grade-key">3</span>
+        </button>
+        <button class="grade-btn" data-grade="easy">
+          Easy
+          <span class="grade-key">4</span>
+        </button>
+      </div>
+
+      <div class="review-meta">
+        <div class="progress-counter">7 / 20</div>
+        <div class="streak-indicator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+          14-day streak
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SCREEN 2 — FOLDER / LIBRARY VIEW (sidebar visible, Folders active)
+       ============================================================ -->
+  <section class="screen" id="screen-folders">
+    <div class="app-shell">
+
+      <nav class="sidebar">
+        <div class="sidebar-title">Training Sanctum</div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
+          Review
+        </div>
+        <div class="nav-item active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+          Folders
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Import
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Stats
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </div>
+      </nav>
+
+      <div class="content-area">
+        <div class="page-header">
+          <h1 class="page-title">English Idioms</h1>
+          <p class="page-subtitle">Folders <span class="crumb-sep">/</span> English Idioms <span class="crumb-sep">/</span> 6 subfolders</p>
+        </div>
+
+        <div class="section-group">
+          <div class="section-header">
+            <span class="section-bullet"></span>
+            <h2>Recently studied</h2>
+          </div>
+
+          <div class="folder-row">
+            <div class="folder-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+            </div>
+            <div class="folder-info">
+              <div class="folder-name">Idioms about time</div>
+              <div class="folder-count">20 cards</div>
+            </div>
+            <button class="folder-overflow" aria-label="More options">
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </button>
+          </div>
+
+          <div class="folder-row">
+            <div class="folder-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+            </div>
+            <div class="folder-info">
+              <div class="folder-name">Business idioms</div>
+              <div class="folder-count">34 cards</div>
+            </div>
+            <button class="folder-overflow" aria-label="More options">
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="section-group">
+          <div class="section-header">
+            <span class="section-bullet"></span>
+            <h2>All folders</h2>
+          </div>
+
+          <div class="folder-row">
+            <div class="folder-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+            </div>
+            <div class="folder-info">
+              <div class="folder-name">Animal idioms</div>
+              <div class="folder-count">18 cards</div>
+            </div>
+            <button class="folder-overflow" aria-label="More options">
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </button>
+          </div>
+
+          <div class="folder-row">
+            <div class="folder-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+            </div>
+            <div class="folder-info">
+              <div class="folder-name">Food &amp; cooking idioms</div>
+              <div class="folder-count">27 cards</div>
+            </div>
+            <button class="folder-overflow" aria-label="More options">
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </button>
+          </div>
+
+          <div class="folder-row">
+            <div class="folder-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+            </div>
+            <div class="folder-info">
+              <div class="folder-name">Weather idioms</div>
+              <div class="folder-count">12 cards</div>
+            </div>
+            <button class="folder-overflow" aria-label="More options">
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SCREEN 3 — EMPTY DUE-QUEUE STATE
+       ============================================================ -->
+  <section class="screen" id="screen-empty">
+    <div class="empty-screen">
+      <div class="empty-streak-label">Current streak</div>
+      <div class="empty-streak">14-day streak</div>
+      <p class="empty-line">You're all caught up — nothing is due for review right now. Come back later, or add a new card to keep building your deck.</p>
+      <button class="btn-primary">+ Add card</button>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var html = document.documentElement;
+      var toggle = document.getElementById('themeToggle');
+      var icon = document.getElementById('themeIcon');
+      var label = document.getElementById('themeLabel');
+
+      var sunPath = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>';
+      var moonPath = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>';
+
+      function applyTheme(mode) {
+        html.classList.remove('theme-dark', 'theme-light');
+        html.classList.add(mode === 'light' ? 'theme-light' : 'theme-dark');
+        icon.innerHTML = mode === 'light' ? moonPath : sunPath;
+        label.textContent = mode === 'light' ? 'Dark mode' : 'Light mode';
+        try { localStorage.setItem('ts-demo-theme', mode); } catch (e) {}
+      }
+
+      var saved = null;
+      try { saved = localStorage.getItem('ts-demo-theme'); } catch (e) {}
+      applyTheme(saved === 'light' ? 'light' : 'dark');
+
+      toggle.addEventListener('click', function () {
+        var isLight = html.classList.contains('theme-light');
+        applyTheme(isLight ? 'dark' : 'light');
+      });
+
+      // Screen switcher
+      var pills = document.querySelectorAll('.tab-pill');
+      var screens = {
+        review: document.getElementById('screen-review'),
+        folders: document.getElementById('screen-folders'),
+        empty: document.getElementById('screen-empty')
+      };
+
+      pills.forEach(function (pill) {
+        pill.addEventListener('click', function () {
+          pills.forEach(function (p) { p.classList.remove('active'); });
+          pill.classList.add('active');
+          Object.keys(screens).forEach(function (key) {
+            screens[key].classList.remove('active');
+          });
+          screens[pill.getAttribute('data-screen')].classList.add('active');
+        });
+      });
+
+      // Quizlet-style click-to-flip on the review card
+      var card = document.getElementById('reviewCard');
+      card.addEventListener('click', function () {
+        card.classList.toggle('flipped');
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.code === 'Space' && screens.review.classList.contains('active')) {
+          e.preventDefault();
+          card.classList.toggle('flipped');
+        }
+      });
+
+      // Grading resets the card back to prompt state (loops demo)
+      document.querySelectorAll('.grade-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          card.classList.remove('flipped');
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>
