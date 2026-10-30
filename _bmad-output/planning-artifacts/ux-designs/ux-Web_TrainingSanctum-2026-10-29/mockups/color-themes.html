@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Training Sanctum — Color Theme Variations</title>
+<style>
+/* =========================================================================
+   SHARED STRUCTURE (no colors here — every color comes from the
+   per-theme custom properties declared on each .theme-* wrapper below)
+   ========================================================================= */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 32px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #0c0d10;
+  color: #e8e8e8;
+}
+.page-head { max-width: 1400px; margin: 0 auto 36px; }
+.page-head h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
+.page-head p { margin: 0; color: #9aa0ab; font-size: 14px; max-width: 760px; line-height: 1.5; }
+
+.themes-grid {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+}
+
+.theme-block {
+  border-radius: 16px;
+  padding: 28px;
+  border: 1px solid #23242a;
+  background: #16171b;
+}
+
+.theme-head { margin-bottom: 18px; }
+.theme-head .name { font-size: 20px; font-weight: 800; margin: 0 0 2px; letter-spacing: -0.01em; }
+.theme-head .register { font-size: 13px; color: #8d93a0; margin: 0; font-style: italic; }
+
+/* token chip row */
+.tokens { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 22px; }
+.chip {
+  display: flex; align-items: center; gap: 8px;
+  background: #1d1e24; border: 1px solid #2a2b32; border-radius: 999px;
+  padding: 5px 10px 5px 5px; font-size: 11.5px; color: #c7cad1;
+}
+.swatch { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.15); }
+.chip .role { font-weight: 700; color: #f1f2f5; }
+.chip .hex { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #9aa0ab; }
+
+/* demo layout: dark review screen + light library list, side by side */
+.demo-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.demo-col { flex: 1 1 420px; min-width: 320px; }
+.demo-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: #767c89; margin: 0 0 8px; font-weight: 700;
+}
+
+/* ---- DARK MODE: flashcard review screen ---- */
+.app-dark {
+  background: var(--d-bg);
+  border-radius: 14px;
+  padding: 22px;
+  border: 1px solid var(--d-border);
+}
+.review-topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 18px;
+}
+.review-topbar .deck-name { font-size: 13px; font-weight: 700; color: var(--d-text); }
+.review-topbar .deck-sub { font-size: 11px; color: var(--d-text-2); }
+.toolbar-icons { display: flex; gap: 10px; }
+.toolbar-icons span {
+  font-size: 13px; color: var(--d-text-2); width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 7px; border: 1px solid var(--d-border);
+}
+
+.flashcard {
+  background: var(--d-surface);
+  border: 1px solid var(--d-border);
+  border-radius: 20px;
+  min-height: 190px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 30px 20px;
+  position: relative;
+  margin-bottom: 14px;
+}
+.flashcard .card-icons {
+  position: absolute; top: 14px; right: 16px; display: flex; gap: 8px;
+}
+.flashcard .card-icons span {
+  font-size: 12px; color: var(--d-text-2); opacity: 0.8;
+}
+.flashcard .term {
+  font-size: 26px; font-weight: 800; color: var(--d-text); text-align: center; letter-spacing: -0.01em;
+}
+.flashcard .hint { font-size: 12px; color: var(--d-text-2); margin-top: 10px; }
+
+.nav-row {
+  display: flex; align-items: center; justify-content: center; gap: 18px;
+  margin-bottom: 8px;
+}
+.nav-row .arrow {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--d-border);
+  display: flex; align-items: center; justify-content: center; color: var(--d-text-2); font-size: 14px;
+}
+.nav-row .counter { font-size: 12px; color: var(--d-text-2); font-variant-numeric: tabular-nums; min-width: 54px; text-align: center; }
+
+.util-row { display: flex; justify-content: center; gap: 16px; margin-bottom: 18px; }
+.util-row span { font-size: 12px; color: var(--d-text-2); }
+
+.grade-row { display: flex; gap: 8px; }
+.grade-btn {
+  flex: 1; text-align: center; padding: 10px 6px; border-radius: 10px;
+  font-size: 12px; font-weight: 700; border: 1px solid; background: transparent;
+  letter-spacing: 0.01em;
+}
+.grade-again { color: var(--d-danger); border-color: var(--d-danger); background: color-mix(in srgb, var(--d-danger) 12%, transparent); }
+.grade-hard  { color: var(--d-warning); border-color: var(--d-warning); background: color-mix(in srgb, var(--d-warning) 10%, transparent); }
+.grade-good  { color: var(--d-accent); border-color: var(--d-accent); background: color-mix(in srgb, var(--d-accent) 12%, transparent); }
+.grade-easy  { color: var(--d-success); border-color: var(--d-success); background: color-mix(in srgb, var(--d-success) 10%, transparent); }
+
+/* ---- LIGHT MODE: folder / library list ---- */
+.app-light {
+  background: var(--l-bg);
+  border-radius: 14px;
+  padding: 22px;
+  border: 1px solid var(--l-border);
+}
+.lib-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+.lib-header h3 { margin: 0; font-size: 18px; font-weight: 800; color: var(--l-text); letter-spacing: -0.01em; }
+.lib-header .new-btn {
+  font-size: 11.5px; font-weight: 700; color: #fff; background: var(--l-accent);
+  padding: 7px 12px; border-radius: 8px;
+}
+
+.section-header {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--l-text-2); margin: 16px 0 8px;
+}
+.section-header:first-of-type { margin-top: 0; }
+.section-header .bullet { width: 7px; height: 7px; background: var(--l-accent); display: inline-block; flex-shrink: 0; }
+
+.lib-card {
+  background: var(--l-surface);
+  border: 1px solid var(--l-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.lib-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; border-bottom: 1px solid var(--l-border);
+}
+.lib-row:last-child { border-bottom: none; }
+.lib-row.hover { background: color-mix(in srgb, var(--l-accent) 6%, var(--l-surface)); }
+.folder-icon {
+  width: 26px; height: 20px; border-radius: 3px;
+  background: var(--l-accent); opacity: 0.85; flex-shrink: 0; position: relative;
+}
+.folder-icon::before {
+  content: ""; position: absolute; top: -4px; left: 2px; width: 12px; height: 4px;
+  background: var(--l-accent); border-radius: 2px 2px 0 0; opacity: 0.85;
+}
+.lib-row .title { font-size: 13px; font-weight: 700; color: var(--l-text); flex: 1; }
+.lib-row .meta { font-size: 11px; color: var(--l-text-2); margin-right: 6px; }
+.lib-row .menu { font-size: 14px; color: var(--l-text-2); letter-spacing: 1px; width: 20px; text-align: center; }
+
+.css-note {
+  margin-top: 16px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px; color: #6d7280; background: #111217; border: 1px solid #23242a;
+  border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>Training Sanctum — Color Theme Variations</h1>
+  <p>Five directions on the locked visual brief: dark navy/charcoal base with a single deep-red pop accent in dark mode; sage-green canvas with floating white cards in light mode (Spy&nbsp;x&nbsp;Family site register). Each variation shows the flashcard review screen (dark) and the folder/library list (light) side by side, with exact hex tokens documented below and in CSS comments.</p>
+</div>
+
+<div class="themes-grid">
+
+  <!-- =====================================================================
+       THEME 1 — QUIET FOCUS
+       Dark:  bg #1A1D24  surface #22262F  accent #B33A3A  text #ECEEF1 / #9199A6  border #2E333D
+       Light: bg #8FA396  surface #FFFFFF  accent #B33A3A  text #1E2430 / #5B6472  border #E4E8E3
+       success(Easy) #5B8A66  warning(Hard) #C98A3B  danger(Again) #8E2E2E
+       Muted, desaturated, cool-neutral restraint — closest to a plain keyboard-app register.
+     ===================================================================== -->
+  <section class="theme-block"
+    style="--d-bg:#1A1D24; --d-surface:#22262F; --d-border:#2E333D; --d-text:#ECEEF1; --d-text-2:#9199A6;
+           --d-accent:#B33A3A; --d-danger:#8E2E2E; --d-warning:#C98A3B; --d-success:#5B8A66;
+           --l-bg:#8FA396; --l-surface:#FFFFFF; --l-border:#E4E8E3; --l-text:#1E2430; --l-text-2:#5B6472; --l-accent:#B33A3A;">
+    <div class="theme-head">
+      <p class="name">1. Quiet Focus</p>
+      <p class="register">Desaturated, low-drama, built for long unglamorous study sessions</p>
+    </div>
+
+    <div class="tokens">
+      <div class="chip"><span class="swatch" style="background:#1A1D24"></span><span class="role">background</span><span class="hex">#1A1D24</span></div>
+      <div class="chip"><span class="swatch" style="background:#22262F"></span><span class="role">surface/card</span><span class="hex">#22262F</span></div>
+      <div class="chip"><span class="swatch" style="background:#B33A3A"></span><span class="role">accent</span><span class="hex">#B33A3A</span></div>
+      <div class="chip"><span class="swatch" style="background:#ECEEF1"></span><span class="role">text-primary</span><span class="hex">#ECEEF1</span></div>
+      <div class="chip"><span class="swatch" style="background:#9199A6"></span><span class="role">text-secondary</span><span class="hex">#9199A6</span></div>
+      <div class="chip"><span class="swatch" style="background:#2E333D"></span><span class="role">border</span><span class="hex">#2E333D</span></div>
+      <div class="chip"><span class="swatch" style="background:#5B8A66"></span><span class="role">success/Easy</span><span class="hex">#5B8A66</span></div>
+      <div class="chip"><span class="swatch" style="background:#C98A3B"></span><span class="role">warning/Hard</span><span class="hex">#C98A3B</span></div>
+      <div class="chip"><span class="swatch" style="background:#8E2E2E"></span><span class="role">danger/Again</span><span class="hex">#8E2E2E</span></div>
+      <div class="chip"><span class="swatch" style="background:#8FA396"></span><span class="role">light bg (sage)</span><span class="hex">#8FA396</span></div>
+    </div>
+
+    <div class="demo-row">
+      <div class="demo-col">
+        <p class="demo-label">Dark mode — review session</p>
+        <div class="app-dark">
+          <div class="review-topbar">
+            <div><div class="deck-name">Organic Chemistry</div><div class="deck-sub">Reactions &amp; Mechanisms</div></div>
+            <div class="toolbar-icons"><span>&#128204;</span><span>&#9834;</span><span>&#9734;</span></div>
+          </div>
+          <div class="flashcard">
+            <div class="card-icons"></div>
+            <div class="term">Nucleophilic Substitution</div>
+            <div class="hint">Tap to reveal definition</div>
+          </div>
+          <div class="nav-row"><span class="arrow">&#8249;</span><span class="counter">12 / 48</span><span class="arrow">&#8250;</span></div>
+          <div class="util-row"><span>&#8646; shuffle</span><span>&#9881; settings</span><span>&#9974; fullscreen</span></div>
+          <div class="grade-row">
+            <div class="grade-btn grade-again">Again</div>
+            <div class="grade-btn grade-hard">Hard</div>
+            <div class="grade-btn grade-good">Good</div>
+            <div class="grade-btn grade-easy">Easy</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-col">
+        <p class="demo-label">Light mode — library</p>
+        <div class="app-light">
+          <div class="lib-header"><h3>My Library</h3><div class="new-btn">+ New Set</div></div>
+          <div class="section-header"><span class="bullet"></span>Today</div>
+          <div class="lib-card">
+            <div class="lib-row hover"><div class="folder-icon"></div><div class="title">MCAT — Biochemistry</div><div class="meta">64 cards</div><div class="menu">&#8230;</div></div>
+            <div class="lib-row"><div class="folder-icon"></div><div class="title">Spanish Verbs — Irregular</div><div class="meta">120 cards</div><div class="menu">&#8230;</div></div>
+          </div>
+          <div class="section-header"><span class="bullet"></span>Last Week</div>
+          <div class="lib-card">
+            <div class="lib-row"><div class="folder-icon"></div><div class="title">CS 301 — Data Structures</div><div class="meta">42 cards</div><div class="menu">&#8230;</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="css-note">/* Quiet Focus */
+.dark  { --bg:#1A1D24; --surface:#22262F; --accent:#B33A3A; --text:#ECEEF1; --text-2:#9199A6; --border:#2E333D; }
+.light { --bg:#8FA396; --surface:#FFFFFF; --accent:#B33A3A; --text:#1E2430; --text-2:#5B6472; --border:#E4E8E3; }
+--success:#5B8A66; --warning:#C98A3B; --danger:#8E2E2E;</div>
+  </section>
+
+  <!-- =====================================================================
+       THEME 2 — EDITORIAL CALM
+       Dark:  bg #171A21  surface #20242C  accent #CC2936  text #F5F6F8 / #8891A0  border #2A2F39
+       Light: bg #7C9188  surface #FFFFFF  accent #CC2936  text #1E2430 / #596270  border #D8DED7
+       success #3F7D5C  warning #B8822E  danger #A61E2B
+       Cooler saturated red, deeper sage, higher contrast, bold masthead energy.
+     ===================================================================== -->
+  <section class="theme-block"
+    style="--d-bg:#171A21; --d-surface:#20242C; --d-border:#2A2F39; --d-text:#F5F6F8; --d-text-2:#8891A0;
+           --d-accent:#CC2936; --d-danger:#A61E2B; --d-warning:#B8822E; --d-success:#3F7D5C;
+           --l-bg:#7C9188; --l-surface:#FFFFFF; --l-border:#D8DED7; --l-text:#1E2430; --l-text-2:#596270; --l-accent:#CC2936;">
+    <div class="theme-head">
+      <p class="name">2. Editorial Calm</p>
+      <p class="register">Cooler, saturated red; near-black navy; bold masthead confidence</p>
+    </div>
+
+    <div class="tokens">
+      <div class="chip"><span class="swatch" style="background:#171A21"></span><span class="role">background</span><span class="hex">#171A21</span></div>
+      <div class="chip"><span class="swatch" style="background:#20242C"></span><span class="role">surface/card</span><span class="hex">#20242C</span></div>
+      <div class="chip"><span class="swatch" style="background:#CC2936"></span><span class="role">accent</span><span class="hex">#CC2936</span></div>
+      <div class="chip"><span class="swatch" style="background:#F5F6F8"></span><span class="role">text-primary</span><span class="hex">#F5F6F8</span></div>
+      <div class="chip"><span class="swatch" style="background:#8891A0"></span><span class="role">text-secondary</span><span class="hex">#8891A0</span></div>
+      <div class="chip"><span class="swatch" style="background:#2A2F39"></span><span class="role">border</span><span class="hex">#2A2F39</span></div>
+      <div class="chip"><span class="swatch" style="background:#3F7D5C"></span><span class="role">success/Easy</span><span class="hex">#3F7D5C</span></div>
+      <div class="chip"><span class="swatch" style="background:#B8822E"></span><span class="role">warning/Hard</span><span class="hex">#B8822E</span></div>
+      <div class="chip"><span class="swatch" style="background:#A61E2B"></span><span class="role">danger/Again</span><span class="hex">#A61E2B</span></div>
+      <div class="chip"><span class="swatch" style="background:#7C9188"></span><span class="role">light bg (sage)</span><span class="hex">#7C9188</span></div>
+    </div>
+
+    <div class="demo-row">
+      <div class="demo-col">
+        <p class="demo-label">Dark mode — review session</p>
+        <div class="app-dark">
+          <div class="review-topbar">
+            <div><div class="deck-name">Organic Chemistry</div><div class="deck-sub">Reactions &amp; Mechanisms</div></div>
+            <div class="toolbar-icons"><span>&#128204;</span><span>&#9834;</span><span>&#9734;</span></div>
+          </div>
+          <div class="flashcard">
+            <div class="card-icons"></div>
+            <div class="term">Nucleophilic Substitution</div>
+            <div class="hint">Tap to reveal definition</div>
+          </div>
+          <div class="nav-row"><span class="arrow">&#8249;</span><span class="counter">12 / 48</span><span class="arrow">&#8250;</span></div>
+          <div class="util-row"><span>&#8646; shuffle</span><span>&#9881; settings</span><span>&#9974; fullscreen</span></div>
+          <div class="grade-row">
+            <div class="grade-btn grade-again">Again</div>
+            <div class="grade-btn grade-hard">Hard</div>
+            <div class="grade-btn grade-good">Good</div>
+            <div class="grade-btn grade-easy">Easy</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-col">
+        <p class="demo-label">Light mode — library</p>
+        <div class="app-light">
+          <div class="lib-header"><h3>My Library</h3><div class="new-btn">+ New Set</div></div>
+          <div class="section-header"><span class="bullet"></span>Today</div>
+          <div class="lib-card">
+            <div class="lib-row hover"><div class="folder-icon"></div><div class="title">MCAT — Biochemistry</div><div class="meta">64 cards</div><div class="menu">&#8230;</div></div>
+            <div class="lib-row"><div class="folder-icon"></div><div class="title">Spanish Verbs — Irregular</div><div class="meta">120 cards</div><div class="menu">&#8230;</div></div>
+          </div>
+          <div class="section-header"><span class="bullet"></span>Last Week</div>
+          <div class="lib-card">
+            <div class="lib-row"><div class="folder-icon"></div><div class="title">CS 301 — Data Structures</div><div class="meta">42 cards</div><div class="menu">&#8230;</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="css-note">/* Editorial Calm */
+.dark  { --bg:#171A21; --surface:#20242C; --accent:#CC2936; --text:#F5F6F8; --text-2:#8891A0; --border:#2A2F39; }
+.light { --bg:#7C9188; --surface:#FFFFFF; --accent:#CC2936; --text:#1E2430; --text-2:#596270; --border:#D8DED7; }
+--success:#3F7D5C; --warning:#B8822E; --danger:#A61E2B;</div>
+  </section>
+
+  <!-- =====================================================================
+       THEME 3 — MIDNIGHT EMBER
+       Dark:  bg #1C1816  surface #26201D  accent #D4453A  text #F2EDE9 / #A69A91  border #342C28
+       Light: bg #93A28C  surface #FFFDFB  accent #D4453A  text #2A2420 / #6B6058  border #E2E6DC
+       success #6B8F5A  warning #CC8B3D  danger #B23A2E
+       Warm-leaning red, warm charcoal instead of navy, cozy evening-study mood.
+     ===================================================================== -->
+  <section class="theme-block"
+    style="--d-bg:#1C1816; --d-surface:#26201D; --d-border:#342C28; --d-text:#F2EDE9; --d-text-2:#A69A91;
+           --d-accent:#D4453A; --d-danger:#B23A2E; --d-warning:#CC8B3D; --d-success:#6B8F5A;
+           --l-bg:#93A28C; --l-surface:#FFFDFB; --l-border:#E2E6DC; --l-text:#2A2420; --l-text-2:#6B6058; --l-accent:#D4453A;">
+    <div class="theme-head">
+      <p class="name">3. Midnight Ember</p>
+      <p class="register">Warmer red, warm charcoal instead of navy — a cozy late-night study lamp</p>
+    </div>
+
+    <div class="tokens">
+      <div class="chip"><span class="swatch" style="background:#1C1816"></span><span class="role">background</span><span class="hex">#1C1816</span></div>
+      <div class="chip"><span class="swatch" style="background:#26201D"></span><span class="role">surface/card</span><span class="hex">#26201D</span></div>
+      <div class="chip"><span class="swatch" style="background:#D4453A"></span><span class="role">accent</span><span class="hex">#D4453A</span></div>
+      <div class="chip"><span class="swatch" style="background:#F2EDE9"></span><span class="role">text-primary</span><span class="hex">#F2EDE9</span></div>
+      <div class="chip"><span class="swatch" style="background:#A69A91"></span><span class="role">text-secondary</span><span class="hex">#A69A91</span></div>
+      <div class="chip"><span class="swatch" style="background:#342C28"></span><span class="role">border</span><span class="hex">#342C28</span></div>
+      <div class="chip"><span class="swatch" style="background:#6B8F5A"></span><span class="role">success/Easy</span><span class="hex">#6B8F5A</span></div>
+      <div class="chip"><span class="swatch" style="background:#CC8B3D"></span><span class="role">warning/Hard</span><span class="hex">#CC8B3D</span></div>
+      <div class="chip"><span class="swatch" style="background:#B23A2E"></span><span class="role">danger/Again</span><span class="hex">#B23A2E</span></div>
+      <div class="chip"><span class="swatch" style="background:#93A28C"></span><span class="role">light bg (sage)</span><span class="hex">#93A28C</span></div>
+    </div>
+
+    <div class="demo-row">
+      <div class="demo-col">
+        <p class="demo-label">Dark mode — review session</p>
+        <div class="app-dark">
+          <div class="review-topbar">
+            <div><div class="deck-name">Organic Chemistry</div><div class="deck-sub">Reactions &amp; Mechanisms</div></div>
+            <div class="toolbar-icons"><span>&#128204;</span><span>&#9834;</span><span>&#9734;</span></div>
+          </div>
+          <div class="flashcard">
+            <div class="card-icons"></div>
+            <div class="term">Nucleophilic Substitution</div>
+            <div class="hint">Tap to reveal definition</div>
+          </div>
+          <div class="nav-row"><span class="arrow">&#8249;</span><span class="counter">12 / 48</span><span class="arrow">&#8250;</span></div>
+          <div class="util-row"><span>&#8646; shuffle</span><span>&#9881; settings</span><span>&#9974; fullscreen</span></div>
+          <div class="grade-row">
+            <div class="grade-btn grade-again">Again</div>
+            <div class="grade-btn grade-hard">Hard</div>
+            <div class="grade-btn grade-good">Good</div>
+            <div class="grade-btn grade-easy">Easy</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-col">
+        <p class="demo-label">Light mode — library</p>
+        <div class="app-light">
+          <div class="lib-header"><h3>My Library</h3><div class="new-btn">+ New Set</div></div>
+          <div class="section-header"><span class="bullet"></span>Today</div>
+          <div class="lib-card">
+            <div class="lib-row hover"><div class="folder-icon"></div><div class="title">MCAT — Biochemistry</div><div class="meta">64 cards</div><div class="menu">&#8230;</div></div>
+            <div class="lib-row"><div class="folder-icon"></div><div class="title">Spanish Verbs — Irregular</div><div class="meta">120 cards</div><div class="menu">&#8230;</div></div>
+          </div>
+          <div class="section-header"><span class="bullet"></span>Last Week</div>
+          <div class="lib-card">
+            <div class="lib-row"><div class="folder-icon"></div><div class="title">CS 301 — Data Structures</div><div class="meta">42 cards</div><div class="menu">&#8230;</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="css-note">/* Midnight Ember */
+.dark  { --bg:#1C1816; --surface:#26201D; --accent:#D4453A; --text:#F2EDE9; --text-2:#A69A91; --border:#342C28; }
+.light { --bg:#93A28C; --surface:#FFFDFB; --accent:#D4453A; --text:#2A2420; --text-2:#6B6058; --border:#E2E6DC; }
+--success:#6B8F5A; --warning:#CC8B3D; --danger:#B23A2E;</div>
+  </section>
+
+  <!-- =====================================================================
+       THEME 4 — SOFT ARCHIVE
+       Dark:  bg #22262D  surface #2B303A  accent #BD4A4A  text #DCE0E6 / #848D9B  border #353B46
+       Light: bg #9BAB9C  surface #FAFAF8  accent #BD4A4A  text #333B47 / #717A87  border #E6E8E2
+       success #6E9B72  warning #CB9A5A  danger #A4463F
+       Lower contrast overall, gentle paper-like surfaces, least "punchy" variation.
+     ===================================================================== -->
+  <section class="theme-block"
+    style="--d-bg:#22262D; --d-surface:#2B303A; --d-border:#353B46; --d-text:#DCE0E6; --d-text-2:#848D9B;
+           --d-accent:#BD4A4A; --d-danger:#A4463F; --d-warning:#CB9A5A; --d-success:#6E9B72;
+           --l-bg:#9BAB9C; --l-surface:#FAFAF8; --l-border:#E6E8E2; --l-text:#333B47; --l-text-2:#717A87; --l-accent:#BD4A4A;">
+    <div class="theme-head">
+      <p class="name">4. Soft Archive</p>
+      <p class="register">Softer contrast, gentle paper-like surfaces — the least punchy, most restful read</p>
+    </div>
+
+    <div class="tokens">
+      <div class="chip"><span class="swatch" style="background:#22262D"></span><span class="role">background</span><span class="hex">#22262D</span></div>
+      <div class="chip"><span class="swatch" style="background:#2B303A"></span><span class="role">surface/card</span><span class="hex">#2B303A</span></div>
+      <div class="chip"><span class="swatch" style="background:#BD4A4A"></span><span class="role">accent</span><span class="hex">#BD4A4A</span></div>
+      <div class="chip"><span class="swatch" style="background:#DCE0E6"></span><span class="role">text-primary</span><span class="hex">#DCE0E6</span></div>
+      <div class="chip"><span class="swatch" style="background:#848D9B"></span><span class="role">text-secondary</span><span class="hex">#848D9B</span></div>
+      <div class="chip"><span class="swatch" style="background:#353B46"></span><span class="role">border</span><span class="hex">#353B46</span></div>
+      <div class="chip"><span class="swatch" style="background:#6E9B72"></span><span class="role">success/Easy</span><span class="hex">#6E9B72</span></div>
+      <div class="chip"><span class="swatch" style="background:#CB9A5A"></span><span class="role">warning/Hard</span><span class="hex">#CB9A5A</span></div>
+      <div class="chip"><span class="swatch" style="background:#A4463F"></span><span class="role">danger/Again</span><span class="hex">#A4463F</span></div>
+      <div class="chip"><span class="swatch" style="background:#9BAB9C"></span><span class="role">light bg (sage)</span><span class="hex">#9BAB9C</span></div>
+    </div>
+
+    <div class="demo-row">
+      <div class="demo-col">
+        <p class="demo-label">Dark mode — review session</p>
+        <div class="app-dark">
+          <div class="review-topbar">
+            <div><div class="deck-name">Organic Chemistry</div><div class="deck-sub">Reactions &amp; Mechanisms</div></div>
+            <div class="toolbar-icons"><span>&#128204;</span><span>&#9834;</span><span>&#9734;</span></div>
+          </div>
+          <div class="flashcard">
+            <div class="card-icons"></div>
+            <div class="term">Nucleophilic Substitution</div>
+            <div class="hint">Tap to reveal definition</div>
+          </div>
+          <div class="nav-row"><span class="arrow">&#8249;</span><span class="counter">12 / 48</span><span class="arrow">&#8250;</span></div>
+          <div class="util-row"><span>&#8646; shuffle</span><span>&#9881; settings</span><span>&#9974; fullscreen</span></div>
+          <div class="grade-row">
+            <div class="grade-btn grade-again">Again</div>
+            <div class="grade-btn grade-hard">Hard</div>
+            <div class="grade-btn grade-good">Good</div>
+            <div class="grade-btn grade-easy">Easy</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-col">
+        <p class="demo-label">Light mode — library</p>
+        <div class="app-light">
+          <div class="lib-header"><h3>My Library</h3><div class="new-btn">+ New Set</div></div>
+          <div class="section-header"><span class="bullet"></span>Today</div>
+          <div class="lib-card">
+            <div class="lib-row hover"><div class="folder-icon"></div><div class="title">MCAT — Biochemistry</div><div class="meta">64 cards</div><div class="menu">&#8230;</div></div>
+            <div class="lib-row"><div class="folder-icon"></div><div class="title">Spanish Verbs — Irregular</div><div class="meta">120 cards</div><div class="menu">&#8230;</div></div>
+          </div>
+          <div class="section-header"><span class="bullet"></span>Last Week</div>
+          <div class="lib-card">
+            <div class="lib-row"><div class="folder-icon"></div><div class="title">CS 301 — Data Structures</div><div class="meta">42 cards</div><div class="menu">&#8230;</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="css-note">/* Soft Archive */
+.dark  { --bg:#22262D; --surface:#2B303A; --accent:#BD4A4A; --text:#DCE0E6; --text-2:#848D9B; --border:#353B46; }
+.light { --bg:#9BAB9C; --surface:#FAFAF8; --accent:#BD4A4A; --text:#333B47; --text-2:#717A87; --border:#E6E8E2; }
+--success:#6E9B72; --warning:#CB9A5A; --danger:#A4463F;</div>
+  </section>
+
+  <!-- =====================================================================
+       THEME 5 — SIGNAL BOLD
+       Dark:  bg #121419  surface #1C2028  accent #E8262F  text #FFFFFF / #7D8699  border #262B35
+       Light: bg #829487  surface #FFFFFF  accent #E8262F  text #15181F / #525A68  border #D2D9CD
+       success #2E8B57  warning #D98324  danger #C21807
+       Highest contrast, most saturated red, near-black navy — the boldest, most decisive register.
+     ===================================================================== -->
+  <section class="theme-block"
+    style="--d-bg:#121419; --d-surface:#1C2028; --d-border:#262B35; --d-text:#FFFFFF; --d-text-2:#7D8699;
+           --d-accent:#E8262F; --d-danger:#C21807; --d-warning:#D98324; --d-success:#2E8B57;
+           --l-bg:#829487; --l-surface:#FFFFFF; --l-border:#D2D9CD; --l-text:#15181F; --l-text-2:#525A68; --l-accent:#E8262F;">
+    <div class="theme-head">
+      <p class="name">5. Signal Bold</p>
+      <p class="register">Near-black navy, highest contrast, the most saturated red — decisive and alert</p>
+    </div>
+
+    <div class="tokens">
+      <div class="chip"><span class="swatch" style="background:#121419"></span><span class="role">background</span><span class="hex">#121419</span></div>
+      <div class="chip"><span class="swatch" style="background:#1C2028"></span><span class="role">surface/card</span><span class="hex">#1C2028</span></div>
+      <div class="chip"><span class="swatch" style="background:#E8262F"></span><span class="role">accent</span><span class="hex">#E8262F</span></div>
+      <div class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="role">text-primary</span><span class="hex">#FFFFFF</span></div>
+      <div class="chip"><span class="swatch" style="background:#7D8699"></span><span class="role">text-secondary</span><span class="hex">#7D8699</span></div>
+      <div class="chip"><span class="swatch" style="background:#262B35"></span><span class="role">border</span><span class="hex">#262B35</span></div>
+      <div class="chip"><span class="swatch" style="background:#2E8B57"></span><span class="role">success/Easy</span><span class="hex">#2E8B57</span></div>
+      <div class="chip"><span class="swatch" style="background:#D98324"></span><span class="role">warning/Hard</span><span class="hex">#D98324</span></div>
+      <div class="chip"><span class="swatch" style="background:#C21807"></span><span class="role">danger/Again</span><span class="hex">#C21807</span></div>
+      <div class="chip"><span class="swatch" style="background:#829487"></span><span class="role">light bg (sage)</span><span class="hex">#829487</span></div>
+    </div>
+
+    <div class="demo-row">
+      <div class="demo-col">
+        <p class="demo-label">Dark mode — review session</p>
+        <div class="app-dark">
+          <div class="review-topbar">
+            <div><div class="deck-name">Organic Chemistry</div><div class="deck-sub">Reactions &amp; Mechanisms</div></div>
+            <div class="toolbar-icons"><span>&#128204;</span><span>&#9834;</span><span>&#9734;</span></div>
+          </div>
+          <div class="flashcard">
+            <div class="card-icons"></div>
+            <div class="term">Nucleophilic Substitution</div>
+            <div class="hint">Tap to reveal definition</div>
+          </div>
+          <div class="nav-row"><span class="arrow">&#8249;</span><span class="counter">12 / 48</span><span class="arrow">&#8250;</span></div>
+          <div class="util-row"><span>&#8646; shuffle</span><span>&#9881; settings</span><span>&#9974; fullscreen</span></div>
+          <div class="grade-row">
+            <div class="grade-btn grade-again">Again</div>
+            <div class="grade-btn grade-hard">Hard</div>
+            <div class="grade-btn grade-good">Good</div>
+            <div class="grade-btn grade-easy">Easy</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-col">
+        <p class="demo-label">Light mode — library</p>
+        <div class="app-light">
+          <div class="lib-header"><h3>My Library</h3><div class="new-btn">+ New Set</div></div>
+          <div class="section-header"><span class="bullet"></span>Today</div>
+          <div class="lib-card">
+            <div class="lib-row hover"><div class="folder-icon"></div><div class="title">MCAT — Biochemistry</div><div class="meta">64 cards</div><div class="menu">&#8230;</div></div>
+            <div class="lib-row"><div class="folder-icon"></div><div class="title">Spanish Verbs — Irregular</div><div class="meta">120 cards</div><div class="menu">&#8230;</div></div>
+          </div>
+          <div class="section-header"><span class="bullet"></span>Last Week</div>
+          <div class="lib-card">
+            <div class="lib-row"><div class="folder-icon"></div><div class="title">CS 301 — Data Structures</div><div class="meta">42 cards</div><div class="menu">&#8230;</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="css-note">/* Signal Bold */
+.dark  { --bg:#121419; --surface:#1C2028; --accent:#E8262F; --text:#FFFFFF; --text-2:#7D8699; --border:#262B35; }
+.light { --bg:#829487; --surface:#FFFFFF; --accent:#E8262F; --text:#15181F; --text-2:#525A68; --border:#D2D9CD; }
+--success:#2E8B57; --warning:#D98324; --danger:#C21807;</div>
+  </section>
+
+</div>
+
+</body>
+</html>
