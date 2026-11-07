@@ -1,0 +1,73 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 11-07-2026 00:00
+last_updated: 11-07-2026 00:00
+project: Web_TrainingSanctum
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-live-deployed-application-skeleton: backlog
+  1-2-user-registration: backlog
+  1-3-user-login-logout: backlog
+  1-4-session-persistence: backlog
+  1-5-authenticated-app-shell-theme-toggle: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-create-a-card: backlog
+  2-2-edit-a-card: backlog
+  2-3-delete-a-card: backlog
+  2-4-folder-crud: backlog
+  2-5-assign-browse-cards-by-folder: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-paste-import: backlog
+  3-2-csv-excel-import-with-column-mapping: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-sm-2-scheduling-engine: backlog
+  4-2-grade-a-card-persist-scheduling-update: backlog
+  4-3-due-queue-review-session-keyboard-first: backlog
+  4-4-daily-new-card-batch-cap: backlog
+  4-5-focus-mode: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-streak-tracking: backlog
+  5-2-data-export-backup: backlog
+  5-3-restore-from-backup: backlog
+  5-4-progress-stats-view: backlog
+  5-5-cross-cutting-accessibility-microcopy-pass: backlog
+  epic-5-retrospective: optional
