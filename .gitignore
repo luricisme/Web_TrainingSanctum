@@ -29,3 +29,5 @@ blob-report/
 .vscode/*
 !.vscode/extensions.json
 
+.vercel
+.env*
