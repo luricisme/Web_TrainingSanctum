@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/*
+ * Dual-theme design tokens from DESIGN.md
+ * (_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/DESIGN.md).
+ * Dark is the default canvas; data-theme="light" recreates the sage/white
+ * light theme. Consumed by Tailwind v4's @theme inline so Story 1.5 (sidebar
+ * nav / review UI) can use `bg-background`, `text-accent`, etc. without
+ * rework.
+ */
+:root {
+  --color-bg: #14151f;
+  --color-card: #1f2130;
+  --color-elevated: #262838;
+  --color-text: #ecf1f2;
+  --color-text-soft: #faf7f0;
+  --color-text-secondary: #c6c9d2;
+  --color-text-tertiary: #9b9fae;
+  --color-border: #3a3d4d;
+  --color-divider: #2a2c3c;
+  --color-row-hover: #262838;
+
+  --color-accent: #b74242;
+  --color-accent-hover: #c65252;
+  --color-success: #5c8a68;
+  --color-warning: #c98a3a;
+  --color-error: #b74242;
+  --color-info: #6a8a99;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+}
+
+:root[data-theme="light"] {
+  --color-bg: #8ea89b;
+  --color-card: #faf7f0;
+  --color-elevated: #ecf1f2;
+  --color-text: #0e0e12;
+  --color-text-soft: #0e0e12;
+  --color-text-secondary: #3a3d4d;
+  --color-text-tertiary: #6b6f80;
+  --color-border: #c6c9d2;
+  --color-divider: #c6c9d2;
+  --color-row-hover: #ecf1f2;
+}
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-card: var(--color-card);
+  --color-elevated: var(--color-elevated);
+  --color-foreground: var(--color-text);
+  --color-foreground-soft: var(--color-text-soft);
+  --color-foreground-secondary: var(--color-text-secondary);
+  --color-foreground-tertiary: var(--color-text-tertiary);
+  --color-border: var(--color-border);
+  --color-divider: var(--color-divider);
+  --color-row-hover: var(--color-row-hover);
+
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+  --color-info: var(--color-info);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-full: var(--radius-full);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  --font-mono: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
