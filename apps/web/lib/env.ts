@@ -13,7 +13,11 @@ const envSchema = z.object({
   DATABASE_URL: z
     .string({ message: "DATABASE_URL is required" })
     .min(1, "DATABASE_URL must not be empty")
-    .url("DATABASE_URL must be a valid connection string URL"),
+    .url("DATABASE_URL must be a valid connection string URL")
+    .refine(
+      (value) => value.startsWith("postgres://") || value.startsWith("postgresql://"),
+      "DATABASE_URL must use the postgres:// or postgresql:// scheme"
+    ),
   BETTER_AUTH_SECRET: z
     .string({ message: "BETTER_AUTH_SECRET is required" })
     .min(1, "BETTER_AUTH_SECRET must not be empty"),

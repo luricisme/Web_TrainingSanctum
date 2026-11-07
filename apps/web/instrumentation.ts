@@ -14,7 +14,8 @@
  * https://nextjs.org/docs/app/guides/instrumentation
  */
 export async function register() {
-  if (process.env.NEXT_RUNTIME === "nodejs") {
-    await import("./lib/env");
-  }
+  // Run for every runtime (nodejs, edge, ...) — gating this to a single
+  // runtime risks silently skipping the fail-fast check under any other
+  // runtime Next.js invokes this hook for.
+  await import("./lib/env");
 }

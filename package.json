@@ -17,7 +17,9 @@
     "test": "vitest run -c vitest.config.ts",
     "test:api": "playwright test --project=api",
     "test:e2e": "playwright test --project=e2e",
-    "db:generate": "npm run generate -w packages/db"
+    "db:generate": "npm run generate -w packages/db",
+    "db:migrate:dev": "npm run migrate:dev -w packages/db",
+    "db:migrate:deploy": "npm run migrate:deploy -w packages/db"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",

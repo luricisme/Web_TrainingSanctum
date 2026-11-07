@@ -43,7 +43,7 @@ In the Vercel project → Settings → Environment Variables, add for
 | Variable | Production value | Preview value |
 | --- | --- | --- |
 | `DATABASE_URL` | Neon production branch pooled connection string | Leave unset if using the Neon-Vercel integration (it injects a per-preview branch URL automatically); otherwise set manually per branch |
-| `BETTER_AUTH_SECRET` | A strong random secret, e.g. `openssl rand -base64 32` | Can reuse the production value for now (no real auth wired up until story 1.2) |
+| `BETTER_AUTH_SECRET` | A strong random secret, e.g. `openssl rand -base64 32` | Generate a separate secret for Preview (don't reuse the production value), even though no real auth is wired up until story 1.2 |
 
 If you installed the Neon Vercel integration in step 1, it manages
 `DATABASE_URL` for Preview deployments itself — don't hand-set a single
