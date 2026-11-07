@@ -1,0 +1,31 @@
+// Training Sanctum — Prisma schema
+//
+// Story 1.1 scope only: the bare `User` model (skeleton) needed to prove the
+// Prisma wiring end-to-end. Card, Folder, and SchedulingRecord land in
+// Epic 2+ per the architecture spine. AD-2: Postgres is reachable only
+// through the client exported by this package — no other package
+// instantiates PrismaClient or issues raw SQL.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "./generated/client"
+  moduleFormat = "esm"
+}
+
+// Prisma 7 removed `url` from the datasource block — the connection string
+// now lives in prisma.config.ts (CLI/migrate) and is passed to PrismaClient
+// via a driver adapter at runtime (see client.ts).
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  hashedPassword String
+  timezone       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("users")
+}

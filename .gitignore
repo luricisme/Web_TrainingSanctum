@@ -1,2 +1,33 @@
 node_modules/
 npm-debug.log*
+
+# Next.js
+.next/
+out/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# Prisma
+packages/db/generated/
+
+# Testing
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# Editor / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+.vercel
+.env*

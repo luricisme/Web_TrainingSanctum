@@ -1,0 +1,33 @@
+{
+  "name": "training-sanctum",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/web",
+    "packages/domain",
+    "packages/db"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "start": "npm run start -w apps/web",
+    "lint": "npm run lint -ws --if-present",
+    "typecheck": "npm run typecheck -ws --if-present",
+    "test": "vitest run -c vitest.config.ts",
+    "test:api": "playwright test --project=api",
+    "test:e2e": "playwright test --project=e2e",
+    "db:generate": "npm run generate -w packages/db",
+    "db:migrate:dev": "npm run migrate:dev -w packages/db",
+    "db:migrate:deploy": "npm run migrate:deploy -w packages/db"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@types/node": "26.6.6",
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

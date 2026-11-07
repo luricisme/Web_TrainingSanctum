@@ -1,0 +1,27 @@
+{
+  "name": "@training-sanctum/db",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./client.ts",
+  "types": "./client.ts",
+  "exports": {
+    ".": "./client.ts"
+  },
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "prisma": "7.10.1",
+    "typescript": "5.9.3"
+  }
+}
