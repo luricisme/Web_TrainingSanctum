@@ -21,6 +21,16 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z
     .string({ message: "BETTER_AUTH_SECRET is required" })
     .min(1, "BETTER_AUTH_SECRET must not be empty"),
+  // Optional: Better Auth can infer its base URL from the incoming request in
+  // Next.js, but setting this explicitly is recommended behind a proxy/CDN
+  // (e.g. Vercel) so callback/redirect URLs are never derived from a
+  // spoofable forwarded header. Not required for story 1.2's email/password
+  // flow (no OAuth/email-verification redirects yet).
+  BETTER_AUTH_URL: z
+    .literal("")
+    .transform(() => undefined)
+    .or(z.string().url("BETTER_AUTH_URL must be a valid URL"))
+    .optional(),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

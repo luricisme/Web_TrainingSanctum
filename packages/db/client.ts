@@ -1,7 +1,7 @@
 // AD-2: the only place in the codebase allowed to instantiate PrismaClient.
 // Every other package/route imports the singleton exported from here.
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "./generated/client/client.js";
+import { PrismaClient } from "./generated/client/client";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -31,4 +31,4 @@ if (process.env.NODE_ENV !== "production") {
   global.__prisma = prisma;
 }
 
-export * from "./generated/client/client.js";
+export * from "./generated/client/client";
