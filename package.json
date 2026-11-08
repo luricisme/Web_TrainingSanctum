@@ -12,6 +12,7 @@
     "dev": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
     "start": "npm run start -w apps/web",
+    "postinstall": "npm run db:generate",
     "lint": "npm run lint -ws --if-present",
     "typecheck": "npm run typecheck -ws --if-present",
     "test": "vitest run -c vitest.config.ts",
