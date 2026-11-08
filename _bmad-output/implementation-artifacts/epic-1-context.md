@@ -4,7 +4,7 @@
 
 ## Goal
 
-A user can create an account, log in and out, and reach a live, publicly deployed instance of Training Sanctum with its five-item app shell in place. This epic also lays the engineering foundation everything after it depends on: the domain/API/db layering, CI running all three test suites, and the deployed Vercel+Neon environment. Nothing in later epics (card management, import, review, stats) can be built until this scaffold, auth, and deployment pipeline exist.
+A user can create an account, log in and out, and reach a live, publicly deployed instance of Training Sanctum with its four-item app shell in place. This epic also lays the engineering foundation everything after it depends on: the domain/API/db layering, CI running all three test suites, and the deployed Vercel+Neon environment. Nothing in later epics (card management, import, review, stats) can be built until this scaffold, auth, and deployment pipeline exist.
 
 ## Stories
 
@@ -45,7 +45,7 @@ A user can create an account, log in and out, and reach a live, publicly deploye
 ## UX & Interaction Patterns
 
 - Dual-theme design tokens (dark default, light via toggle) must be scaffolded as CSS variables mapped for Tailwind v4: background, card surface, elevated surface, text, accent (single saturated color used for exactly one actionable thing per screen, e.g. active nav item), semantic colors, borders/dividers. Dark mode is near-black charcoal-navy; light mode is a sage/white/ink palette recreated from a reference source — the light-mode contrast is flagged as an unverified assumption to resolve later (Epic 5), not in this epic.
-- Sidebar nav: fixed 240px width, five flat icon+label items (Review, Folders, Import, Stats, Settings), each linking to a placeholder page for now. Active item gets elevated-surface background + accent-colored text. Hidden entirely on mobile (<640px); review-specific hiding (focus mode) is out of scope for this epic and lands in Epic 4.
+- Sidebar nav: fixed 240px width, four flat icon+label items (Review, Classes, Stats, Settings — no Import item; import lives inside a Folder's "Add cards"), each linking to a placeholder page for now. Active item gets elevated-surface background + accent-colored text. Hidden entirely on mobile (<640px); review-specific hiding (focus mode) is out of scope for this epic and lands in Epic 4.
 - Theme toggle lives in Settings, switches the full token set, and the choice persists across reloads.
 - Unauthenticated visitors attempting to reach any shell route are redirected to login.
 - Responsive breakpoints to establish: mobile <640px, tablet 640–1024px, desktop >1024px.

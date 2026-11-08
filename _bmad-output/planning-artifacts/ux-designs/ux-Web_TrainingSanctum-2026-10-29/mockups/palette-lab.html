@@ -1,0 +1,256 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training Sanctum Palettes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: palette tabs on top, the selected palette rendered as two live app previews (dark + light) side by side, token table with contrast below. */
+:root {
+  --bg: #f4f4f6; --fg: #17181c; --muted: #5d606b; --line: #dfe0e6; --panel: #ffffff; --chip: #ececf1; --pick: #17181c; --pick-fg: #ffffff;
+  --good: #1f7a4d; --bad: #b3261e;
+  --display: "Fraunces", Georgia, serif; --body: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif; --mono: "JetBrains Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121317; --fg: #ececef; --muted: #9a9ca6; --line: #2a2c33; --panel: #1a1b20; --chip: #24262d; --pick: #ececef; --pick-fg: #121317;
+  --good: #6fcf97; --bad: #ff8a80; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121317; --fg: #ececef; --muted: #9a9ca6; --line: #2a2c33; --panel: #1a1b20; --chip: #24262d; --pick: #ececef; --pick-fg: #121317;
+  --good: #6fcf97; --bad: #ff8a80; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: clamp(28px, 4vw, 40px); line-height: 1.1; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 500; font-size: 22px; margin: 0; }
+.lede { color: var(--muted); max-width: 68ch; margin: 8px 0 0; }
+.diag { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.diag div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.diag b { display: block; margin-bottom: 4px; }
+.diag span { color: var(--muted); font-size: 14px; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.tab { font: inherit; font-weight: 500; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 999px; padding: 8px 14px 8px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.tab[aria-pressed="true"] { background: var(--pick); color: var(--pick-fg); border-color: var(--pick); }
+.tab:focus-visible, button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.dots { display: inline-flex; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--panel); margin-left: -4px; }
+.dots i:first-child { margin-left: 0 }
+.rec { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: var(--chip); color: var(--fg); }
+.tab[aria-pressed="true"] .rec { background: transparent; color: inherit; border: 1px solid currentColor; }
+
+.about { display: grid; gap: 6px; max-width: 75ch; }
+.about p { margin: 0; color: var(--muted); }
+.about .name { font-family: var(--display); font-size: 26px; font-weight: 600; color: var(--fg); }
+
+.previews { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr)); gap: 16px; }
+.mode-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+
+/* ---- mini app, painted only from --p-* vars set by JS ---- */
+.app { background: var(--p-bg); color: var(--p-text); border-radius: 14px; display: grid; grid-template-columns: 150px 1fr; overflow: hidden; border: 1px solid var(--line); min-height: 470px; }
+.side { background: var(--p-card); border-right: 1px solid var(--p-divider); padding: 16px 10px; display: flex; flex-direction: column; gap: 4px; }
+.brand { font-family: var(--display); font-weight: 600; font-size: 15px; padding: 0 8px 12px; color: var(--p-text); }
+.nav { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; font-size: 13px; color: var(--p-text2); }
+.nav.on { background: var(--p-elevated); color: var(--p-accent); font-weight: 600; }
+.nav svg { width: 14px; height: 14px; flex: none; }
+.badge { margin-left: auto; font-size: 11px; font-weight: 600; background: var(--p-accent); color: var(--p-on-accent); border-radius: 999px; padding: 0 6px; }
+.main { padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.topline { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--p-text3); gap: 8px; }
+.bar { height: 4px; background: var(--p-elevated); border-radius: 99px; overflow: hidden; flex: 1; max-width: 160px; }
+.bar i { display: block; height: 100%; width: 30%; background: var(--p-accent); }
+.card { background: var(--p-card); border: 1px solid var(--p-divider); border-radius: 12px; padding: 20px; box-shadow: 0 6px 20px rgba(0,0,0,.12); display: grid; gap: 8px; }
+.word { font-family: var(--display); font-size: 28px; font-weight: 600; line-height: 1.1; }
+.ipa { font-family: var(--mono); font-size: 12px; color: var(--p-text3); }
+.def { font-size: 13.5px; color: var(--p-text); }
+.ex { font-size: 13px; color: var(--p-text2); font-style: italic; border-left: 2px solid var(--p-border); padding-left: 10px; }
+.grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.g { font: inherit; font-size: 12.5px; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--p-border); background: transparent; color: var(--p-text2); display: grid; gap: 1px; text-align: center; }
+.g small { font-family: var(--mono); font-size: 10px; color: var(--p-text3); }
+.g.again { border-color: var(--p-error); color: var(--p-error); }
+.g.again small { color: var(--p-error); opacity: .8; }
+.row2 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { font: inherit; font-size: 13px; font-weight: 600; border: 0; border-radius: 8px; padding: 8px 14px; background: var(--p-accent); color: var(--p-on-accent); }
+.btn.ghost { background: transparent; border: 1px solid var(--p-border); color: var(--p-text2); font-weight: 500; }
+.sec { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--p-text2); }
+.sec i { width: 7px; height: 7px; background: var(--p-accent); }
+.list { background: var(--p-card); border-radius: 10px; border: 1px solid var(--p-divider); }
+.li { display: flex; justify-content: space-between; gap: 8px; padding: 9px 12px; font-size: 13px; border-top: 1px solid var(--p-divider); }
+.li:first-child { border-top: 0 }
+.li.hover { background: var(--p-elevated); }
+.li span { color: var(--p-text3); font-size: 12px; white-space: nowrap; }
+.pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.pill { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; border: 1px solid currentColor; }
+
+@media (max-width: 560px) {
+  .app { grid-template-columns: 1fr; }
+  .side { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--p-divider); }
+  .brand { width: 100%; padding-bottom: 4px; }
+}
+
+/* ---- tokens table ---- */
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 640px; }
+th, td { text-align: left; padding: 8px 12px; border-top: 1px solid var(--line); }
+thead th { border-top: 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td code { font-family: var(--mono); font-size: 12.5px; }
+.sw { display: inline-block; width: 16px; height: 16px; border-radius: 4px; vertical-align: -3px; margin-right: 8px; border: 1px solid var(--line); }
+.cr { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.ok { color: var(--good); } .no { color: var(--bad); }
+.head-row { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+.copy { font: inherit; font-weight: 600; font-size: 14px; background: var(--pick); color: var(--pick-fg); border: 0; border-radius: 8px; padding: 9px 16px; cursor: pointer; }
+pre { margin: 0; font-family: var(--mono); font-size: 12.5px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; max-height: 340px; }
+.note { color: var(--muted); font-size: 13.5px; margin: 0; }
+@media (prefers-reduced-motion: no-preference) { .app, .app * { transition: background-color .25s, color .25s, border-color .25s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Bộ màu cho Training Sanctum</h1>
+    <p class="lede">Mỗi bộ màu bên dưới được áp thẳng lên giao diện ôn tập thật của app, ở cả chế độ tối và sáng. Bảng cuối trang tính độ tương phản WCAG cho từng cặp màu chữ / nền, và có nút sao chép CSS để dán vào <code>globals.css</code>.</p>
+  </header>
+
+  <section class="diag" aria-label="Vấn đề của bộ màu hiện tại">
+    <div><b>Đỏ gạch đang làm hai việc</b><span>Accent <code>#b74242</code> trùng với màu lỗi. Nút chính và nút "Again" trông như cảnh báo.</span></div>
+    <div><b>Đỏ trên nền navy bị đục</b><span>Đỏ trầm và xanh than cùng tối, nên accent không nổi và chữ đỏ trên card chỉ khoảng 2.9:1.</span></div>
+    <div><b>Nền sage của bản sáng</b><span><code>#8ea89b</code> là màu trung tính tầm trung, xám xỉn, chữ phụ khó đọc trên đó và card trắng trông lạc tông.</span></div>
+    <div><b>Hai theme như hai app</b><span>Bản tối là navy, bản sáng là xanh rêu. Chỉ có màu đỏ nối hai bản lại.</span></div>
+  </section>
+
+  <nav class="tabs" id="tabs" aria-label="Chọn bộ màu"></nav>
+
+  <section class="about" id="about" aria-live="polite"></section>
+
+  <section class="previews">
+    <div><div class="mode-label">Chế độ tối (mặc định)</div><div class="app" id="app-dark"></div></div>
+    <div><div class="mode-label">Chế độ sáng</div><div class="app" id="app-light"></div></div>
+  </section>
+
+  <section style="display:grid;gap:12px">
+    <div class="head-row"><h2>Token và độ tương phản</h2></div>
+    <p class="note">Chữ thường cần ít nhất 4.5:1 (AA). Chữ phụ nhỏ cũng nên đạt mức này; viền và nút lớn chỉ cần 3:1.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Cặp màu</th><th>Tối</th><th>Tỉ lệ</th><th>Sáng</th><th>Tỉ lệ</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </section>
+
+  <section style="display:grid;gap:12px">
+    <div class="head-row"><h2>CSS cho globals.css</h2><button class="copy" id="copy" type="button">Sao chép CSS</button></div>
+    <pre id="css" tabindex="0"></pre>
+  </section>
+</div>
+
+<script>
+const P = [
+  { id: "brass", name: "Mực & Đồng", rec: true,
+    why: "Nền xanh mực trung tính, accent vàng đồng ấm. Gợi cảm giác thư viện buổi tối và bìa sách mạ đồng, hợp với cái tên Sanctum. Màu vàng không mang nghĩa lỗi, nên đỏ được dành riêng cho \"Again\" và thông báo lỗi. Bản sáng dùng nền giấy xám lạnh, accent chuyển sang đồng đậm để đủ tương phản.",
+    dark:  { bg:"#111318", card:"#191c23", elevated:"#232731", text:"#e9e7e2", text2:"#b6b4ae", text3:"#8b8a85", border:"#343844", divider:"#262a33", accent:"#e2a94b", accentHover:"#ecbb6a", onAccent:"#1a1206", success:"#6fbf8e", warning:"#e08a3c", error:"#ec6f63", info:"#7ea9d8" },
+    light: { bg:"#f3f4f6", card:"#ffffff", elevated:"#eceef2", text:"#16181d", text2:"#4a4f5a", text3:"#6b7180", border:"#d6d9e0", divider:"#e4e6eb", accent:"#9a6210", accentHover:"#7f500b", onAccent:"#ffffff", success:"#2f7d52", warning:"#b45309", error:"#c0392b", info:"#2f6aa8" } },
+  { id: "pine", name: "Rừng thông",
+    why: "Giữ lại tinh thần xanh lá của nền sage cũ nhưng làm cho đúng: nền tối ngả xanh rêu rất nhẹ, accent xanh ngọc tươi. Màu xanh đọc là \"tiến bộ\" và \"bình tĩnh\", hợp với việc học mỗi ngày. Bản sáng bỏ nền sage, dùng nền trắng ngả xanh nhẹ.",
+    dark:  { bg:"#0e1412", card:"#151d1a", elevated:"#1e2924", text:"#e4ebe7", text2:"#adbab3", text3:"#82918a", border:"#2c3a34", divider:"#222d29", accent:"#5cc79a", accentHover:"#79d5ad", onAccent:"#05140d", success:"#9ccc65", warning:"#e0a84f", error:"#ec6f63", info:"#6fa8d6" },
+    light: { bg:"#f1f5f2", card:"#ffffff", elevated:"#e6ede8", text:"#121a16", text2:"#43514a", text3:"#64736b", border:"#d2dcd6", divider:"#e1e8e3", accent:"#1b7650", accentHover:"#145f40", onAccent:"#ffffff", success:"#3d7a1f", warning:"#a8660c", error:"#c0392b", info:"#2a6496" } },
+  { id: "indigo", name: "Chàm tập trung",
+    why: "Nền xanh chàm sâu, accent tím-xanh dịu. Gần với hướng Linear / Raycast mà PRD ban đầu nhắm tới: yên tĩnh, kỹ thuật, ít cảm xúc. An toàn nhất, nhưng cũng ít cá tính nhất.",
+    dark:  { bg:"#101120", card:"#181a2e", elevated:"#21243c", text:"#e6e7f2", text2:"#b1b3c9", text3:"#868aa3", border:"#30344f", divider:"#252840", accent:"#959aff", accentHover:"#aeb1ff", onAccent:"#0d0f2a", success:"#5ec79a", warning:"#e2a94b", error:"#ef6b6b", info:"#6bb6e0" },
+    light: { bg:"#f5f5fa", card:"#ffffff", elevated:"#ececf6", text:"#14152a", text2:"#464a66", text3:"#686c8c", border:"#d8dae9", divider:"#e6e7f1", accent:"#4a4ed4", accentHover:"#3a3eb8", onAccent:"#ffffff", success:"#2f7d52", warning:"#b45309", error:"#c62f3a", info:"#2a6aa0" } },
+  { id: "vermilion", name: "Son đỏ tinh chỉnh",
+    why: "Nếu bạn vẫn muốn giữ chất Spy x Family: accent đỏ son tươi hơn, nền trung tính ấm thay cho navy, bản sáng bỏ sage. Nhược điểm còn lại là accent và lỗi vẫn cùng họ đỏ, nên trạng thái lỗi phải có thêm icon hoặc chữ.",
+    dark:  { bg:"#141416", card:"#1d1c20", elevated:"#28262b", text:"#ece9e6", text2:"#bab5b0", text3:"#8d8883", border:"#38353c", divider:"#2a282d", accent:"#ef6a5f", accentHover:"#f5857b", onAccent:"#1c0806", success:"#6dbb8a", warning:"#e0a84f", error:"#ff8a7a", info:"#7ea9d8" },
+    light: { bg:"#f5f3f2", card:"#ffffff", elevated:"#efeceb", text:"#1a1716", text2:"#4e4845", text3:"#736c68", border:"#ddd8d5", divider:"#ebe7e5", accent:"#c0372e", accentHover:"#a32d25", onAccent:"#ffffff", success:"#2f7d52", warning:"#a8660c", error:"#9e2a22", info:"#2f6aa8" } },
+  { id: "current", name: "Hiện tại",
+    why: "Bộ màu đang dùng trong globals.css, để so sánh.",
+    dark:  { bg:"#14151f", card:"#1f2130", elevated:"#262838", text:"#ecf1f2", text2:"#c6c9d2", text3:"#9b9fae", border:"#3a3d4d", divider:"#2a2c3c", accent:"#b74242", accentHover:"#c65252", onAccent:"#faf7f0", success:"#5c8a68", warning:"#c98a3a", error:"#b74242", info:"#6a8a99" },
+    light: { bg:"#8ea89b", card:"#faf7f0", elevated:"#ecf1f2", text:"#0e0e12", text2:"#3a3d4d", text3:"#6b6f80", border:"#c6c9d2", divider:"#c6c9d2", accent:"#b74242", accentHover:"#c65252", onAccent:"#faf7f0", success:"#5c8a68", warning:"#c98a3a", error:"#b74242", info:"#6a8a99" } },
+];
+
+const icon = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const NAV = [
+  ["Review", '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>', true, 14],
+  ["Folders", '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'],
+  ["Import", '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>'],
+  ["Stats", '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>'],
+  ["Settings", '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.2H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9 4.6V4.5a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V10a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>'],
+];
+const APP = `
+  <aside class="side"><div class="brand">Training Sanctum</div>
+    ${NAV.map(([n, d, on, b]) => `<div class="nav${on ? " on" : ""}">${icon(d)}${n}${b ? `<span class="badge">${b}</span>` : ""}</div>`).join("")}
+  </aside>
+  <div class="main">
+    <div class="topline"><span>GRE Core · thẻ 12 / 40</span><div class="bar"><i></i></div></div>
+    <div class="card">
+      <div class="word">ephemeral</div>
+      <div class="ipa">/ɪˈfem(ə)rəl/ · adjective</div>
+      <div class="def">Lasting for a very short time; transitory.</div>
+      <div class="ex">"Fame in the age of social media is often ephemeral."</div>
+    </div>
+    <div class="grades">
+      <button class="g again" type="button" tabindex="-1">Again<small>1 · &lt;10m</small></button>
+      <button class="g" type="button" tabindex="-1">Hard<small>2 · 1d</small></button>
+      <button class="g" type="button" tabindex="-1">Good<small>3 · 1d</small></button>
+      <button class="g" type="button" tabindex="-1">Easy<small>4 · 4d</small></button>
+    </div>
+    <div class="sec"><i></i>Recently studied</div>
+    <div class="list">
+      <div class="li">Academic Word List · Sublist 3<span>42 thẻ</span></div>
+      <div class="li hover">Economist idioms<span>18 đến hạn</span></div>
+    </div>
+    <div class="row2">
+      <button class="btn" type="button" tabindex="-1">Start review</button>
+      <button class="btn ghost" type="button" tabindex="-1">Add cards</button>
+      <span class="pills"><span class="pill" style="color:var(--p-success)">Streak 9</span><span class="pill" style="color:var(--p-warning)">3 leech</span><span class="pill" style="color:var(--p-info)">Synced</span></span>
+    </div>
+  </div>`;
+
+const K = { bg:"bg", card:"card", elevated:"elevated", text:"text", text2:"text2", text3:"text3", border:"border", divider:"divider", accent:"accent", "on-accent":"onAccent", success:"success", warning:"warning", error:"error", info:"info" };
+function paint(el, t) { for (const [css, k] of Object.entries(K)) el.style.setProperty("--p-" + css, t[k]); }
+
+function lum(hex) { const c = hex.slice(1).match(/../g).map(h => { const v = parseInt(h, 16) / 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; }
+function ratio(a, b) { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); }
+
+const PAIRS = [
+  ["Chữ chính / nền", "text", "bg", 4.5], ["Chữ chính / card", "text", "card", 4.5],
+  ["Chữ phụ / card", "text2", "card", 4.5], ["Chữ mờ / card", "text3", "card", 4.5],
+  ["Accent làm chữ / card", "accent", "card", 4.5], ["Chữ trên nút accent", "onAccent", "accent", 4.5],
+  ["Lỗi / card", "error", "card", 4.5], ["Thành công / card", "success", "card", 4.5],
+  ["Viền / card", "border", "card", 1.3],
+];
+const cell = (t, f, b, min) => { const r = ratio(t[f], t[b]); const ok = r >= min; return `<td><span class="sw" style="background:${t[f]}"></span><code>${t[f]}</code></td><td class="cr ${ok ? "ok" : "no"}">${r.toFixed(2)} ${ok ? "✓" : "✗"}</td>`; };
+
+function css(p) {
+  const map = [["bg","bg"],["card","card"],["elevated","elevated"],["text","text"],["text-secondary","text2"],["text-tertiary","text3"],["border","border"],["divider","divider"],["row-hover","elevated"],["accent","accent"],["accent-hover","accentHover"],["on-accent","onAccent"],["success","success"],["warning","warning"],["error","error"],["info","info"]];
+  const block = t => map.map(([n, k]) => `  --color-${n}: ${t[k]};`).join("\n");
+  return `/* ${p.name} */\n:root {\n${block(p.dark)}\n}\n\n:root[data-theme="light"] {\n${block(p.light)}\n}\n\n/* Thêm vào @theme inline:\n   --color-on-accent: var(--color-on-accent);\n   và đổi chữ trên nút accent từ text-soft sang on-accent. */`;
+}
+
+const tabs = document.getElementById("tabs");
+let cur = P[0];
+function select(p) {
+  cur = p;
+  [...tabs.children].forEach(b => b.setAttribute("aria-pressed", b.dataset.id === p.id));
+  paint(document.getElementById("app-dark"), p.dark);
+  paint(document.getElementById("app-light"), p.light);
+  document.getElementById("about").innerHTML = `<div class="name">${p.name}${p.rec ? ' <span class="rec">Đề xuất</span>' : ""}</div><p>${p.why}</p>`;
+  document.getElementById("tbody").innerHTML = PAIRS.map(([l, f, b, m]) => `<tr><th scope="row" style="font-weight:500">${l}</th>${cell(p.dark, f, b, m)}${cell(p.light, f, b, m)}</tr>`).join("");
+  document.getElementById("css").textContent = css(p);
+  try { localStorage.setItem("ts-palette", p.id); } catch (e) {}
+}
+P.forEach(p => {
+  const b = document.createElement("button");
+  b.className = "tab"; b.type = "button"; b.dataset.id = p.id;
+  b.innerHTML = `<span class="dots"><i style="background:${p.dark.bg}"></i><i style="background:${p.dark.accent}"></i><i style="background:${p.light.accent}"></i></span>${p.name}${p.rec ? '<span class="rec">Đề xuất</span>' : ""}`;
+  b.onclick = () => select(p);
+  tabs.appendChild(b);
+});
+document.getElementById("app-dark").innerHTML = APP;
+document.getElementById("app-light").innerHTML = APP;
+let saved = null; try { saved = localStorage.getItem("ts-palette"); } catch (e) {}
+select(P.find(p => p.id === saved) || P[0]);
+
+document.getElementById("copy").onclick = async (e) => {
+  const btn = e.currentTarget;
+  try { await navigator.clipboard.writeText(document.getElementById("css").textContent); btn.textContent = "Đã sao chép"; }
+  catch (err) { const r = document.createRange(); r.selectNodeContents(document.getElementById("css")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Đã chọn sẵn, nhấn Ctrl+C"; }
+  setTimeout(() => btn.textContent = "Sao chép CSS", 2200);
+};
+</script>

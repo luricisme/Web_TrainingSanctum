@@ -3,29 +3,30 @@
 /*
  * Dual-theme design tokens from DESIGN.md
  * (_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/DESIGN.md).
- * Dark is the default canvas; data-theme="light" recreates the sage/white
- * light theme. Consumed by Tailwind v4's @theme inline so Story 1.5 (sidebar
- * nav / review UI) can use `bg-background`, `text-accent`, etc. without
- * rework.
+ * Palette: "Focus Indigo". Dark is the default canvas; data-theme="light"
+ * switches to the indigo paper theme. The accent changes per theme to keep
+ * AA contrast, so text on an accent fill must use `on-accent`.
+ * Consumed by Tailwind v4's @theme inline so Story 1.5 (sidebar nav / review
+ * UI) can use `bg-background`, `text-accent`, etc. without rework.
  */
 :root {
-  --color-bg: #14151f;
-  --color-card: #1f2130;
-  --color-elevated: #262838;
-  --color-text: #ecf1f2;
-  --color-text-soft: #faf7f0;
-  --color-text-secondary: #c6c9d2;
-  --color-text-tertiary: #9b9fae;
-  --color-border: #3a3d4d;
-  --color-divider: #2a2c3c;
-  --color-row-hover: #262838;
+  --color-bg: #101120;
+  --color-card: #181a2e;
+  --color-elevated: #21243c;
+  --color-text: #e6e7f2;
+  --color-text-secondary: #b1b3c9;
+  --color-text-tertiary: #868aa3;
+  --color-border: #30344f;
+  --color-divider: #252840;
+  --color-row-hover: #21243c;
 
-  --color-accent: #b74242;
-  --color-accent-hover: #c65252;
-  --color-success: #5c8a68;
-  --color-warning: #c98a3a;
-  --color-error: #b74242;
-  --color-info: #6a8a99;
+  --color-accent: #959aff;
+  --color-accent-hover: #aeb1ff;
+  --color-on-accent: #0d0f2a;
+  --color-success: #5ec79a;
+  --color-warning: #e2a94b;
+  --color-error: #ef6b6b;
+  --color-info: #6bb6e0;
 
   --radius-sm: 6px;
   --radius-md: 12px;
@@ -34,16 +35,23 @@
 }
 
 :root[data-theme="light"] {
-  --color-bg: #8ea89b;
-  --color-card: #faf7f0;
-  --color-elevated: #ecf1f2;
-  --color-text: #0e0e12;
-  --color-text-soft: #0e0e12;
-  --color-text-secondary: #3a3d4d;
-  --color-text-tertiary: #6b6f80;
-  --color-border: #c6c9d2;
-  --color-divider: #c6c9d2;
-  --color-row-hover: #ecf1f2;
+  --color-bg: #f5f5fa;
+  --color-card: #ffffff;
+  --color-elevated: #ececf6;
+  --color-text: #14152a;
+  --color-text-secondary: #464a66;
+  --color-text-tertiary: #686c8c;
+  --color-border: #d8dae9;
+  --color-divider: #e6e7f1;
+  --color-row-hover: #ececf6;
+
+  --color-accent: #4a4ed4;
+  --color-accent-hover: #3a3eb8;
+  --color-on-accent: #ffffff;
+  --color-success: #2f7d52;
+  --color-warning: #b45309;
+  --color-error: #c62f3a;
+  --color-info: #2a6aa0;
 }
 
 @theme inline {
@@ -51,7 +59,6 @@
   --color-card: var(--color-card);
   --color-elevated: var(--color-elevated);
   --color-foreground: var(--color-text);
-  --color-foreground-soft: var(--color-text-soft);
   --color-foreground-secondary: var(--color-text-secondary);
   --color-foreground-tertiary: var(--color-text-tertiary);
   --color-border: var(--color-border);
@@ -60,6 +67,7 @@
 
   --color-accent: var(--color-accent);
   --color-accent-hover: var(--color-accent-hover);
+  --color-on-accent: var(--color-on-accent);
   --color-success: var(--color-success);
   --color-warning: var(--color-warning);
   --color-error: var(--color-error);

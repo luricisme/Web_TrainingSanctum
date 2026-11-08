@@ -22,19 +22,19 @@ FR-1: User authentication — a user can create an account and log in/out with e
 
 FR-2: Session persistence — a logged-in user stays authenticated across browser sessions until explicit logout or expiry (30-day sliding window per architecture). Concurrent sessions from multiple devices are permitted, last-write-wins on Scheduling Record updates.
 
-FR-3: Create and edit cards — a user can create/edit a Card with fields: Term, Definition, Example Sentence, Context/Collocation, Part of Speech. Term and Definition are required; others optional. Full Unicode (IPA, accented characters, non-Latin scripts) must be accepted and rendered correctly.
+FR-3: Create and edit cards — a user can create/edit a Card with fields: Term, Definition, Example Sentence, Context/Collocation, Part of Speech. Term and Definition are required; others optional. Full Unicode (IPA, accented characters, non-Latin scripts) must be accepted and rendered correctly. Cards are always created inside a Folder via "Add cards", which offers two modes: Manual (Quizlet-style multi-row editor) and Import (FR-6/FR-7).
 
 FR-4: Delete a card — a user can delete a Card, which removes both its Scheduling Records and review history from the due queue immediately.
 
-FR-5: Folder CRUD — a user can create, rename, and delete Folders, and assign Cards to exactly one Folder (including a default "Unsorted" Folder). Deleting a Folder prompts for handling its Cards (default: move to Unsorted; alternative: delete with it) — never silently orphans/deletes. Folders are flat, single-level only.
+FR-5: Class & Folder CRUD — fixed hierarchy Class → Folder → Card. A user can create/rename/delete Classes and Folders (Folders always live in exactly one Class) and move a Card to any Folder, in any Class. Every Class has one built-in "Unsorted" Folder that cannot be renamed or deleted. Deleting a Folder: move its Cards to the Class's Unsorted (default) or delete them. Deleting a Class: move all its Folders to another Class (default; Unsorted Cards merge into the target's Unsorted, name clashes get " (2)") or delete everything after typing the Class name. Both deletes are atomic. No sub-folders, no sub-classes.
 
-FR-6: Paste import — a user can paste line-delimited term/definition pairs (configurable delimiter, chosen per-import) into a text box and have them parsed into Cards in one action, in under 5 seconds end-to-end. Malformed lines are reported individually (line number + reason) without discarding valid lines. A pasted line whose Term exactly matches (case-insensitive, trimmed) an existing Card's Term in the target Folder is treated as a duplicate, skipped and reported.
+FR-6: Paste import — inside a Folder's Add cards → Import → Paste, a user pastes line-delimited term/definition pairs (delimiter chosen per import) and presses Preview; the lines open in the import review editor (the Manual-mode row editor, rows labelled with source line numbers, no column mapping), where malformed rows show an inline reason and duplicates of the Folder's existing Terms (case-insensitive, trimmed) are flagged as "will be skipped". The user edits or removes rows, then Save commits: valid rows are created, still-invalid rows and still-duplicate rows are reported, never silently dropped or duplicated. Under 5 seconds of system time (Preview + Save, excluding editing time). Results: Created / Duplicates skipped / Errors.
 
-FR-7: CSV/Excel import — a user can upload a CSV or Excel file mapping columns to the five Card fields via a column-mapping step shown before commit. Rows with invalid data are reported; valid rows still commit. Same duplicate-detection rule as FR-6 applies.
+FR-7: CSV/Excel import — upload a CSV/Excel file, map its columns to the five Card fields, then review the mapped rows in the same import review editor before Save. Same inline errors, duplicate flagging, row removal, re-check at Save, 5-second system-time budget and three-group results as FR-6.
 
 FR-8: SM-2 scheduling per direction — the system computes the next `interval`, `repetitions`, and `ease_factor` for a Scheduling Record using the classical SM-2 algorithm, independently per Recall Direction. New Scheduling Record defaults: `ease_factor = 2.5`, `repetitions = 0`. Learning-phase intervals: Step 1 = 1 day, Step 2 = 6 days, then EF-driven. "Again" (quality 1) resets `repetitions` to 0, restarts learning steps, and does not change `ease_factor`. `ease_factor` floors at 1.3. At equal `repetitions`, Hard/Good/Easy produce an identical next interval, diverging only in resulting `ease_factor`. Grade-to-quality mapping: Again=1, Hard=3, Good=4, Easy=5. Grading one direction does not alter the other direction's Scheduling Record. Must match the worked fixtures in the PRD addendum exactly.
 
-FR-9: Due-queue review — the system presents due Scheduling Records (per-direction) one at a time: prompt, then reveal, then Grade capture. A Card due in both directions appears as two separate, independently-gradable queue entries. Entries ordered oldest-due-first. Fully keyboard-operable (Space reveals; 1–4 or J/K/L/; grades). Grading and advancing renders with sub-100ms perceived transition latency under rapid input.
+FR-9: Due-queue review — the system presents due Scheduling Records (per-direction) one at a time: prompt, then reveal, then Grade capture. A Card due in both directions appears as two separate, independently-gradable queue entries. Default scope is all Classes; a session can also be scoped to one Class or one Folder ("Review this class/folder"). Entries ordered oldest-due-first. Fully keyboard-operable (Space reveals; 1–4 or J/K/L/; grades). Grading and advancing renders with sub-100ms perceived transition latency under rapid input.
 
 FR-10: Daily batch cap — the due queue for a session is capped at a configurable daily limit (default 20) applying only to new-card introduction; already-due cards are never withheld. The cap counts Cards (not Scheduling Records). A Card reset to `repetitions = 0` via "Again" is not a New Card and is uncapped.
 
@@ -80,7 +80,7 @@ NFR-6: Live deployment — the product ships to a live, publicly accessible depl
 - Performance budgets (AD-13): sub-100ms grade→next-card transition; 200ms app-open→due-queue-paint; sub-5s paste/CSV import end-to-end.
 - Auth convention: Better Auth session cookie required on every Route Handler except `/api/auth/**`; unauthenticated requests return 401 with the standard error envelope; 30-day sliding session window.
 - Config validation: environment variables (`DATABASE_URL`, `BETTER_AUTH_SECRET`, etc.) validated against a Zod schema at process start; fail fast on missing/malformed vars.
-- Error envelope convention: `{ error: { code, message, fields?, details? } }` — `fields` for single-record field errors (FR-3), `details` for batch/line-numbered errors (FR-6/FR-7); never both, never a bare string.
+- Error envelope convention: `{ error: { code, message, fields?, details? } }` — `fields` for single-record field errors (FR-3), `details` for batch/line-numbered errors (FR-6/FR-7, and multi-row saves in Manual mode, FR-3); never both, never a bare string.
 - Observability: every write path that can silently lose data if it fails partway (import commit, grade write, export, restore, folder-delete cascade) logs a structured single-line summary (operation, record counts, outcome).
 - Stack pinning: Next.js 16.x (App Router, Turbopack, Node 20+), TypeScript 5.x, Prisma 7.8.x, Postgres via Neon (free tier), Better Auth + `@better-auth/prisma-adapter`, TanStack Query v5, Zod 3.x/4.x, Tailwind CSS v4 (tokens mapped to DESIGN.md), Vitest, Playwright, Vercel hosting, GitHub Actions CI.
 - Deployment topology: Vercel production + per-branch preview deployments each paired with a Neon branch seeded from minimal fixtures (not a prod copy); CI spins up a disposable Postgres per run; local dev uses `.env.local` + `prisma migrate dev` as the only schema-change path.
@@ -91,19 +91,19 @@ UX-DR1: Implement the dual-theme design token set (dark default / light toggle) 
 
 UX-DR2: Build the Review card component: large soft-rounded (`rounded.lg`) surface, center-aligned, fixed bounds that never resize between prompt and revealed states, Quizlet-style 3D Y-axis flip (520ms, ease-out) on click/tap/Space, inert top-right icon row (pin/audio/star).
 
-UX-DR3: Build the Grade buttons component: Again / Hard / Good / Easy, visible only after flip, each labeled with its keyboard shortcut; Again styled toward accent/danger; Hard/Good/Easy equal weight to each other (never implying Hard shortens the next interval, per classical SM-2).
+UX-DR3: Build the Grade buttons component: Again / Hard / Good / Easy, visible only after flip, each labeled with its keyboard shortcut; Again styled with the `error` color (never the accent); Hard/Good/Easy equal weight to each other (never implying Hard shortens the next interval, per classical SM-2).
 
-UX-DR4: Build the Sidebar nav component: fixed 240px width, five flat icon+label items (Review, Folders, Import, Stats, Settings), active-item styling (`elevated` background + accent text), hidden entirely during review focus mode and on mobile (<640px).
+UX-DR4: Build the Sidebar nav component: fixed 240px width, four flat icon+label items (Review, Classes, Stats, Settings), active-item styling (`elevated` background + accent text), hidden entirely during review focus mode and on mobile (<640px). There is no Import item — import lives inside a Folder's "Add cards" (UX-DR9).
 
-UX-DR5: Build the List/folder row component: rows grouped under section headers preceded by the small red square section-bullet marker, hover state (`row-hover`), trailing "..." overflow menu for rename/delete.
+UX-DR5: Build the List/folder row component: rows grouped under section headers preceded by the small accent-colored square section-bullet marker, hover state (`row-hover`), trailing "..." overflow menu for rename/delete.
 
 UX-DR6: Build the Progress counter (mono-font "X / Y") and streak indicator (flame icon + day count), both visible outside active review only (per FR-11/FR-12).
 
-UX-DR7: Build the Modal component for: folder-delete confirmation (two explicit buttons — "Move to Unsorted" primary / "Delete cards too" secondary-danger, no checkbox) and restore-from-backup confirmation (consequence statement + Confirm/Cancel, no type-to-confirm).
+UX-DR7: Build the Modal component for: folder-delete confirmation (two explicit buttons — "Move cards to Unsorted" primary / "Delete cards too" secondary-danger, no checkbox); class-delete confirmation ("Move folders to…" with a target-Class picker as primary, "Delete class and everything in it" secondary-danger that only enables after typing the Class name; when no other Class exists only the delete option is shown); and restore-from-backup confirmation (consequence statement + Confirm/Cancel, no type-to-confirm).
 
-UX-DR8: Build the Empty due-queue state: centered, prominent streak count, calm congratulatory line, primary "+ Add card" button — never a bare "nothing to do" message.
+UX-DR8: Build the Empty due-queue state: centered, prominent streak count, calm congratulatory line, primary "+ Add card" button (opens Manual mode in the last-used Folder, with a Folder picker to change it) — never a bare "nothing to do" message.
 
-UX-DR9: Build the Import screen: pill-style Paste/Upload-file tabs feeding one shared column-mapping + error-review step, and a post-commit results screen grouped into exactly 3 sections (Created / Duplicates skipped / Errors, each error with line number + reason).
+UX-DR9: Build the "Add cards" panel opened from inside a Folder, with two modes in a pill switcher: **Manual** (Quizlet-style editor — numbered term/definition rows, optional fields expandable per row, "+ Add row", Tab moves to the next field and Enter on the last field adds a row, one Save creates all valid rows) and **Import** (Paste / Upload-file sub-tabs; Paste → delimiter + "Preview", Upload → column mapping). Import always ends in the **import review editor**: the same row editor as Manual, prefilled with the parsed rows, each labelled with its source line number, with inline errors on malformed rows, a "Already in {Folder} — will be skipped" flag on duplicates (cleared when the Term is edited), and a remove (×) button per row; a summary strip above the rows reads "30 rows · 2 need fixing · 1 duplicate". Save commits, then a results view shows exactly 3 groups (Created / Duplicates skipped / Errors, each error with line number + reason). The target Folder is fixed to the Folder the panel was opened from and shown in the panel header. There is no standalone Import page or nav item.
 
 UX-DR10: Implement responsive breakpoints (mobile <640px, tablet 640–1024px, desktop >1024px): sidebar hidden and grade-button row wraps below 640px; review session stays single-column/centered (card capped at 640px) at all sizes.
 
@@ -111,7 +111,7 @@ UX-DR11: Implement full keyboard interaction for the review loop: Space reveals,
 
 UX-DR12: Implement mobile touch interactions for review: tap-to-flip plus 4-directional swipe mapped to the four grades, additive to (not replacing) the grade buttons' own tap targets.
 
-UX-DR13: Verify and fix WCAG AA contrast in both themes before ship, with explicit focus on the unverified light-mode combination (sage background × white cards × charcoal-ink text) flagged `[ASSUMPTION]` in DESIGN.md.
+UX-DR13: Verify WCAG AA contrast in both themes before ship against the measured ratios recorded in DESIGN.md ("Focus Indigo" palette); any token added later must be checked against `card` and `bg` in both themes.
 
 UX-DR14: Implement a visible focus-ring/`:focus-visible` state on every interactive element sufficient for full keyboard navigation of the entire app (not just the review loop), with tab order following reading order on every surface.
 
@@ -125,9 +125,9 @@ FR-1: Epic 1 - User account creation and login/logout
 FR-2: Epic 1 - Session persistence across browser sessions (30-day sliding window)
 FR-3: Epic 2 - Create and edit a Card (5 fields, Unicode-safe)
 FR-4: Epic 2 - Delete a Card (cascades both Scheduling Records)
-FR-5: Epic 2 - Folder CRUD and card-folder assignment, with delete-cascade choice
-FR-6: Epic 3 - Paste import with per-line error/duplicate reporting
-FR-7: Epic 3 - CSV/Excel import with column mapping and per-row error/duplicate reporting
+FR-5: Epic 2 - Class & Folder CRUD (Class → Folder → Card, per-Class Unsorted), card moves, folder-delete and class-delete choices
+FR-6: Epic 3 - Paste import (Import mode of a Folder's Add cards) → import review editor → Save, with per-line error/duplicate reporting
+FR-7: Epic 3 - CSV/Excel import with column mapping → import review editor → Save, with per-row error/duplicate reporting
 FR-8: Epic 4 - Classical SM-2 scheduling engine, per Recall Direction
 FR-9: Epic 4 - Due-queue review session (keyboard-first, ordered, dual-direction entries)
 FR-10: Epic 4 - Daily new-card batch cap
@@ -140,19 +140,19 @@ FR-15: Epic 5 - Progress & stats view (streaks, totals, retention curve)
 ## Epic List
 
 ### Epic 1: Foundation, Auth & Live Deployment
-A user can create an account, log in and out, and reach a live, publicly deployed instance of Training Sanctum with its five-item app shell in place. This epic also lays the engineering foundation everything after it depends on: the domain/API/db layering from the Structural Seed, CI running all three test suites, and the deployed Vercel+Neon environment.
+A user can create an account, log in and out, and reach a live, publicly deployed instance of Training Sanctum with its four-item app shell in place. This epic also lays the engineering foundation everything after it depends on: the domain/API/db layering from the Structural Seed, CI running all three test suites, and the deployed Vercel+Neon environment.
 **FRs covered:** FR-1, FR-2
 **Implementation notes:** Monorepo scaffold (`apps/web`, `packages/domain`, `packages/db`, `tests/`) per the Architecture Structural Seed — no starter template exists, this is built from scratch; Better Auth + Prisma + `User.timezone` capture at signup (AD-8 prerequisite); Zod env-var validation at process start; Vitest/Playwright wiring and GitHub Actions CI (AD-12, NFR-4); Vercel production + preview deployments with Neon branching (NFR-6, AD-11 infra durability); dark/light design-token scaffolding (UX-DR1, UX-DR16) and the Sidebar nav shell (UX-DR4, minus review-specific hide logic which lands in Epic 4); standard response envelope and error envelope conventions (AD-10, Consistency Conventions) established here for all later Route Handlers to follow.
 
-### Epic 2: Card & Folder Management
-A user can manually create, edit, and delete Cards with all five fields (full Unicode support), and organize them into Folders — including the default "Unsorted" Folder and a safe, explicit choice of what happens to a Folder's Cards on delete.
+### Epic 2: Class, Folder & Card Management
+A user can organize study material as Class → Folder → Card: create, rename, and delete Classes and Folders (each Class with its built-in "Unsorted" Folder), add Cards inside a Folder through the Manual mode of "Add cards", and edit, delete, and move Cards — with safe, explicit choices of what happens to contents when a Folder or Class is deleted.
 **FRs covered:** FR-3, FR-4, FR-5
-**Implementation notes:** Establishes the shared `createCardWithSchedulingRecords` domain function (AD-9) that Epic 3's import also calls; field-level validation via Zod (AD-6) and the `fields` error-envelope shape; folder-delete-cascade wrapped in one Prisma transaction (AD-11); List/folder row component (UX-DR5) and folder-delete modal (UX-DR7); Unicode-safe text fields (NFR-5).
+**Implementation notes:** Establishes the shared `createCardWithSchedulingRecords` domain function (AD-9) that Epic 3's import also calls; field-level validation via Zod (AD-6) and the `fields` error-envelope shape; folder-delete and class-delete cascades each wrapped in one Prisma transaction (AD-11); Class created together with its Unsorted Folder in one transaction; List/folder row component (UX-DR5), folder-delete and class-delete modals (UX-DR7), and the "Add cards" panel shell with its Manual mode (UX-DR9, Import mode lands in Epic 3); Unicode-safe text fields (NFR-5).
 
 ### Epic 3: Bulk Import
-A user can paste line-delimited term/definition pairs or upload a CSV/Excel file and have them parsed into Cards in one pass, under 5 seconds, with duplicates and malformed rows clearly reported without losing the valid rows in the same batch.
+A user can paste line-delimited term/definition pairs or upload a CSV/Excel file, review and fix the parsed rows in the same editor as manual entry, and save them as Cards in one pass, with duplicates and malformed rows clearly flagged and reported without losing the valid rows in the same batch.
 **FRs covered:** FR-6, FR-7
-**Implementation notes:** `parseImportBlock` and `detectDuplicates` as shared pure domain functions used identically by both import paths (AD-5); reuses Epic 2's `createCardWithSchedulingRecords` (AD-9) rather than constructing Cards independently; column-mapping step before commit; Import screen with Paste/Upload pill tabs and the 3-group results screen (UX-DR9); `details` (line-numbered) error-envelope shape; sub-5-second import performance budget (AD-13).
+**Implementation notes:** `parseImportBlock` and `detectDuplicates` as shared pure domain functions used identically by both import paths (AD-5); read-only `POST /api/import/parse` feeding the import review editor, committed through Epic 2's `POST /api/cards/batch` (shared with Manual mode, duplicates re-checked at commit) and `createCardWithSchedulingRecords` (AD-9) rather than constructing Cards independently; column-mapping step for files only; Import mode of the Folder's "Add cards" panel with Paste/Upload sub-tabs, the import review editor and the 3-group results view (UX-DR9), always targeting the Folder it was opened from; `details` (line-numbered) error-envelope shape; sub-5-second import system-time budget (AD-13).
 
 ### Epic 4: Spaced Repetition Review Engine
 A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with the new-card batch cap and distraction-free focus mode in place.
@@ -166,7 +166,7 @@ A user can see their current/longest streak and basic stats (including the SM-2 
 
 ## Epic 1: Foundation, Auth & Live Deployment
 
-A user can create an account, log in/out, and reach a live, publicly deployed instance of Training Sanctum with its five-item app shell in place. This epic also lays the engineering foundation everything after it depends on.
+A user can create an account, log in/out, and reach a live, publicly deployed instance of Training Sanctum with its four-item app shell in place. This epic also lays the engineering foundation everything after it depends on.
 
 ### Story 1.1: Live, Deployed Application Skeleton
 
@@ -266,7 +266,7 @@ So that the product already feels like itself before individual features exist.
 
 **Given** a logged-in user
 **When** they land in the app
-**Then** they see the five-item sidebar nav (Review, Folders, Import, Stats, Settings) styled per `DESIGN.md` tokens, each linking to a placeholder page
+**Then** they see the four-item sidebar nav (Review, Classes, Stats, Settings) styled per `DESIGN.md` tokens, each linking to a placeholder page
 
 **Given** the theme toggle
 **When** switched
@@ -277,32 +277,104 @@ So that the product already feels like itself before individual features exist.
 **Then** they're redirected to login
 **And** on mobile (<640px) the sidebar is hidden per the responsive breakpoint rule
 
-## Epic 2: Card & Folder Management
+## Epic 2: Class, Folder & Card Management
 
-A user can manually create, edit, and delete Cards with all five fields (full Unicode support), and organize them into Folders — including the default "Unsorted" Folder and a safe, explicit choice of what happens to a Folder's Cards on delete.
+A user can organize study material as Class → Folder → Card: create, rename, and delete Classes and Folders (each Class with its built-in "Unsorted" Folder), add Cards inside a Folder through the Manual mode of "Add cards", and edit, delete, and move Cards — with safe, explicit choices of what happens to contents when a Folder or Class is deleted.
 
-### Story 2.1: Create a Card
+### Story 2.1: Class CRUD
 
 As a user,
-I want to create a Card with the five fields,
-So that I can capture a new word to study later.
+I want to create, rename, and delete Classes,
+So that I can separate my study material by course or goal.
 
 **Acceptance Criteria:**
 
-**Given** I'm on the create-card form
-**When** I fill Term + Definition (required) and submit
-**Then** a Card is created with two Scheduling Records at SM-2 defaults (`ease_factor=2.5`, `repetitions=0`, `next_review_date`=start of today) and assigned to the default "Unsorted" folder unless I pick another
+**Given** I have no Classes yet
+**When** I open Classes
+**Then** I see an empty state with a primary "Create class" button
 
-**Given** Term or Definition is empty
-**When** I submit
-**Then** I get a field-level validation error and no Card is created
+**Given** I create a Class with a name
+**When** I save
+**Then** it appears in my Class list immediately, already containing one "Unsorted" Folder, both created in one transaction
+
+**Given** an existing Class
+**When** I rename it
+**Then** the new name is reflected everywhere it's referenced
+
+**Given** a Class that has Folders and another Class exists
+**When** I delete it
+**Then** I'm prompted to choose "Move folders to…" (default, with a target-Class picker) or "Delete class and everything in it"
+**And** on move, its Unsorted Cards merge into the target Class's Unsorted Folder, its other Folders move with their Cards, and a Folder name already used in the target gets a " (2)" suffix
+
+**Given** "Delete class and everything in it" is chosen
+**When** I confirm
+**Then** the delete button only enables after I type the Class name, and the Class, its Folders, its Cards and their Scheduling Records are removed
+**And** both options complete atomically — no partial moves or partial deletes
+**And** when no other Class exists, only the delete option is offered
+
+### Story 2.2: Folder CRUD inside a Class
+
+As a user,
+I want to create, rename, and delete Folders inside a Class,
+So that I can organize a Class's cards by topic or source.
+
+**Acceptance Criteria:**
+
+**Given** I open a Class
+**When** I look at its Folders
+**Then** I see its "Unsorted" Folder plus any Folders I created, each with its card count
+
+**Given** I create a Folder with a name inside a Class
+**When** I save
+**Then** it appears in that Class's Folder list immediately
+
+**Given** a custom Folder
+**When** I rename it
+**Then** the new name is reflected everywhere it's referenced
+
+**Given** the Unsorted Folder
+**When** I open its "..." menu
+**Then** rename and delete are not available
+
+**Given** a custom Folder containing Cards
+**When** I delete it
+**Then** I'm prompted to choose "Move cards to Unsorted" (default, the same Class's Unsorted) or "Delete cards too," and the chosen action completes atomically with no orphaned or silently-deleted Cards
+**And** Folders cannot be created inside other Folders
+
+### Story 2.3: Add Cards — Manual Mode
+
+As a user,
+I want to add cards inside a Folder by typing them Quizlet-style,
+So that I can capture new words quickly without leaving the Folder I'm working in.
+
+**Acceptance Criteria:**
+
+**Given** I'm inside a Folder
+**When** I choose "Add cards"
+**Then** a panel opens in Manual mode with the target Folder shown in its header, and a mode switcher offering Manual and Import
+
+**Given** the Manual editor
+**When** I fill Term + Definition in one or more numbered rows and press Save
+**Then** one Card is created per filled row in that Folder, each with two Scheduling Records at SM-2 defaults (`ease_factor=2.5`, `repetitions=0`, `next_review_date`=start of today), via `createCardWithSchedulingRecords` (AD-9)
+
+**Given** a row with Term or Definition empty
+**When** I save
+**Then** that row shows a field-level error and is not created, while the valid rows are still created
+
+**Given** the Manual editor
+**When** I press Tab
+**Then** focus moves to the next field, and Enter in the last field of the last row adds a new row
+**And** each row can expand to show Example Sentence, Context/Collocation and Part of Speech, which can be left blank
 
 **Given** I enter special characters (IPA symbols, accented characters, non-Latin scripts) in any field
 **When** I save
 **Then** they're accepted and rendered correctly
-**And** the three optional fields can be left blank without error
 
-### Story 2.2: Edit a Card
+**Given** the Empty due-queue state's "+ Add card"
+**When** I use it
+**Then** Manual mode opens for the last-used Folder, with a Folder picker to change the target
+
+### Story 2.4: Edit a Card
 
 As a user,
 I want to edit an existing Card's fields,
@@ -319,7 +391,7 @@ So that I can fix or refine an entry without recreating it.
 **Then** I get a field-level validation error and the previous values are retained
 **And** editing a Card never alters its Scheduling Records
 
-### Story 2.3: Delete a Card
+### Story 2.5: Delete a Card
 
 As a user,
 I want to delete a Card,
@@ -331,96 +403,88 @@ So that stale or duplicate entries don't clutter my study set.
 **When** I delete it
 **Then** both its Scheduling Records are removed and it disappears from any due queue immediately
 
-### Story 2.4: Folder CRUD
+### Story 2.6: Move & Browse Cards
 
 As a user,
-I want to create, rename, and delete Folders,
-So that I can organize my cards by topic or source.
-
-**Acceptance Criteria:**
-
-**Given** no folders exist yet
-**When** I view Folders
-**Then** a default "Unsorted" folder is already present and cannot be deleted
-
-**Given** I create a folder with a name
-**When** I save
-**Then** it appears in my folder list immediately
-
-**Given** an existing custom folder
-**When** I rename it
-**Then** the new name is reflected everywhere it's referenced
-
-**Given** a custom folder containing Cards
-**When** I delete it
-**Then** I'm prompted to choose "Move to Unsorted" (default) or "Delete cards too," and the chosen action completes atomically with no orphaned or silently-deleted Cards
-
-### Story 2.5: Assign & Browse Cards by Folder
-
-As a user,
-I want to assign Cards to a Folder and browse by folder,
-So that I can find and manage related vocabulary together.
+I want to browse Classes and Folders and move Cards between Folders,
+So that I can find and reorganize related vocabulary.
 
 **Acceptance Criteria:**
 
 **Given** an existing Card
-**When** I change its Folder assignment
-**Then** it moves out of the old folder's list and into the new one (always exactly one Folder)
+**When** I move it to another Folder (in the same or another Class)
+**Then** it leaves the old Folder's list and appears in the new one (always exactly one Folder)
 
 **Given** a Folder
 **When** I open it
-**Then** I see its Cards as rows grouped under section headers
+**Then** I see its Cards as rows, with a breadcrumb "Classes / {Class} / {Folder}"
 
-**Given** the Folders view with none selected
+**Given** the Classes view
 **When** I look
-**Then** I see all folders with their card counts
-**And** folders stay flat/single-level — there's no way to nest one inside another
+**Then** I see every Class with its Folder count and Card count
+**And** the hierarchy stays fixed at Class → Folder → Card — there is no way to nest a Folder in a Folder or a Class in a Class
 
 ## Epic 3: Bulk Import
 
-A user can paste line-delimited term/definition pairs or upload a CSV/Excel file and have them parsed into Cards in one pass, under 5 seconds, with duplicates and malformed rows clearly reported without losing the valid rows in the same batch.
+A user can paste line-delimited term/definition pairs or upload a CSV/Excel file, review and fix the parsed rows in the same editor as manual entry, and save them as Cards in one pass, with duplicates and malformed rows clearly flagged and reported without losing the valid rows in the same batch.
 
-### Story 3.1: Paste Import
+### Story 3.1: Paste Import with Review Editor
 
 As a user,
-I want to paste line-delimited term/definition pairs and have them parsed into Cards in one action,
-So that bulk vocabulary capture doesn't require manual entry.
+I want to paste term/definition pairs, check and fix them in the card editor, then save,
+So that bulk capture is fast but I still control exactly what becomes a Card.
 
 **Acceptance Criteria:**
 
-**Given** a block of N valid lines pasted with my chosen delimiter
-**When** I click Import
-**Then** N Cards are created (each with two fresh Scheduling Records) and visible in the UI within 5 seconds end-to-end
+**Given** I'm inside a Folder and open "Add cards", switch to Import and choose Paste
+**When** I look at the panel
+**Then** the target Folder is fixed to that Folder and shown in the header — there is no separate Import page
 
-**Given** malformed lines in the same paste
-**When** I import
-**Then** each is reported individually (line number + reason) without discarding valid lines in the same batch
+**Given** a pasted block and my chosen delimiter
+**When** I press Preview
+**Then** every line opens as an editable row in the import review editor (the same editor as Manual mode), labelled with its source line number, and nothing is saved yet
 
-**Given** a pasted line's Term exactly matches (case-insensitive, trimmed) an existing Card's Term in the target Folder
-**When** imported
-**Then** it is skipped and reported as a duplicate, not silently duplicated
-**And** the results screen shows exactly three grouped sections: Created (N), Duplicates skipped (N), Errors (N with line+reason)
+**Given** a malformed line (e.g. no delimiter)
+**When** the editor opens
+**Then** that row shows the reason inline and I can fix it in place
 
-### Story 3.2: CSV/Excel Import with Column Mapping
+**Given** a line whose Term exactly matches (case-insensitive, trimmed) an existing Card's Term in the target Folder
+**When** the editor opens
+**Then** the row is flagged "Already in {Folder} — will be skipped", and editing its Term clears the flag
+
+**Given** the editor with N valid rows and no edits
+**When** I press Save
+**Then** N Cards are created in that Folder (each with two fresh Scheduling Records) and visible in the Folder, with Preview + Save taking under 5 seconds of system time
+
+**Given** rows that are still invalid or still duplicate at Save, or rows I removed with ×
+**When** I save
+**Then** invalid rows are not created and are reported with line number + reason, duplicates (re-checked at Save) are skipped and reported, removed rows are neither created nor reported, and valid rows still save
+**And** the results view shows exactly three grouped sections: Created (N), Duplicates skipped (N), Errors (N with line+reason)
+
+### Story 3.2: CSV/Excel Import with Column Mapping and Review Editor
 
 As a user,
-I want to upload a CSV or Excel file and map its columns to the five Card fields,
-So that a week's worth of notes-app vocabulary becomes cards in one pass.
+I want to upload a CSV or Excel file, map its columns, and review the rows before saving,
+So that a week's worth of notes-app vocabulary becomes cards in one pass without surprises.
 
 **Acceptance Criteria:**
 
-**Given** I upload a CSV/Excel file
+**Given** I'm inside a Folder, open "Add cards" → Import → Upload file, and upload a CSV/Excel file
 **When** the column-mapping step appears
-**Then** I can map file columns to the five Card fields regardless of their order, before anything commits
+**Then** I can map file columns to the five Card fields regardless of their order, before anything is saved
 
-**Given** some rows are invalid
-**When** I commit
-**Then** those rows are reported with row number + reason while valid rows still commit
+**Given** I confirm the mapping
+**When** the next step opens
+**Then** the mapped rows appear in the same import review editor as paste import, labelled with source row numbers, with the same inline errors, duplicate flags and remove (×) buttons
 
-**Given** a row's Term exactly matches (case-insensitive, trimmed) an existing Card's Term in the target Folder
-**When** imported
+**Given** some rows are still invalid at Save
+**When** I save
+**Then** those rows are reported with row number + reason while valid rows still save
+
+**Given** a row's Term exactly matches (case-insensitive, trimmed) an existing Card's Term in the target Folder at Save
+**When** I save
 **Then** it is skipped and reported as a duplicate — the same rule and underlying logic as paste import
-**And** if every row is malformed, Created shows (0), every row appears under Errors with line+reason, and the import completes without crashing
+**And** if every row is malformed and I save without fixing any, Created shows (0), every row appears under Errors with line+reason, and nothing crashes
 
 ## Epic 4: Spaced Repetition Review Engine
 
@@ -482,7 +546,11 @@ So that daily study stays fast and frictionless.
 
 **Given** due Scheduling Records exist
 **When** I open Review
-**Then** they're presented one at a time, prompt side first, ordered oldest-due-first
+**Then** due entries from all Classes are presented one at a time, prompt side first, ordered oldest-due-first
+
+**Given** I'm viewing a Class or a Folder
+**When** I choose "Review this class" or "Review this folder"
+**Then** the session contains only that scope's due entries and otherwise behaves exactly like the default session, and its grades count toward the same streak
 
 **Given** a Card due in both directions
 **When** it appears
@@ -618,7 +686,7 @@ So that the app feels like one coherent, trustworthy product.
 
 **Given** both themes
 **When** checked against WCAG AA
-**Then** all text/background combinations meet 4.5:1 contrast — with particular verification of the flagged light-mode sage/white/charcoal combination
+**Then** all text/background combinations meet 4.5:1 contrast — matching the measured "Focus Indigo" ratios recorded in DESIGN.md
 
 **Given** any interactive element
 **When** focused via keyboard
