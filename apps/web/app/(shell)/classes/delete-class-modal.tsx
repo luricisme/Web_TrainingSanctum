@@ -72,7 +72,7 @@ export function DeleteClassModal({
         if (!remove.isPending) onClose();
       }}
     >
-      <p className="text-base leading-[1.5] text-foreground-secondary">
+      <p className="text-body text-foreground-secondary">
         This class has {pluralize(target.folderCount, "folder")} and{" "}
         {pluralize(target.cardCount, "card")}.
       </p>
@@ -95,7 +95,7 @@ export function DeleteClassModal({
               </option>
             ))}
           </select>
-          <p className="text-sm leading-[1.45] text-foreground-tertiary">
+          <p className="text-body-sm text-foreground-tertiary">
             Unsorted cards merge into that class&apos;s Unsorted folder. A folder
             name already in use there gets a number added.
           </p>
@@ -114,7 +114,7 @@ export function DeleteClassModal({
           </div>
         </section>
       ) : (
-        <p className="mt-6 text-sm leading-[1.45] text-foreground-tertiary">
+        <p className="mt-6 text-body-sm text-foreground-tertiary">
           No other class exists to move folders to.
         </p>
       )}

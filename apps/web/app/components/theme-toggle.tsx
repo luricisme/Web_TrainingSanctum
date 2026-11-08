@@ -51,7 +51,7 @@ export function ThemeToggle() {
             role="radio"
             aria-checked={active}
             onClick={() => apply(value)}
-            className={`rounded-full px-4 py-1 text-sm font-semibold leading-[1.45] transition-colors duration-150 ease-in-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+            className={`rounded-full px-4 py-1 text-body-sm font-semibold transition-state focus-ring ${
               active
                 ? "bg-accent text-on-accent"
                 : "text-foreground-secondary hover:text-foreground"

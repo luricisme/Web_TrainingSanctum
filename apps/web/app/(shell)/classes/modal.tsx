@@ -47,7 +47,7 @@ export function Modal({
       <div className="p-6 sm:p-8">
         <h2
           id={titleId}
-          className="break-words text-xl font-semibold leading-[1.3] text-foreground"
+          className="break-words text-heading-3 text-foreground"
         >
           {title}
         </h2>

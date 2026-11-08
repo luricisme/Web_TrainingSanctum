@@ -4,9 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import type { ClassSummary } from "@training-sanctum/domain";
 import { pluralize } from "./ui";
 
-const focusRing =
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
-
 /**
  * One Class row: icon chip, name, counts and a trailing overflow menu with
  * Rename and Delete. Rows do not link anywhere yet (Story 2.2 adds the detail
@@ -66,21 +63,21 @@ export function ClassRow({
     action();
   }
 
-  const itemClass = `block w-full rounded-sm px-3 py-2 text-left text-sm leading-[1.45] transition-colors duration-150 ease-in-out hover:bg-row-hover ${focusRing}`;
+  const itemClass = `block w-full rounded-sm px-3 py-2 text-left text-body-sm transition-state hover:bg-row-hover focus-ring`;
 
   return (
-    <li className="flex items-center gap-3 rounded-sm border-b border-divider p-3 transition-colors duration-150 ease-in-out last:border-b-0 hover:bg-row-hover">
+    <li className="flex items-center gap-3 rounded-sm border-b border-divider p-3 transition-state last:border-b-0 hover:bg-row-hover">
       <span
         aria-hidden="true"
-        className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-card text-foreground-secondary"
+        className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-card text-foreground-secondary"
       >
         <svg
-          width="18"
-          height="18"
+          width="20"
+          height="20"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="1.75"
           strokeLinecap="round"
           strokeLinejoin="round"
         >
@@ -89,10 +86,10 @@ export function ClassRow({
       </span>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-base font-semibold leading-[1.5] text-foreground">
+        <p className="truncate text-body font-semibold text-foreground">
           {item.name}
         </p>
-        <p className="text-xs font-medium leading-[1.4] tracking-[0.01em] text-foreground-tertiary">
+        <p className="text-caption text-foreground-tertiary">
           {pluralize(item.folderCount, "folder")} · {pluralize(item.cardCount, "card")}
         </p>
       </div>
@@ -105,7 +102,7 @@ export function ClassRow({
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className={`flex rounded-sm p-2 text-foreground-tertiary transition-colors duration-150 ease-in-out hover:bg-card hover:text-foreground ${focusRing}`}
+          className={`flex rounded-sm p-2 text-foreground-tertiary transition-state hover:bg-card hover:text-foreground focus-ring`}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <circle cx="5" cy="12" r="2" />

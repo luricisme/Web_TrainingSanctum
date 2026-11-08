@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ClassSummary } from "@training-sanctum/domain";
 import { apiFetch } from "@/lib/api-client";
+import { SectionMarker } from "@/app/components/section-marker";
 import { PageHeader } from "../page-header";
 import { ClassFormModal } from "./class-form-modal";
 import { ClassRow } from "./class-row";
@@ -48,13 +49,13 @@ export function ClassesView() {
             {[0, 1, 2].map((i) => (
               <li
                 key={i}
-                className="h-[60px] animate-pulse rounded-sm bg-elevated motion-reduce:animate-none"
+                className="h-16 animate-pulse rounded-sm bg-elevated motion-reduce:animate-none"
               />
             ))}
           </ul>
         ) : isError && !data ? (
           <div role="alert" className="flex flex-col items-start gap-4">
-            <p className="text-base leading-[1.5] text-foreground-secondary">
+            <p className="text-body text-foreground-secondary">
               Could not load your classes.
             </p>
             <button type="button" onClick={() => void refetch()} className={buttonSecondary}>
@@ -63,7 +64,7 @@ export function ClassesView() {
           </div>
         ) : classes.length === 0 ? (
           <div className="flex flex-col items-start gap-6 py-6">
-            <p className="max-w-sm text-base leading-[1.5] text-foreground-secondary">
+            <p className="max-w-sm text-body text-foreground-secondary">
               Create a class to start adding cards.
             </p>
             <button
@@ -77,16 +78,9 @@ export function ClassesView() {
         ) : (
           <section aria-labelledby="all-classes">
             <div className="mb-3 flex items-center justify-between gap-4">
-              <h2
-                id="all-classes"
-                className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase leading-[1.3] tracking-[0.08em] text-foreground-tertiary"
-              >
-                <span
-                  aria-hidden="true"
-                  className="size-[7px] shrink-0 rounded-[1px] bg-accent"
-                />
+              <SectionMarker as="h2" id="all-classes">
                 All classes
-              </h2>
+              </SectionMarker>
               <button
                 type="button"
                 onClick={() => setDialog({ kind: "create" })}

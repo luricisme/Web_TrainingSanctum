@@ -8,12 +8,12 @@ export function PageHeader({
 }) {
   return (
     <header>
-      <h1 className="text-[2rem] font-bold leading-[1.2] tracking-[-0.01em] text-foreground">
+      <h1 className="text-heading-1 text-foreground">
         {title}
       </h1>
       <hr aria-hidden="true" className="mt-6 border-0 border-t border-divider" />
       {children ? (
-        <p className="mt-6 text-base leading-[1.5] text-foreground-secondary">
+        <p className="mt-6 text-body text-foreground-secondary">
           {children}
         </p>
       ) : null}

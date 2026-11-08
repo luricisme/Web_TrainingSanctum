@@ -12,7 +12,7 @@ export default async function ShellLayout({
     <div className="min-h-screen bg-background sm:flex">
       <Sidebar />
       <main className="min-w-0 flex-1 px-4 py-12 sm:px-6">
-        <div className="mx-auto w-full max-w-[1200px]">
+        <div className="mx-auto w-full max-w-content">
           <QueryProvider>{children}</QueryProvider>
         </div>
       </main>

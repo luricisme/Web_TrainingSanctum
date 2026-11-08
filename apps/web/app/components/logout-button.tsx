@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "@/lib/auth-client";
+import { buttonQuiet } from "./ui";
 
 /** Logout control, rendered from Settings. */
 export function LogoutButton() {
@@ -36,12 +37,12 @@ export function LogoutButton() {
         onClick={handleClick}
         disabled={busy}
         aria-busy={busy}
-        className="rounded-sm px-3 py-2 text-sm leading-[1.45] text-foreground-secondary transition-colors duration-150 ease-in-out hover:bg-row-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60"
+        className={buttonQuiet}
       >
         {busy ? "Logging out..." : "Log out"}
       </button>
       {failed ? (
-        <p role="alert" className="text-sm leading-[1.45] text-error">
+        <p role="alert" className="text-body-sm text-error">
           Could not log out. Try again.
         </p>
       ) : null}
