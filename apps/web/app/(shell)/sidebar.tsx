@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { SectionMarker } from "@/app/components/section-marker";
 
 const iconProps = {
   width: 20,
@@ -62,14 +63,10 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-divider bg-card px-3 py-8 sm:flex">
-      <p className="flex items-center gap-2 px-3 text-[0.6875rem] font-semibold uppercase leading-[1.3] tracking-[0.08em] text-foreground-tertiary">
-        <span
-          aria-hidden="true"
-          className="size-[7px] shrink-0 rounded-[1px] bg-accent"
-        />
-        Training Sanctum
-      </p>
+    <aside className="sticky top-0 hidden h-screen w-sidebar shrink-0 flex-col border-r border-divider bg-card px-3 py-8 sm:flex">
+      <div className="px-3">
+        <SectionMarker>Training Sanctum</SectionMarker>
+      </div>
       <nav aria-label="Main" className="mt-8">
         <ul className="flex flex-col gap-1">
           {items.map((item) => {
@@ -80,7 +77,7 @@ export function Sidebar() {
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-3 rounded-sm px-3 py-2 text-base leading-[1.5] transition-colors duration-150 ease-in-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+                  className={`flex items-center gap-3 rounded-sm px-3 py-2 text-body transition-state focus-ring ${
                     active
                       ? "bg-elevated font-semibold text-accent"
                       : "text-foreground-secondary hover:bg-row-hover hover:text-foreground"

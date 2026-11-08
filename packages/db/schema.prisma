@@ -43,6 +43,9 @@ model User {
 
   sessions Session[]
   accounts Account[]
+  classes  Class[]
+  folders  Folder[]
+  cards    Card[]
 
   @@map("users")
 }
@@ -92,4 +95,85 @@ model Verification {
 
   @@index([identifier])
   @@map("verifications")
+}
+
+// Story 2.1: the Class -> Folder -> Card hierarchy. Every row carries `userId`
+// so each query can be scoped to the session user. Deletes cascade down the
+// tree. The "one Unsorted Folder per Class" rule is a partial unique index on
+// `folders("classId") WHERE "isUnsorted"`, which Prisma cannot express, so it
+// lives as raw SQL at the end of the add_class_folder_card migration.
+model Class {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  folders Folder[]
+
+  @@index([userId, name])
+  @@map("classes")
+}
+
+model Folder {
+  id         String   @id @default(cuid())
+  name       String
+  isUnsorted Boolean  @default(false)
+  classId    String
+  class      Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  cards Card[]
+
+  @@index([classId])
+  @@index([userId])
+  @@map("folders")
+}
+
+model Card {
+  id           String   @id @default(cuid())
+  term         String
+  definition   String
+  example      String?
+  context      String?
+  partOfSpeech String?
+  folderId     String
+  folder       Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  schedulingRecords SchedulingRecord[]
+
+  @@index([folderId])
+  @@index([userId])
+  @@map("cards")
+}
+
+enum RecallDirection {
+  TERM_TO_DEFINITION
+  DEFINITION_TO_TERM
+}
+
+// Schema only in Story 2.1: nothing writes these rows until Story 2.3.
+model SchedulingRecord {
+  id             String          @id @default(cuid())
+  cardId         String
+  card           Card            @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  direction      RecallDirection
+  interval       Int             @default(0)
+  repetitions    Int             @default(0)
+  easeFactor     Float           @default(2.5)
+  nextReviewDate DateTime
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([cardId, direction])
+  @@index([nextReviewDate])
+  @@map("scheduling_records")
 }

@@ -25,6 +25,15 @@ import { useRouter } from "next/navigation";
 import { registerSchema } from "@training-sanctum/domain";
 import type { ErrorEnvelope } from "@training-sanctum/domain";
 import { signUp } from "@/lib/auth-client";
+import { SectionMarker } from "@/app/components/section-marker";
+import {
+  buttonPrimary,
+  fieldErrorClass,
+  formErrorClass,
+  inputClass,
+  labelClass,
+  linkClass,
+} from "@/app/components/ui";
 
 type FieldErrors = NonNullable<ErrorEnvelope["error"]["fields"]>;
 
@@ -117,20 +126,14 @@ export default function RegisterPage() {
 
   return (
     <main className="flex min-h-screen bg-background px-4 py-12 lg:items-center lg:py-16">
-      <div className="mx-auto grid w-full max-w-[1200px] content-start gap-8 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] lg:gap-16">
+      <div className="mx-auto grid w-full max-w-content content-start gap-8 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] lg:gap-16">
         <header className="mx-auto w-full max-w-md lg:mx-0 lg:justify-self-end">
-          <p className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase leading-[1.3] tracking-[0.08em] text-foreground-tertiary">
-            <span
-              aria-hidden="true"
-              className="size-[7px] shrink-0 rounded-[1px] bg-accent"
-            />
-            Training Sanctum
-          </p>
-          <h1 className="mt-6 text-[2rem] font-bold leading-[1.2] tracking-[-0.01em] text-foreground">
+          <SectionMarker>Training Sanctum</SectionMarker>
+          <h1 className="mt-6 text-heading-1 text-foreground">
             Create your account
           </h1>
           <hr aria-hidden="true" className="mt-6 border-0 border-t border-divider" />
-          <p className="mt-6 text-base leading-[1.5] text-foreground-secondary">
+          <p className="mt-6 text-body text-foreground-secondary">
             Your daily vocabulary review, kept quiet.
           </p>
         </header>
@@ -207,7 +210,7 @@ export default function RegisterPage() {
             </div>
 
             {formError ? (
-              <p className="break-words border-l-2 border-error py-1 pl-3 text-sm leading-[1.45] text-error">
+              <p className={formErrorClass}>
                 {formError}
               </p>
             ) : null}
@@ -215,17 +218,17 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-1 rounded-md bg-accent px-4 py-3 text-base font-semibold text-on-accent transition-colors duration-150 ease-in-out hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-accent"
+              className={`${buttonPrimary} mt-1`}
             >
               {submitting ? "Creating account..." : "Create account"}
             </button>
           </form>
 
-          <p className="mt-6 text-sm leading-[1.45] text-foreground-secondary">
+          <p className="mt-6 text-body-sm text-foreground-secondary">
             Already have an account?{" "}
             <Link
               href="/login"
-              className="text-foreground underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className={linkClass}
             >
               Log in
             </Link>
@@ -235,17 +238,3 @@ export default function RegisterPage() {
     </main>
   );
 }
-
-// DESIGN.md typography `body-small` (0.875rem / 1.45) for labels and inline
-// errors; inputs use `rounded.sm` and a 1px `border` outline. Focus uses the
-// same 2px accent outline (offset 2px) as the submit button, plus an accent
-// border on valid fields; invalid fields keep the `error` border (DNA
-// error_tone: plain, inline, non-alarming). State changes run 150ms
-// ease-in-out (motion.normal).
-const labelClass =
-  "text-sm leading-[1.45] text-foreground-secondary";
-
-const inputClass =
-  "rounded-sm border border-border bg-background px-3 py-3 text-base text-foreground transition-colors duration-150 ease-in-out focus:border-accent focus:outline-2 focus:outline-offset-2 focus:outline-accent aria-[invalid=true]:border-error aria-[invalid=true]:focus:border-error";
-
-const fieldErrorClass = "break-words text-sm leading-[1.45] text-error";

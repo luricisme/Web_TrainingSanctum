@@ -33,3 +33,11 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-5-authenticated-app-shell-theme-toggle.md`
   summary: Add a way to navigate and log out below 640px (bottom bar or menu), since the sidebar is hidden there and Settings is reachable only by URL.
   evidence: The spec, DESIGN.md and EXPERIENCE.md all hide the sidebar on mobile and name no replacement; with logout now only in Settings, a phone user has no UI path to Classes, Stats, Settings or Log out. Needs a design decision before building.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-class-crud.md`
+  summary: Redirect to `/login` when `apiFetch` receives a 401, instead of showing a generic load or mutation error.
+  evidence: `apps/web/lib/api-client.ts` turns a `401 UNAUTHENTICATED` envelope into a plain `ApiError`, so a user whose session expired mid-visit sees "Could not load your classes" with no path back to login. Rare under 30-day sliding sessions, but every later screen will inherit it.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-class-crud.md`
+  summary: Verify that `prisma migrate dev` does not drop the raw-SQL partial unique index `folders_classId_isUnsorted_key` as drift (unverified, would be medium if true).
+  evidence: The index enforcing one Unsorted Folder per Class exists only in `migration.sql` because Prisma cannot express a partial index in `schema.prisma`. To settle it, run `prisma migrate dev` against a shadow database and check whether the generated SQL contains `DROP INDEX "folders_classId_isUnsorted_key"`.
