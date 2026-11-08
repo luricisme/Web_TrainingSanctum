@@ -78,13 +78,13 @@ export function DeleteFolderModal({
         </p>
       ) : null}
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      <div className="mt-6 flex flex-col gap-3">
         <button
           type="button"
           autoFocus
           disabled={remove.isPending}
           onClick={() => run("move")}
-          className={buttonPrimary}
+          className={`${buttonPrimary} w-full`}
         >
           Move cards to Unsorted
         </button>
@@ -92,7 +92,7 @@ export function DeleteFolderModal({
           type="button"
           disabled={remove.isPending}
           onClick={() => run("delete")}
-          className={buttonDanger}
+          className={`${buttonDanger} w-full`}
         >
           Delete cards too
         </button>
