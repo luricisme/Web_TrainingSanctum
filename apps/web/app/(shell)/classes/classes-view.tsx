@@ -63,7 +63,7 @@ export function ClassesView() {
             </button>
           </div>
         ) : classes.length === 0 ? (
-          <div className="flex flex-col items-start gap-6 py-6">
+          <div className="flex flex-col items-start gap-6">
             <p className="max-w-sm text-body text-foreground-secondary">
               Create a class to start adding cards.
             </p>

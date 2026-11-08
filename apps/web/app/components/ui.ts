@@ -7,7 +7,7 @@
 
 /** The one actionable thing per screen: accent fill with `on-accent` text. */
 export const buttonPrimary =
-  "rounded-md bg-accent px-6 py-3 text-body font-semibold text-on-accent transition-state hover:bg-accent-hover focus-ring disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-accent";
+  "rounded-md bg-accent px-6 py-3 text-body font-medium text-on-accent transition-state hover:bg-accent-hover focus-ring disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-accent";
 
 export const buttonSecondary =
   "rounded-md border border-border px-6 py-3 text-body text-foreground-secondary transition-state hover:bg-row-hover hover:text-foreground focus-ring disabled:cursor-not-allowed disabled:opacity-60";
