@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import type { ClassSummary } from "@training-sanctum/domain";
+import { RowMenu } from "./row-menu";
 import { pluralize } from "./ui";
 
 /**
- * One Class row: icon chip, name, counts and a trailing overflow menu with
- * Rename and Delete. Rows do not link anywhere yet (Story 2.2 adds the detail
- * page). Hover lightens to `row-hover`; no scale transforms.
+ * One Class row: icon chip, name (a link to the Class detail page), counts and
+ * a trailing overflow menu with Rename and Delete. Hover lightens to
+ * `row-hover`; no scale transforms.
  */
 export function ClassRow({
   item,
@@ -18,53 +19,6 @@ export function ClassRow({
   onRename: () => void;
   onDelete: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const first = wrapRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
-    first?.focus();
-    function onPointerDown(event: MouseEvent) {
-      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [open]);
-
-  function close(restoreFocus: boolean) {
-    setOpen(false);
-    if (restoreFocus) triggerRef.current?.focus();
-  }
-
-  function onMenuKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    const items = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')
-    );
-    const index = items.indexOf(document.activeElement as HTMLElement);
-    if (event.key === "Escape") {
-      event.preventDefault();
-      close(true);
-    } else if (event.key === "ArrowDown") {
-      event.preventDefault();
-      items[(index + 1) % items.length]?.focus();
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      items[(index - 1 + items.length) % items.length]?.focus();
-    } else if (event.key === "Tab") {
-      setOpen(false);
-    }
-  }
-
-  function choose(action: () => void) {
-    setOpen(false);
-    triggerRef.current?.focus();
-    action();
-  }
-
-  const itemClass = `block w-full rounded-sm px-3 py-2 text-left text-body-sm transition-state hover:bg-row-hover focus-ring`;
-
   return (
     <li className="flex items-center gap-3 rounded-sm border-b border-divider p-3 transition-state last:border-b-0 hover:bg-row-hover">
       <span
@@ -86,55 +40,24 @@ export function ClassRow({
       </span>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-body font-semibold text-foreground">
+        <Link
+          href={`/classes/${item.id}`}
+          className="block truncate rounded-sm text-body font-semibold text-foreground focus-ring"
+        >
           {item.name}
-        </p>
+        </Link>
         <p className="text-caption text-foreground-tertiary">
           {pluralize(item.folderCount, "folder")} · {pluralize(item.cardCount, "card")}
         </p>
       </div>
 
-      <div ref={wrapRef} className="relative" onKeyDown={onMenuKeyDown}>
-        <button
-          ref={triggerRef}
-          type="button"
-          aria-label={`Options for ${item.name}`}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          className={`flex rounded-sm p-2 text-foreground-tertiary transition-state hover:bg-card hover:text-foreground focus-ring`}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <circle cx="5" cy="12" r="2" />
-            <circle cx="12" cy="12" r="2" />
-            <circle cx="19" cy="12" r="2" />
-          </svg>
-        </button>
-        {open ? (
-          <div
-            role="menu"
-            aria-label={`${item.name} options`}
-            className="absolute right-0 top-full z-10 mt-1 w-40 rounded-md border border-border bg-card p-1"
-          >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => choose(onRename)}
-              className={`${itemClass} text-foreground`}
-            >
-              Rename
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => choose(onDelete)}
-              className={`${itemClass} text-error`}
-            >
-              Delete
-            </button>
-          </div>
-        ) : null}
-      </div>
+      <RowMenu
+        name={item.name}
+        items={[
+          { label: "Rename", onSelect: onRename },
+          { label: "Delete", onSelect: onDelete, danger: true },
+        ]}
+      />
     </li>
   );
 }
