@@ -1,0 +1,181 @@
+"use client";
+
+/**
+ * Login form (spec-1-3). Mirrors /register's editorial split (overline
+ * masthead + section bullet left, form on a `card` surface right) and uses
+ * the same DESIGN.md token utilities. Input is validated with the shared
+ * `loginSchema` before any Better Auth call (AD-6). Wrong password and
+ * unknown email are indistinguishable: one generic form-level alert.
+ */
+import { useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { loginSchema } from "@training-sanctum/domain";
+import { signIn } from "@/lib/auth-client";
+
+type FieldErrors = { email?: string; password?: string };
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError(null);
+    setFieldErrors({});
+
+    const parsed = loginSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      const errors: FieldErrors = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0];
+        if (key === "email" || key === "password") {
+          errors[key] ??=
+            key === "email" ? "Enter a valid email address." : issue.message;
+        }
+      }
+      setFieldErrors(errors);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await signIn.email({
+        email: parsed.data.email,
+        password: parsed.data.password,
+      });
+
+      if (error) {
+        // The catch-all route wraps sign-in failures in the standard
+        // envelope. Every 401 (wrong password or unknown email) shows the
+        // same generic message, revealing nothing about which part was wrong.
+        setFormError(
+          error.status === 401
+            ? "Invalid email or password."
+            : error.status === 429
+              ? "Too many attempts. Try again in a moment."
+              : "Something went wrong. Please try again."
+        );
+        return;
+      }
+
+      router.push("/");
+    } catch {
+      setFormError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <main className="flex min-h-screen bg-background px-4 py-12 lg:items-center lg:py-16">
+      <div className="mx-auto grid w-full max-w-[1200px] content-start gap-8 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] lg:gap-16">
+        <header className="mx-auto w-full max-w-md lg:mx-0 lg:justify-self-end">
+          <p className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase leading-[1.3] tracking-[0.08em] text-foreground-tertiary">
+            <span
+              aria-hidden="true"
+              className="size-[7px] shrink-0 rounded-[1px] bg-accent"
+            />
+            Training Sanctum
+          </p>
+          <h1 className="mt-6 text-[2rem] font-bold leading-[1.2] tracking-[-0.01em] text-foreground">
+            Welcome back
+          </h1>
+          <hr aria-hidden="true" className="mt-6 border-0 border-t border-divider" />
+          <p className="mt-6 text-base leading-[1.5] text-foreground-secondary">
+            Pick up your daily review where you left off.
+          </p>
+        </header>
+
+        <div aria-hidden="true" className="hidden bg-divider lg:block" />
+
+        <div className="mx-auto w-full max-w-md self-start rounded-lg border border-divider bg-card p-6 lg:mx-0 lg:justify-self-start lg:p-8">
+          <form className="flex flex-col gap-6" onSubmit={handleSubmit} noValidate>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="email" className={labelClass}>
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className={inputClass}
+                aria-invalid={Boolean(fieldErrors.email)}
+                aria-describedby={fieldErrors.email ? "email-error" : undefined}
+              />
+              {fieldErrors.email ? (
+                <p id="email-error" className={fieldErrorClass}>
+                  {fieldErrors.email}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="password" className={labelClass}>
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className={inputClass}
+                aria-invalid={Boolean(fieldErrors.password)}
+                aria-describedby={fieldErrors.password ? "password-error" : undefined}
+              />
+              {fieldErrors.password ? (
+                <p id="password-error" className={fieldErrorClass}>
+                  {fieldErrors.password}
+                </p>
+              ) : null}
+            </div>
+
+            {formError ? (
+              <p
+                role="alert"
+                className="break-words border-l-2 border-error py-1 pl-3 text-sm leading-[1.45] text-error"
+              >
+                {formError}
+              </p>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              aria-busy={submitting}
+              className="mt-1 rounded-md bg-accent px-4 py-3 text-base font-semibold text-on-accent transition-colors duration-150 ease-in-out hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-accent"
+            >
+              {submitting ? "Logging in..." : "Log in"}
+            </button>
+          </form>
+
+          <p className="mt-6 text-sm leading-[1.45] text-foreground-secondary">
+            No account yet?{" "}
+            <Link
+              href="/register"
+              className="text-foreground underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              Create one
+            </Link>
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+const labelClass = "text-sm leading-[1.45] text-foreground-secondary";
+
+const inputClass =
+  "rounded-sm border border-border bg-background px-3 py-3 text-base text-foreground transition-colors duration-150 ease-in-out focus:border-accent focus:outline-2 focus:outline-offset-2 focus:outline-accent aria-[invalid=true]:border-error aria-[invalid=true]:focus:border-error";
+
+const fieldErrorClass = "break-words text-sm leading-[1.45] text-error";

@@ -25,3 +25,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-restyle-register-focus-indigo.md`
   summary: Show the password requirements (e.g. minimum length) as a hint linked with aria-describedby before submit.
   evidence: Users only learn the Zod password rules after a failed submit ("Too small: expected string to have >=8 characters"); this existed before the restyle and needs copy per EXPERIENCE.md voice.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-3-user-login-logout.md`
+  summary: Redirect already-authenticated visitors away from `/login` and `/register`, and give unauthenticated `/` a path to login (Story 1.5 route gating).
+  evidence: A signed-in user can open `/login` and sign in again, creating a redundant session; a fresh visitor to the placeholder `/` sees no login link. Frozen Never excludes route gating from 1.3; Story 1.5 owns "unauthenticated visitors are redirected to login".

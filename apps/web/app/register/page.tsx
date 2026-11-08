@@ -20,6 +20,7 @@
  * submit button (plus the section bullet and input focus).
  */
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { registerSchema } from "@training-sanctum/domain";
 import type { ErrorEnvelope } from "@training-sanctum/domain";
@@ -219,6 +220,16 @@ export default function RegisterPage() {
               {submitting ? "Creating account..." : "Create account"}
             </button>
           </form>
+
+          <p className="mt-6 text-sm leading-[1.45] text-foreground-secondary">
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="text-foreground underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              Log in
+            </Link>
+          </p>
         </div>
       </div>
     </main>

@@ -14,13 +14,14 @@ const { GET, POST: betterAuthPost } = toNextJsHandler(auth);
 
 export { GET };
 
-// Registration is the one endpoint spec-1-2's frozen Boundaries require to
-// answer in the shared `{error:{code,message,fields}}` envelope (AD-10)
-// instead of Better Auth's own flat `{code,message}` body. Scoped to this
-// one path so every other auth endpoint (sign-in, session, ...) keeps
-// Better Auth's native error shape, which its own client-side error
-// handling (and future stories built on it) expect.
-const ENVELOPE_WRAPPED_PATHS = new Set(["/api/auth/sign-up/email"]);
+// Registration (spec-1-2) and sign-in (spec-1-3) failures answer in the
+// shared `{error:{code,message,fields?}}` envelope (AD-10) instead of Better
+// Auth's own flat `{code,message}` body. Scoped to these paths so every
+// other auth endpoint (session, ...) keeps Better Auth's native error shape.
+const ENVELOPE_WRAPPED_PATHS = new Set([
+  "/api/auth/sign-up/email",
+  "/api/auth/sign-in/email",
+]);
 
 export async function POST(request: Request): Promise<Response> {
   const response = await betterAuthPost(request);
@@ -33,15 +34,23 @@ export async function POST(request: Request): Promise<Response> {
     | { code?: string; message?: string }
     | null;
 
-  if (!body?.code) {
-    return response;
-  }
+  // Bodies without a `code` (e.g. the rate limiter's 429, which returns only
+  // `{message}` or non-JSON) are still wrapped, with a status-derived code.
+  const code =
+    body?.code ?? (response.status === 429 ? "RATE_LIMITED" : "AUTH_ERROR");
+  const message =
+    body?.message ??
+    (body?.code
+      ? body.code
+      : response.status === 429
+        ? "Too many requests. Please try again later."
+        : "Authentication failed.");
 
   const envelope: ErrorEnvelope = {
     error: {
-      code: body.code,
-      message: body.message ?? body.code,
-      ...(body.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
+      code,
+      message,
+      ...(body?.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
         ? {
             fields: {
               email: body.message ?? "An account with this email already exists.",
@@ -53,6 +62,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const headers = new Headers(response.headers);
   headers.delete("content-length");
+  headers.set("content-type", "application/json");
 
   return new Response(JSON.stringify(envelope), {
     status: response.status,

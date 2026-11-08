@@ -40,6 +40,8 @@ export default defineConfig({
         process.env.DATABASE_URL ??
         "postgresql://placeholder:placeholder@localhost:5432/placeholder",
       BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "placeholder-secret-for-ci",
+      // Suites sign up/in more than Better Auth's per-IP limit allows.
+      AUTH_RATE_LIMIT: "off",
     },
   },
 });

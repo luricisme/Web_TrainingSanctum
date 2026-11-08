@@ -21,6 +21,14 @@ export const auth = betterAuth({
   // instantiate a second PrismaClient.
   database: prismaAdapter(prisma, { provider: "postgresql" }),
 
+  // Defaults to Better Auth's own behavior (on in production). Only the
+  // Playwright webServer turns it off; see AUTH_RATE_LIMIT in ./env.ts.
+  // "off" is ignored on Vercel production so a mistaken setting there cannot
+  // silently disable login brute-force protection.
+  ...(env.AUTH_RATE_LIMIT === "off" && process.env.VERCEL_ENV !== "production"
+    ? { rateLimit: { enabled: false } }
+    : {}),
+
   advanced: {
     database: {
       // Consistency Conventions ("IDs"): all primary keys are
