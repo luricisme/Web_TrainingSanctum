@@ -8,3 +8,4 @@
 
 export * from "./http";
 export * from "./auth/registration";
+export * from "./auth/login";

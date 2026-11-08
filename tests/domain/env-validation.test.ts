@@ -38,6 +38,22 @@ describe("apps/web/lib/env fail-fast validation (AC2)", () => {
     );
   });
 
+  it("defaults AUTH_RATE_LIMIT to on and accepts off", async () => {
+    const base = {
+      ...ORIGINAL_ENV,
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
+      BETTER_AUTH_SECRET: "test-secret",
+    };
+
+    process.env = { ...base };
+    delete process.env.AUTH_RATE_LIMIT;
+    expect((await import("../../apps/web/lib/env")).env.AUTH_RATE_LIMIT).toBe("on");
+
+    vi.resetModules();
+    process.env = { ...base, AUTH_RATE_LIMIT: "off" };
+    expect((await import("../../apps/web/lib/env")).env.AUTH_RATE_LIMIT).toBe("off");
+  });
+
   it("succeeds and returns the parsed env when config is valid", async () => {
     process.env = {
       ...ORIGINAL_ENV,

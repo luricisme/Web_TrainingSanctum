@@ -31,6 +31,11 @@ const envSchema = z.object({
     .transform(() => undefined)
     .or(z.string().url("BETTER_AUTH_URL must be a valid URL"))
     .optional(),
+  // Better Auth rate-limits sign-in/sign-up (3 per 10s per IP) whenever
+  // NODE_ENV is production, which `next start` is. The Playwright suites
+  // register and log in many users from one IP in seconds, so the test
+  // webServer sets this to "off". Leave unset everywhere else.
+  AUTH_RATE_LIMIT: z.enum(["on", "off"]).default("on"),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
