@@ -137,19 +137,6 @@ export function DeleteClassModal({
           onChange={(event) => setConfirmName(event.target.value)}
           className={inputClass}
         />
-        <div>
-          <button
-            type="button"
-            disabled={!canDelete}
-            onClick={() => {
-              setError(null);
-              remove.mutate({ mode: "delete", confirmName });
-            }}
-            className={buttonDanger}
-          >
-            Delete class and everything in it
-          </button>
-        </div>
       </section>
 
       {error ? (
@@ -158,7 +145,18 @@ export function DeleteClassModal({
         </p>
       ) : null}
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          disabled={!canDelete}
+          onClick={() => {
+            setError(null);
+            remove.mutate({ mode: "delete", confirmName });
+          }}
+          className={buttonDanger}
+        >
+          Delete class and everything in it
+        </button>
         <button
           type="button"
           disabled={remove.isPending}
