@@ -71,7 +71,10 @@ test.describe("POST /api/auth/sign-up/email", () => {
       data: {
         email,
         password: "a-different-password",
-        name: "Registration Test",
+        // Deliberately different from the first attempt's "Registration
+        // Test" so a silent mutation of `name` would actually be caught
+        // below, rather than passing by coincidence.
+        name: "Second Attempt Name",
         timezone: "Asia/Tokyo",
       },
     });
@@ -85,6 +88,7 @@ test.describe("POST /api/auth/sign-up/email", () => {
     expect(body.error.fields?.email).toBeTruthy();
 
     const after = await prisma.user.findUnique({ where: { email } });
+    expect(after?.name).toBe(before?.name);
     expect(after?.timezone).toBe(before?.timezone);
     expect(after?.updatedAt).toEqual(before?.updatedAt);
   });

@@ -48,4 +48,32 @@ describe("apps/web/lib/env fail-fast validation (AC2)", () => {
     const { env } = await import("../../apps/web/lib/env");
     expect(env.DATABASE_URL).toBe("postgresql://user:pass@localhost:5432/db");
   });
+
+  // Code review (2026-11-08): this exact empty-string-rejection bug already
+  // regressed once in story 1.2 (see spec-1-2's Review Triage Log) and CI
+  // never sets BETTER_AUTH_URL, so nothing else would catch a reintroduction.
+  it("treats an explicitly-empty BETTER_AUTH_URL as unset", async () => {
+    process.env = {
+      ...ORIGINAL_ENV,
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
+      BETTER_AUTH_SECRET: "test-secret",
+      BETTER_AUTH_URL: "",
+    };
+
+    const { env } = await import("../../apps/web/lib/env");
+    expect(env.BETTER_AUTH_URL).toBeUndefined();
+  });
+
+  it("rejects a BETTER_AUTH_URL that isn't a valid URL", async () => {
+    process.env = {
+      ...ORIGINAL_ENV,
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
+      BETTER_AUTH_SECRET: "test-secret",
+      BETTER_AUTH_URL: "not-a-url",
+    };
+
+    await expect(import("../../apps/web/lib/env")).rejects.toThrow(
+      /BETTER_AUTH_URL must be a valid URL/
+    );
+  });
 });

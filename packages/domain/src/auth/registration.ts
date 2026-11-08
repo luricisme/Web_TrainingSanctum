@@ -9,6 +9,10 @@
 import { z } from "zod";
 
 export const registerSchema = z.object({
+  // Better Auth's base `User` schema requires `name` (non-optional) on every
+  // `signUp.email` call — trimmed non-empty check mirrors the form's native
+  // `required` attribute, which `noValidate` otherwise leaves unenforced.
+  name: z.string().trim().min(1, "Name is required"),
   email: z.string().email(),
   // Minimum password length: 8 characters (spec-1-2 Boundaries &
   // Constraints) — no stricter policy specified anywhere upstream.

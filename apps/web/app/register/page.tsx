@@ -3,9 +3,9 @@
 /**
  * Minimal registration form (spec-1-2 Task: apps/web/app/register/page.tsx).
  *
- * Validates email/password with the shared Zod schema before ever calling
- * Better Auth (AD-6 / spec-1-2 Boundaries: "checked before any Better Auth
- * call"), captures the browser's IANA timezone, calls `signUp.email`, and
+ * Validates name/email/password with the shared Zod schema before ever
+ * calling Better Auth (AD-6 / spec-1-2 Boundaries: "checked before any
+ * Better Auth call"), captures the browser's IANA timezone, calls `signUp.email`, and
  * redirects to `/` on success — Better Auth's own post-signup session
  * issuance leaves the user logged in, so no separate login step is needed.
  *
@@ -40,13 +40,13 @@ export default function RegisterPage() {
         ? Intl.DateTimeFormat().resolvedOptions().timeZone
         : "";
 
-    const parsed = registerSchema.safeParse({ email, password, timezone });
+    const parsed = registerSchema.safeParse({ name, email, password, timezone });
     if (!parsed.success) {
       const errors: FieldErrors = {};
       let timezoneError: string | undefined;
       for (const issue of parsed.error.issues) {
         const key = issue.path[0];
-        if (key === "email" || key === "password") {
+        if (key === "name" || key === "email" || key === "password") {
           errors[key] ??= issue.message;
         } else if (key === "timezone") {
           timezoneError ??= issue.message;
@@ -70,7 +70,7 @@ export default function RegisterPage() {
         email: parsed.data.email,
         password: parsed.data.password,
         timezone: parsed.data.timezone,
-        name,
+        name: parsed.data.name,
       });
 
       if (error) {
@@ -128,7 +128,14 @@ export default function RegisterPage() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               className="rounded-[var(--radius-sm)] border border-border bg-elevated px-3 py-2 text-foreground"
+              aria-invalid={Boolean(fieldErrors.name)}
+              aria-describedby={fieldErrors.name ? "name-error" : undefined}
             />
+            {fieldErrors.name ? (
+              <p id="name-error" className="text-sm text-error">
+                {fieldErrors.name}
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-1">

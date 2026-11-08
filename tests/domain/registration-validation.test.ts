@@ -4,8 +4,9 @@ import { registerSchema } from "@training-sanctum/domain";
 // AC3 (spec-1-2): invalid email format or missing/short password fail Zod
 // validation before any Better Auth call is made (AD-6).
 describe("registerSchema (spec-1-2)", () => {
-  it("accepts a valid email, password (>=8 chars), and timezone", () => {
+  it("accepts a valid name, email, password (>=8 chars), and timezone", () => {
     const result = registerSchema.safeParse({
+      name: "Jane Doe",
       email: "person@example.com",
       password: "correct-horse",
       timezone: "America/New_York",
@@ -13,8 +14,38 @@ describe("registerSchema (spec-1-2)", () => {
     expect(result.success).toBe(true);
   });
 
+  it("rejects a missing name", () => {
+    const result = registerSchema.safeParse({
+      email: "person@example.com",
+      password: "correct-horse",
+      timezone: "America/New_York",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path[0] === "name")).toBe(
+        true
+      );
+    }
+  });
+
+  it("rejects a whitespace-only name", () => {
+    const result = registerSchema.safeParse({
+      name: "   ",
+      email: "person@example.com",
+      password: "correct-horse",
+      timezone: "America/New_York",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path[0] === "name")).toBe(
+        true
+      );
+    }
+  });
+
   it("rejects an invalid email format", () => {
     const result = registerSchema.safeParse({
+      name: "Jane Doe",
       email: "not-an-email",
       password: "correct-horse",
       timezone: "America/New_York",
@@ -29,6 +60,7 @@ describe("registerSchema (spec-1-2)", () => {
 
   it("rejects a missing password", () => {
     const result = registerSchema.safeParse({
+      name: "Jane Doe",
       email: "person@example.com",
       timezone: "America/New_York",
     });
@@ -42,6 +74,7 @@ describe("registerSchema (spec-1-2)", () => {
 
   it("rejects a password shorter than 8 characters", () => {
     const result = registerSchema.safeParse({
+      name: "Jane Doe",
       email: "person@example.com",
       password: "short1",
       timezone: "America/New_York",
@@ -56,6 +89,7 @@ describe("registerSchema (spec-1-2)", () => {
 
   it("rejects a missing timezone", () => {
     const result = registerSchema.safeParse({
+      name: "Jane Doe",
       email: "person@example.com",
       password: "correct-horse",
       timezone: "",

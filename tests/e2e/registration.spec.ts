@@ -44,6 +44,22 @@ test("invalid email or short password shows field errors and stays on /register"
   await expect(page).toHaveURL(/\/register$/);
 });
 
+// AC3 (spec-1-2): an empty name is a required Better Auth field — the form's
+// native `required` attribute is inert under `noValidate`, so the shared Zod
+// schema must be the thing that actually catches it before any Better Auth
+// call is made.
+test("empty name shows a field error and stays on /register", async ({
+  page,
+}) => {
+  await page.goto("/register");
+  await page.getByLabel("Email").fill("not-submitted@example.test");
+  await page.getByLabel("Password").fill("correct-horse-battery");
+  await page.getByRole("button", { name: "Create account" }).click();
+
+  await expect(page.locator("#name-error")).toBeVisible();
+  await expect(page).toHaveURL(/\/register$/);
+});
+
 // AC2 (spec-1-2): registering an already-registered email surfaces a
 // field-level error on the email field (the standard error envelope,
 // mapped client-side from Better Auth's response — see
