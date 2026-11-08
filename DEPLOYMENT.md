@@ -58,7 +58,16 @@ need a Neon connection string or any GitHub secret to pass. No action needed
 here unless you later want CI to exercise a real Neon branch instead of the
 disposable container.
 
-## 5. Deploy and verify
+## 5. Database migrations
+
+`vercel.json`'s `buildCommand` runs `prisma migrate deploy` before `next
+build` on every deployment, so pending migrations apply automatically
+against whichever `DATABASE_URL` that environment resolves to (production
+branch, or the Neon-integration-provisioned branch for a preview). No
+separate manual migration step is needed — just don't remove this from
+`buildCommand` without replacing it with an equivalent step.
+
+## 6. Deploy and verify
 
 1. Push to `main` (or merge the story's PR) to trigger a production
    deployment; open a PR to trigger a preview deployment.
