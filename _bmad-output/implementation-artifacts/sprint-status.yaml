@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-07-2026 00:00
-last_updated: 11-08-2026 23:30
+last_updated: 11-09-2026 00:15
 project: Web_TrainingSanctum
 project_key: NOKEY
 tracking_system: file-system
@@ -45,7 +45,7 @@ development_status:
 
   epic-2: in-progress
   2-1-class-crud: review
-  2-2-folder-crud-inside-a-class: backlog
+  2-2-folder-crud-inside-a-class: review
   2-3-add-cards-manual-mode: backlog
   2-4-edit-a-card: backlog
   2-5-delete-a-card: backlog
