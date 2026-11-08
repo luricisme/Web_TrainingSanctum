@@ -1,10 +1,14 @@
 // Training Sanctum — Prisma schema
 //
-// Story 1.1 scope only: the bare `User` model (skeleton) needed to prove the
-// Prisma wiring end-to-end. Card, Folder, and SchedulingRecord land in
-// Epic 2+ per the architecture spine. AD-2: Postgres is reachable only
-// through the client exported by this package — no other package
-// instantiates PrismaClient or issues raw SQL.
+// Story 1.1 scope was the bare `User` model (skeleton) needed to prove the
+// Prisma wiring end-to-end. Story 1.2 wires Better Auth (email/password)
+// against this schema: `Session`/`Account`/`Verification` are Better Auth's
+// required tables (field names/shapes mirror its core schema exactly — see
+// apps/web/lib/auth.ts), and `User.timezone` is the one custom field this
+// story adds, captured client-side at signup (AD-8). Card, Folder, and
+// SchedulingRecord land in Epic 2+ per the architecture spine. AD-2: Postgres
+// is reachable only through the client exported by this package — no other
+// package instantiates PrismaClient or issues raw SQL.
 
 generator client {
   provider     = "prisma-client"
@@ -19,13 +23,73 @@ datasource db {
   provider = "postgresql"
 }
 
+// Better Auth's base User fields (name, email, emailVerified, image,
+// timestamps) plus the custom `timezone` field (Design Notes / AD-8).
+// Note: the hashed password itself is NOT stored on this model — Better
+// Auth's email/password provider stores it on the related `Account` row
+// (providerId: "credential"), which is where its own sign-in/verify logic
+// reads it from. See Implementation Notes in spec-1-2 for why the earlier
+// `User.hashedPassword` placeholder field was dropped instead of kept as an
+// unused/hand-synced column.
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  hashedPassword String
-  timezone       String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  timezone      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
 
   @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
 }
