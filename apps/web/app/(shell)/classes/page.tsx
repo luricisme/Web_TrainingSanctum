@@ -1,5 +1,5 @@
-import { PageHeader } from "../page-header";
+import { ClassesView } from "./classes-view";
 
 export default function ClassesPage() {
-  return <PageHeader title="Classes">Your classes will live here.</PageHeader>;
+  return <ClassesView />;
 }
