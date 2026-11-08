@@ -1,0 +1,69 @@
+# Team overrides for bmad-build (Amelia's implementation workflow).
+# Committed to the repo — applies to every developer on the project.
+# Merge rules: strings replace, lists append, review_layers merge by `id`.
+#
+# Purpose: any story that touches UI must be built from the project's design
+# system and Design DNA (skill:design-dna), with skill:threejs-* consulted for
+# any Canvas/WebGL/3D/shader effect — so the UI follows the agreed identity
+# instead of falling back to generic AI-default styling.
+
+[workflow]
+
+persistent_facts = [
+  """UI SOURCE OF TRUTH (precedence, highest first):
+1. _bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/DESIGN.md — visual tokens (color, type, spacing, shape, elevation, motion) and component rules. On any conflict, DESIGN.md wins.
+2. apps/web/app/globals.css — the coded token layer of DESIGN.md. UI code uses these tokens (Tailwind `bg-background`, `text-accent`, CSS vars); never hard-coded hex, px font sizes or ad-hoc shadows that are not in the token set.
+3. _bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/.working/design-dna-profile.json — Design DNA. Use its `design_style` (mood, visual language, composition, interaction feel) and `visual_effects` sections to guide subjective decisions. Its `design_system.color` block predates the 2026-11-08 "Focus Indigo" palette change, so take colors from DESIGN.md, not from the DNA file.
+4. _bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/EXPERIENCE.md — behavior, states, flows, accessibility.
+5. _bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/mockups/key-screens.html — visual reference for layout and density.""",
+
+  """UI SKILLS: For any change that creates or restyles UI, apply skill:design-dna Phase 3 ("Generate — Apply DNA to Content", see .claude/skills/design-dna/SKILL.md and references/generation-guide.md), targeting the real Next.js/Tailwind code in apps/web rather than a standalone HTML file. For any Canvas, WebGL, 3D, particle, shader or scroll-driven effect, consult the matching skill:threejs-* first (threejs-react-three-fiber for React; threejs-performance for frame budget). The current DNA sets visual_effects.effect_intensity = "none" (CSS only), so a heavy effect needs explicit approval in the story or spec.""",
+
+  """ANTI-GENERIC UI RULES (reject these AI defaults unless DESIGN.md asks for them): no decorative gradients, glows, blobs or glassmorphism; no emoji used as icons; no stack of identical rounded cards with drop shadows as the default layout; no blanket rounded-2xl or shadow-lg on everything; the accent marks the one actionable thing per screen and is never spread decoratively; no centered marketing-hero composition on app screens; no filler or lorem copy, since microcopy follows DESIGN.md/EXPERIENCE.md voice; one focal element per screen with chrome receding; editorial rhythm (bold sans headers, small square section markers, thin dividers) and Quizlet-style structure (sidebar nav, list rows, flashcard shape) as specified. Every visual choice must be traceable to a token or rule in DESIGN.md or the DNA design_style.""",
+]
+
+activation_steps_append = [
+  """Classify the request: does it create or change anything a user sees (pages, components, styles, layout, motion, empty/error/loading states)? If yes, mark it UI-TOUCHING. When writing the spec for a UI-TOUCHING change, add to its frontmatter `context:` the DESIGN.md, EXPERIENCE.md and design-dna-profile.json paths from persistent_facts, plus `{project-root}/.claude/skills/design-dna/references/generation-guide.md`; if the change includes Canvas/WebGL/3D/shader/scroll effects, also add the SKILL.md of each relevant threejs-* skill under `{project-root}/.claude/skills/`. Add an acceptance criterion: "UI conforms to DESIGN.md tokens and the Design DNA design_style; passes the anti-generic UI rules; checked against a screenshot in both dark and light themes." """,
+]
+
+implementation_handoff = """
+Launch a subagent with no prior conversation context, with this prompt:
+
+> Read {spec_file} fully and implement it — the spec is the sole source of truth. Load every file listed in its frontmatter `context:` before you start.
+>
+> If the change touches UI:
+> - Apply skill:design-dna Phase 3 (invoke the skill, or read `.claude/skills/design-dna/SKILL.md` and `references/generation-guide.md`) to the real Next.js/Tailwind code in apps/web. Do not generate standalone HTML.
+> - Tokens come from DESIGN.md and apps/web/app/globals.css: no hard-coded hex values or ad-hoc shadows or radii. Take mood, composition, whitespace and interaction feel from the `design_style` of `_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/.working/design-dna-profile.json`. Its color block is outdated, so DESIGN.md wins.
+> - For any Canvas/WebGL/3D/shader/scroll effect, invoke or read the matching skill:threejs-* first (threejs-react-three-fiber for React, threejs-performance for frame budget).
+> - Avoid generic AI styling: no decorative gradients, glows or glassmorphism, no emoji icons, no uniform rounded-shadow card grids, no decorative use of the accent, no filler copy. Every visual decision must trace to DESIGN.md or the DNA design_style.
+> - Before finishing, run the app, screenshot each changed screen in dark and light themes, compare the screenshots with DESIGN.md and mockups/key-screens.html, and fix any drift.
+>
+> When done, report what you changed, how you verified it (including screenshot paths for UI changes), and anything left incomplete or risky. For UI changes, list which DESIGN.md tokens and DNA design_style fields drove the main visual decisions.
+"""
+
+[[workflow.review_layers]]
+id = "design-fidelity"
+name = "Design Fidelity Reviewer"
+when = "the diff changes UI: .tsx/.jsx components or pages, .css files, Tailwind classes, or visual assets"
+instruction = """
+Launch a context-free subagent with this prompt:
+
+You review a UI change for fidelity to this project's design system and for generic "AI-default" styling.
+
+Read, in this order:
+1. `_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/DESIGN.md`. This is the source of truth for tokens and component rules.
+2. `apps/web/app/globals.css`, which holds the coded tokens.
+3. The `design_style` and `visual_effects` sections of `_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/.working/design-dna-profile.json`. Ignore its color block, which is outdated; DESIGN.md wins.
+4. The unified diff at `{diff_file}`. This is the content under review.
+
+Report every place where the diff:
+- uses a value not in the token set (raw hex, arbitrary Tailwind values such as `text-[13px]` or `bg-[#...]`, ad-hoc shadows or radii);
+- contradicts a DESIGN.md component rule or the DNA design_style (mood, focal strategy, whitespace, ornamentation, interaction feel);
+- uses the accent for more than the one actionable thing on a screen;
+- shows generic AI styling: decorative gradients, glows or glassmorphism, emoji icons, uniform rounded-shadow card grids, marketing-hero layout on app screens, or filler copy;
+- adds a Canvas/WebGL/3D/heavy-motion effect even though the DNA sets effect_intensity "none", or implements one against threejs best practice (no disposal, no reduced-motion fallback, unbounded frame cost).
+
+Cite file and line for each finding and name the DESIGN.md rule or DNA field it violates. Output a Markdown list of findings only, with no severity. If nothing violates the design, say so explicitly.
+
+Do not invoke any skill, and do not spawn subagents of your own — you are the reviewer. Return your findings as text in your final message; do not route them through any findings-reporting tool the host may offer.
+"""

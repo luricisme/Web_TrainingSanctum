@@ -44,13 +44,7 @@
     --shadow-medium: 0 4px 12px rgba(0,0,0,0.25);
     --shadow-high: 0 8px 24px rgba(0,0,0,0.35);
 
-    /* accent + semantic — identical across both themes */
-    --accent: #b74242;
-    --accent-hover: #c65252;
-    --success: #5c8a68;
-    --warning: #c98a3a;
-    --error: #b74242;
-    --info: #6a8a99;
+    /* accent + semantic are per-theme ("Focus Indigo", DESIGN.md) — see theme blocks below */
 
     /* motion */
     --dur-normal: 180ms;
@@ -58,32 +52,46 @@
     --ease-in-out: ease-in-out;
   }
 
-  /* DARK (default) — background #14151f, card #1f2130, elevated #262838, text #ecf1f2/#faf7f0 */
+  /* DARK (default) — "Focus Indigo": bg #101120, card #181a2e, accent #959aff */
   html.theme-dark {
-    --bg: #14151f;
-    --card: #1f2130;
-    --elevated: #262838;
-    --text: #ecf1f2;
-    --text-soft: #faf7f0;
-    --text-secondary: #c6c9d2;
-    --text-tertiary: #9b9fae;
-    --border: #3a3d4d;
-    --divider: #2a2c3c;
-    --row-hover: #262838;
+    --bg: #101120;
+    --card: #181a2e;
+    --elevated: #21243c;
+    --text: #e6e7f2;
+    --text-secondary: #b1b3c9;
+    --text-tertiary: #868aa3;
+    --border: #30344f;
+    --divider: #252840;
+    --row-hover: #21243c;
+    --accent: #959aff;
+    --accent-hover: #aeb1ff;
+    --on-accent: #0d0f2a;
+    --success: #5ec79a;
+    --warning: #e2a94b;
+    --error: #ef6b6b;
+    --error-tint: rgba(239, 107, 107, 0.12);
+    --info: #6bb6e0;
   }
 
-  /* LIGHT — background #8ea89b (sage), card #faf7f0, text #0e0e12 (ink) */
+  /* LIGHT — "Focus Indigo": bg #f5f5fa, card #ffffff, accent #4a4ed4 */
   html.theme-light {
-    --bg: #8ea89b;
-    --card: #faf7f0;
-    --elevated: #ecf1f2;
-    --text: #0e0e12;
-    --text-soft: #0e0e12;
-    --text-secondary: #3a3d4d;
-    --text-tertiary: #6b6f80;
-    --border: #c6c9d2;
-    --divider: #c6c9d2;
-    --row-hover: #ecf1f2;
+    --bg: #f5f5fa;
+    --card: #ffffff;
+    --elevated: #ececf6;
+    --text: #14152a;
+    --text-secondary: #464a66;
+    --text-tertiary: #686c8c;
+    --border: #d8dae9;
+    --divider: #e6e7f1;
+    --row-hover: #ececf6;
+    --accent: #4a4ed4;
+    --accent-hover: #3a3eb8;
+    --on-accent: #ffffff;
+    --success: #2f7d52;
+    --warning: #b45309;
+    --error: #c62f3a;
+    --error-tint: rgba(198, 47, 58, 0.08);
+    --info: #2a6aa0;
   }
 
   * { box-sizing: border-box; }
@@ -160,7 +168,7 @@
 
   .tab-pill.active {
     background: var(--accent);
-    color: #faf7f0;
+    color: var(--on-accent);
   }
 
   .theme-toggle {
@@ -197,7 +205,7 @@
   }
 
   /* ============================================================
-     SHARED APP SHELL (sidebar + content) — used by Folders screen
+     SHARED APP SHELL (sidebar + content) — used by Classes, Class and Folder screens
      ============================================================ */
   .app-shell {
     display: flex;
@@ -401,10 +409,10 @@
   .grade-btn:hover { background: var(--elevated); }
 
   .grade-btn.again {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--error);
+    color: var(--error);
   }
-  .grade-btn.again:hover { background: rgba(183, 66, 66, 0.12); }
+  .grade-btn.again:hover { background: var(--error-tint); }
 
   .review-meta {
     display: flex;
@@ -563,7 +571,7 @@
 
   .btn-primary {
     background: var(--accent);
-    color: #faf7f0;
+    color: var(--on-accent);
     border: none;
     padding: var(--sp-3) var(--sp-6);
     border-radius: var(--radius-md);
@@ -572,6 +580,76 @@
     transition: background-color var(--dur-normal) var(--ease-in-out);
   }
   .btn-primary:hover { background: var(--accent-hover); }
+
+
+  /* ============================================================
+     CLASS → FOLDER → CARD browsing + ADD CARDS PANEL
+     ============================================================ */
+  .page-header-row { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-6); }
+  .page-header-row .page-header { margin-bottom: 0; }
+  .header-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+  .btn-secondary {
+    background: transparent; border: 1px solid var(--border); color: var(--text-secondary);
+    padding: var(--sp-3) var(--sp-5); border-radius: var(--radius-md); font-size: var(--fs-body-sm); font-weight: 600; cursor: pointer;
+    transition: background-color var(--dur-normal) var(--ease-in-out), color var(--dur-normal) var(--ease-in-out);
+  }
+  .btn-secondary:hover { background: var(--row-hover); color: var(--text); }
+  .btn-primary { cursor: pointer; }
+  .crumb-link { color: var(--text-secondary); cursor: pointer; }
+  .crumb-link:hover { color: var(--accent); }
+  .folder-icon.class-icon { color: var(--accent); }
+  .tag-locked { font-size: var(--fs-caption); color: var(--text-tertiary); margin-left: var(--sp-2); font-weight: 500; }
+  .card-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: var(--sp-4); align-items: center; padding: var(--sp-3); border-bottom: 1px solid var(--divider); border-radius: var(--radius-sm); }
+  .card-row:hover { background: var(--row-hover); }
+  .card-row .term { font-weight: 600; color: var(--text); }
+  .card-row .def { color: var(--text-secondary); font-size: var(--fs-body-sm); }
+  .section-group .card-row:last-child { border-bottom: none; }
+
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: flex-start; justify-content: center; padding: 6vh var(--sp-4); z-index: 50; overflow-y: auto; }
+  .scrim.open { display: flex; }
+  .add-panel { width: 100%; max-width: 880px; background: var(--card); border: 1px solid var(--divider); border-radius: var(--radius-lg); box-shadow: var(--shadow-high); display: flex; flex-direction: column; }
+  .add-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); padding: var(--sp-5) var(--sp-6); border-bottom: 1px solid var(--divider); flex-wrap: wrap; }
+  .add-head h2 { margin: 0; font-size: var(--fs-h2, 1.25rem); color: var(--text); }
+  .add-head .eyebrow { display: block; margin-bottom: 2px; }
+  .mode-switch { display: inline-flex; background: var(--elevated); border-radius: 999px; padding: 4px; gap: 2px; }
+  .mode-switch button { border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--fs-body-sm); font-weight: 600; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
+  .mode-switch button.on { background: var(--accent); color: var(--on-accent); }
+  .mode-switch.neutral { align-self: flex-start; }
+  .mode-switch.neutral button.on { background: var(--card); color: var(--text); box-shadow: var(--shadow-low); }
+  .add-body { padding: var(--sp-5) var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-3); }
+  .m-row { background: var(--elevated); border-radius: var(--radius-md); padding: var(--sp-4); display: grid; grid-template-columns: 28px 1fr 1fr; gap: var(--sp-4); align-items: start; }
+  .m-num { font-family: var(--font-mono); color: var(--text-tertiary); font-size: var(--fs-body-sm); padding-top: 6px; }
+  .m-field label { display: block; font-size: var(--fs-overline); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); font-weight: 600; margin-top: 4px; }
+  .m-field input { width: 100%; background: transparent; border: 0; border-bottom: 2px solid var(--border); color: var(--text); font: inherit; font-size: var(--fs-body); padding: 6px 0; outline: none; }
+  .m-field input:focus { border-bottom-color: var(--accent); }
+  .m-field.err input { border-bottom-color: var(--error); }
+  .m-err { color: var(--error); font-size: var(--fs-caption); margin-top: 4px; }
+  .m-more { grid-column: 2 / -1; background: none; border: 0; padding: 0; color: var(--text-tertiary); font: inherit; font-size: var(--fs-caption); text-align: left; cursor: pointer; }
+  .m-more:hover { color: var(--text); }
+  .add-row { border: 1.5px dashed var(--border); background: transparent; color: var(--text-secondary); border-radius: var(--radius-md); padding: var(--sp-4); font: inherit; font-weight: 600; cursor: pointer; }
+  .add-row:hover { color: var(--text); border-color: var(--text-tertiary); }
+  .add-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--sp-6); border-top: 1px solid var(--divider); flex-wrap: wrap; }
+  .add-foot .hint { font-size: var(--fs-caption); color: var(--text-tertiary); }
+  .add-foot .actions { display: flex; gap: var(--sp-2); }
+  .paste-box { width: 100%; min-height: 180px; background: var(--elevated); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text); font-family: var(--font-mono); font-size: var(--fs-body-sm); padding: var(--sp-4); resize: vertical; }
+  .delim { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-body-sm); color: var(--text-secondary); }
+  .delim select { background: var(--elevated); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 8px; font: inherit; }
+  .drop { border: 1.5px dashed var(--border); border-radius: var(--radius-md); padding: var(--sp-7) var(--sp-4); text-align: center; color: var(--text-secondary); }
+  .drop strong { color: var(--text); }
+  .rv-strip { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; background: var(--elevated); border-radius: var(--radius-md); padding: var(--sp-3) var(--sp-4); font-size: var(--fs-body-sm); color: var(--text-secondary); }
+  .rv-strip b { color: var(--text); }
+  .rv-strip .bad { color: var(--error); font-weight: 600; }
+  .rv-strip .dup { color: var(--warning); font-weight: 600; }
+  .m-row.rv { grid-template-columns: 40px 1fr 1fr 28px; border-left: 2px solid transparent; }
+  .m-row.rv.is-err { border-left-color: var(--error); }
+  .m-row.rv.is-dup { border-left-color: var(--warning); }
+  .m-row.rv .m-more { grid-column: 2 / 4; }
+  .m-dup { color: var(--warning); font-size: var(--fs-caption); margin-top: 4px; }
+  .rv-x { background: none; border: 0; color: var(--text-tertiary); font-size: 18px; line-height: 1; cursor: pointer; padding: 4px; border-radius: var(--radius-sm); }
+  .rv-x:hover { color: var(--text); background: var(--card); }
+  .btn-link { background: none; border: 0; color: var(--text-secondary); font: inherit; font-size: var(--fs-body-sm); cursor: pointer; padding: 0; }
+  .btn-link:hover { color: var(--text); }
+  [hidden] { display: none !important; }
 
   /* small helper for section eyebrow label */
   .eyebrow {
@@ -583,6 +661,14 @@
 
   @media (max-width: 640px) {
     .sidebar { display: none; }
+    .m-row, .m-row.rv { grid-template-columns: 32px 1fr; }
+    .m-row.rv .rv-x { grid-column: 2; justify-self: end; }
+    .m-row.rv .m-more { grid-column: 2; }
+    .m-row .m-field + .m-field { grid-column: 2; }
+    .card-row { grid-template-columns: 1fr auto; }
+    .card-row .def { grid-column: 1; }
+    .scrim { padding: 0; }
+    .add-panel { border-radius: 0; min-height: 100%; }
     .content-area { padding: var(--sp-5); }
     .grade-row { flex-wrap: wrap; }
   }
@@ -594,7 +680,9 @@
     <div class="brand">Training Sanctum — Design Direction</div>
     <div class="tab-pills" role="tablist" aria-label="Screen selector">
       <button class="tab-pill active" data-screen="review">Review Session</button>
-      <button class="tab-pill" data-screen="folders">Folders</button>
+      <button class="tab-pill" data-screen="classes">Classes</button>
+      <button class="tab-pill" data-screen="class">Class</button>
+      <button class="tab-pill" data-screen="folder">Folder + Add cards</button>
       <button class="tab-pill" data-screen="empty">Empty Queue</button>
     </div>
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode">
@@ -673,117 +761,44 @@
   </section>
 
   <!-- ============================================================
-       SCREEN 2 — FOLDER / LIBRARY VIEW (sidebar visible, Folders active)
+       SCREEN 2 — CLASSES (top level of Class → Folder → Card)
        ============================================================ -->
-  <section class="screen" id="screen-folders">
+  <section class="screen" id="screen-classes">
     <div class="app-shell">
-
-      <nav class="sidebar">
-        <div class="sidebar-title">Training Sanctum</div>
-        <div class="nav-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
-          Review
-        </div>
-        <div class="nav-item active">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
-          Folders
-        </div>
-        <div class="nav-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Import
-        </div>
-        <div class="nav-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          Stats
-        </div>
-        <div class="nav-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Settings
-        </div>
-      </nav>
-
+      <nav class="sidebar" data-active="classes"></nav>
       <div class="content-area">
-        <div class="page-header">
-          <h1 class="page-title">English Idioms</h1>
-          <p class="page-subtitle">Folders <span class="crumb-sep">/</span> English Idioms <span class="crumb-sep">/</span> 6 subfolders</p>
+        <div class="page-header-row">
+          <div class="page-header">
+            <h1 class="page-title">Classes</h1>
+            <p class="page-subtitle">3 classes · 214 cards</p>
+          </div>
+          <div class="header-actions"><button class="btn-primary">+ New class</button></div>
         </div>
-
         <div class="section-group">
-          <div class="section-header">
-            <span class="section-bullet"></span>
-            <h2>Recently studied</h2>
-          </div>
-
-          <div class="folder-row">
-            <div class="folder-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
-            </div>
+          <div class="section-header"><span class="section-bullet"></span><h2>All classes</h2></div>
+          <div class="folder-row" data-go="class">
+            <div class="folder-icon class-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></div>
             <div class="folder-info">
-              <div class="folder-name">Idioms about time</div>
-              <div class="folder-count">20 cards</div>
+              <div class="folder-name">English Idioms</div>
+              <div class="folder-count">5 folders · 111 cards</div>
             </div>
-            <button class="folder-overflow" aria-label="More options">
-              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-            </button>
+            <button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
           </div>
-
-          <div class="folder-row">
-            <div class="folder-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
-            </div>
+          <div class="folder-row" data-go="class">
+            <div class="folder-icon class-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></div>
             <div class="folder-info">
-              <div class="folder-name">Business idioms</div>
-              <div class="folder-count">34 cards</div>
+              <div class="folder-name">IELTS Academic</div>
+              <div class="folder-count">4 folders · 76 cards</div>
             </div>
-            <button class="folder-overflow" aria-label="More options">
-              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-            </button>
+            <button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
           </div>
-        </div>
-
-        <div class="section-group">
-          <div class="section-header">
-            <span class="section-bullet"></span>
-            <h2>All folders</h2>
-          </div>
-
-          <div class="folder-row">
-            <div class="folder-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
-            </div>
+          <div class="folder-row" data-go="class">
+            <div class="folder-icon class-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></div>
             <div class="folder-info">
-              <div class="folder-name">Animal idioms</div>
-              <div class="folder-count">18 cards</div>
+              <div class="folder-name">Business English</div>
+              <div class="folder-count">2 folders · 27 cards</div>
             </div>
-            <button class="folder-overflow" aria-label="More options">
-              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-            </button>
-          </div>
-
-          <div class="folder-row">
-            <div class="folder-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
-            </div>
-            <div class="folder-info">
-              <div class="folder-name">Food &amp; cooking idioms</div>
-              <div class="folder-count">27 cards</div>
-            </div>
-            <button class="folder-overflow" aria-label="More options">
-              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-            </button>
-          </div>
-
-          <div class="folder-row">
-            <div class="folder-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
-            </div>
-            <div class="folder-info">
-              <div class="folder-name">Weather idioms</div>
-              <div class="folder-count">12 cards</div>
-            </div>
-            <button class="folder-overflow" aria-label="More options">
-              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-            </button>
+            <button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
           </div>
         </div>
       </div>
@@ -791,14 +806,219 @@
   </section>
 
   <!-- ============================================================
-       SCREEN 3 — EMPTY DUE-QUEUE STATE
+       SCREEN 3 — CLASS DETAIL (its Folders; Unsorted pinned first)
+       ============================================================ -->
+  <section class="screen" id="screen-class">
+    <div class="app-shell">
+      <nav class="sidebar" data-active="classes"></nav>
+      <div class="content-area">
+        <div class="page-header-row">
+          <div class="page-header">
+            <h1 class="page-title">English Idioms</h1>
+            <p class="page-subtitle"><span class="crumb-link" data-go="classes">Classes</span> <span class="crumb-sep">/</span> English Idioms <span class="crumb-sep">/</span> 5 folders</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary">Review this class</button>
+            <button class="btn-primary">+ New folder</button>
+          </div>
+        </div>
+        <div class="section-group">
+          <div class="section-header"><span class="section-bullet"></span><h2>Recently studied</h2></div>
+          <div class="folder-row" data-go="folder">
+            <div class="folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div>
+            <div class="folder-info">
+              <div class="folder-name">Idioms about time</div>
+              <div class="folder-count">20 cards</div>
+            </div>
+            <button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+          </div>
+          <div class="folder-row" data-go="folder">
+            <div class="folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div>
+            <div class="folder-info">
+              <div class="folder-name">Weather idioms</div>
+              <div class="folder-count">12 cards</div>
+            </div>
+            <button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+          </div>
+        </div>
+        <div class="section-group">
+          <div class="section-header"><span class="section-bullet"></span><h2>All folders</h2></div>
+          <div class="folder-row" data-go="folder">
+            <div class="folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div>
+            <div class="folder-info">
+              <div class="folder-name">Unsorted<span class="tag-locked">built-in</span></div>
+              <div class="folder-count">4 cards</div>
+            </div>
+            
+          </div>
+          <div class="folder-row" data-go="folder">
+            <div class="folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div>
+            <div class="folder-info">
+              <div class="folder-name">Animal idioms</div>
+              <div class="folder-count">18 cards</div>
+            </div>
+            <button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+          </div>
+          <div class="folder-row" data-go="folder">
+            <div class="folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div>
+            <div class="folder-info">
+              <div class="folder-name">Business idioms</div>
+              <div class="folder-count">34 cards</div>
+            </div>
+            <button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+          </div>
+          <div class="folder-row" data-go="folder">
+            <div class="folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div>
+            <div class="folder-info">
+              <div class="folder-name">Food &amp; cooking idioms</div>
+              <div class="folder-count">27 cards</div>
+            </div>
+            <button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SCREEN 4 — FOLDER DETAIL (its Cards; "Add cards" = Manual | Import)
+       ============================================================ -->
+  <section class="screen" id="screen-folder">
+    <div class="app-shell">
+      <nav class="sidebar" data-active="classes"></nav>
+      <div class="content-area">
+        <div class="page-header-row">
+          <div class="page-header">
+            <h1 class="page-title">Weather idioms</h1>
+            <p class="page-subtitle"><span class="crumb-link" data-go="classes">Classes</span> <span class="crumb-sep">/</span> <span class="crumb-link" data-go="class">English Idioms</span> <span class="crumb-sep">/</span> Weather idioms · 12 cards</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary">Review this folder</button>
+            <button class="btn-primary" data-open-add>+ Add cards</button>
+          </div>
+        </div>
+        <div class="section-group">
+          <div class="section-header"><span class="section-bullet"></span><h2>Cards</h2></div>
+          <div class="card-row"><div class="term">under the weather</div><div class="def">slightly ill; not feeling well</div><button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button></div>
+          <div class="card-row"><div class="term">a storm in a teacup</div><div class="def">a lot of anger or worry about something unimportant</div><button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button></div>
+          <div class="card-row"><div class="term">break the ice</div><div class="def">to make people feel more relaxed in a new situation</div><button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button></div>
+          <div class="card-row"><div class="term">every cloud has a silver lining</div><div class="def">something good can come from a bad situation</div><button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button></div>
+          <div class="card-row"><div class="term">steal someone's thunder</div><div class="def">to take attention or praise away from someone</div><button class="folder-overflow" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ADD CARDS PANEL — opened from a Folder (or "+ Add card" on Empty Queue)
+       ============================================================ -->
+  <div class="scrim" id="addScrim" aria-hidden="true">
+    <div class="add-panel" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+      <div class="add-head">
+        <div>
+          <span class="eyebrow">English Idioms</span>
+          <h2 id="addTitle">Add cards to Weather idioms</h2>
+        </div>
+        <div class="mode-switch" role="tablist" aria-label="Add mode">
+          <button class="on" data-mode="manual" role="tab">Manual</button>
+          <button data-mode="import" role="tab">Import</button>
+        </div>
+      </div>
+
+      <div class="add-body" data-pane="manual">
+        <div class="m-row">
+          <div class="m-num">1</div>
+          <div class="m-field"><input value="rain on someone's parade" aria-label="Term 1"><label>Term</label></div>
+          <div class="m-field"><input value="to spoil someone's plans or pleasure" aria-label="Definition 1"><label>Definition</label></div>
+          <button class="m-more">+ More fields (example, context, part of speech)</button>
+        </div>
+        <div class="m-row">
+          <div class="m-num">2</div>
+          <div class="m-field"><input value="calm before the storm" aria-label="Term 2"><label>Term</label></div>
+          <div class="m-field err"><input value="" aria-label="Definition 2"><label>Definition</label><div class="m-err">Add a definition, or clear the term to skip this row.</div></div>
+          <button class="m-more">+ More fields (example, context, part of speech)</button>
+        </div>
+        <div class="m-row">
+          <div class="m-num">3</div>
+          <div class="m-field"><input placeholder="" aria-label="Term 3"><label>Term</label></div>
+          <div class="m-field"><input placeholder="" aria-label="Definition 3"><label>Definition</label></div>
+          <button class="m-more">+ More fields (example, context, part of speech)</button>
+        </div>
+        <button class="add-row">+ Add row</button>
+      </div>
+
+      <div class="add-body" data-pane="import" hidden>
+        <div class="mode-switch neutral" role="tablist" aria-label="Import source">
+          <button class="on" data-src="paste" role="tab">Paste</button>
+          <button data-src="file" role="tab">Upload file</button>
+        </div>
+        <div data-srcpane="paste">
+          <div class="delim" style="margin-bottom:8px">Delimiter
+            <select aria-label="Delimiter"><option>— (em dash)</option><option>Tab</option><option>, (comma)</option></select>
+          </div>
+          <textarea class="paste-box" aria-label="Paste cards">rain cats and dogs — to rain very heavily
+on cloud nine — extremely happy
+a perfect storm: a rare combination of bad events
+under the weather — feeling slightly ill</textarea>
+        </div>
+        <div data-srcpane="file" hidden>
+          <div class="drop"><strong>Drop a CSV or Excel file</strong><br>or click to choose. You map its columns to card fields next.</div>
+        </div>
+      </div>
+
+
+      <div class="add-body" data-pane="review" hidden>
+        <div class="rv-strip"><span><b>4 rows</b> from paste</span><span class="bad">1 needs fixing</span><span class="dup">1 duplicate</span><button class="btn-link" data-back style="margin-left:auto">← Back to paste</button></div>
+        <div class="m-row rv">
+          <div class="m-num">L1</div>
+          <div class="m-field"><input value="rain cats and dogs" aria-label="Term, line 1"><label>Term</label></div>
+          <div class="m-field"><input value="to rain very heavily" aria-label="Definition, line 1"><label>Definition</label></div>
+          <button class="rv-x" aria-label="Remove line 1">×</button>
+          <button class="m-more">+ More fields (example, context, part of speech)</button>
+        </div>
+        <div class="m-row rv">
+          <div class="m-num">L2</div>
+          <div class="m-field"><input value="on cloud nine" aria-label="Term, line 2"><label>Term</label></div>
+          <div class="m-field"><input value="extremely happy" aria-label="Definition, line 2"><label>Definition</label></div>
+          <button class="rv-x" aria-label="Remove line 2">×</button>
+          <button class="m-more">+ More fields (example, context, part of speech)</button>
+        </div>
+        <div class="m-row rv is-err">
+          <div class="m-num">L3</div>
+          <div class="m-field err"><input value="a perfect storm: a rare combination of bad events" aria-label="Term, line 3"><label>Term</label></div>
+          <div class="m-field err"><input value="" aria-label="Definition, line 3"><label>Definition</label><div class="m-err">No “—” delimiter found on this line. Split it into term and definition.</div></div>
+          <button class="rv-x" aria-label="Remove line 3">×</button>
+          <button class="m-more">+ More fields (example, context, part of speech)</button>
+        </div>
+        <div class="m-row rv is-dup">
+          <div class="m-num">L4</div>
+          <div class="m-field"><input value="under the weather" aria-label="Term, line 4"><label>Term</label><div class="m-dup">Already in Weather idioms — will be skipped. Edit the term to keep it.</div></div>
+          <div class="m-field"><input value="feeling slightly ill" aria-label="Definition, line 4"><label>Definition</label></div>
+          <button class="rv-x" aria-label="Remove line 4">×</button>
+          <button class="m-more">+ More fields (example, context, part of speech)</button>
+        </div>
+        <button class="add-row">+ Add row</button>
+      </div>
+
+      <div class="add-foot">
+        <span class="hint" data-hint>Tab moves to the next field · Enter on the last field adds a row</span>
+        <div class="actions">
+          <button class="btn-secondary" data-close-add>Cancel</button>
+          <button class="btn-primary" data-submit>Save 1 card</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN 5 — EMPTY DUE-QUEUE STATE
        ============================================================ -->
   <section class="screen" id="screen-empty">
     <div class="empty-screen">
       <div class="empty-streak-label">Current streak</div>
       <div class="empty-streak">14-day streak</div>
       <p class="empty-line">You're all caught up — nothing is due for review right now. Come back later, or add a new card to keep building your deck.</p>
-      <button class="btn-primary">+ Add card</button>
+      <button class="btn-primary" data-open-add>+ Add card</button>
     </div>
   </section>
 
@@ -833,20 +1053,88 @@
       var pills = document.querySelectorAll('.tab-pill');
       var screens = {
         review: document.getElementById('screen-review'),
-        folders: document.getElementById('screen-folders'),
+        classes: document.getElementById('screen-classes'),
+        class: document.getElementById('screen-class'),
+        folder: document.getElementById('screen-folder'),
         empty: document.getElementById('screen-empty')
       };
 
+      function show(name) {
+        pills.forEach(function (p) { p.classList.toggle('active', p.getAttribute('data-screen') === name); });
+        Object.keys(screens).forEach(function (key) { screens[key].classList.toggle('active', key === name); });
+      }
       pills.forEach(function (pill) {
-        pill.addEventListener('click', function () {
-          pills.forEach(function (p) { p.classList.remove('active'); });
-          pill.classList.add('active');
-          Object.keys(screens).forEach(function (key) {
-            screens[key].classList.remove('active');
-          });
-          screens[pill.getAttribute('data-screen')].classList.add('active');
+        pill.addEventListener('click', function () { show(pill.getAttribute('data-screen')); });
+      });
+      document.querySelectorAll('[data-go]').forEach(function (el) {
+        el.addEventListener('click', function () { show(el.getAttribute('data-go')); });
+      });
+
+      // One sidebar definition, rendered into every app-shell screen.
+      // Four items — no Import item: import lives inside a Folder's Add cards panel.
+      var NAV = [
+        ['review', 'Review', '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>'],
+        ['classes', 'Classes', '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>'],
+        ['stats', 'Stats', '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'],
+        ['settings', 'Settings', '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>']
+      ];
+      document.querySelectorAll('nav.sidebar[data-active]').forEach(function (nav) {
+        var active = nav.getAttribute('data-active');
+        nav.innerHTML = '<div class="sidebar-title">Training Sanctum</div>' + NAV.map(function (n) {
+          return '<div class="nav-item' + (n[0] === active ? ' active' : '') + '"' + (n[0] === 'review' ? ' data-go="review"' : n[0] === 'classes' ? ' data-go="classes"' : '') + '>' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + n[2] + '</svg>' + n[1] + '</div>';
+        }).join('');
+        nav.querySelectorAll('[data-go]').forEach(function (el) {
+          el.addEventListener('click', function () { show(el.getAttribute('data-go')); });
         });
       });
+
+      // Add cards panel: Manual | Import, target Folder fixed in the header
+      var scrim = document.getElementById('addScrim');
+      var submit = scrim.querySelector('[data-submit]');
+      var hint = scrim.querySelector('[data-hint]');
+      // Panes: manual | import (paste/upload) | review (import review editor = Manual editor prefilled)
+      var pane = 'manual';
+      function setMode(mode) {
+        pane = mode;
+        var tab = mode === 'review' ? 'import' : mode;
+        scrim.querySelectorAll('[data-mode]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-mode') === tab); });
+        scrim.querySelectorAll('[data-pane]').forEach(function (p) { p.hidden = p.getAttribute('data-pane') !== mode; });
+        submit.textContent = mode === 'manual' ? 'Save 1 card' : mode === 'import' ? 'Preview' : 'Save 2 cards';
+        hint.textContent = mode === 'manual' ? 'Tab moves to the next field · Enter on the last field adds a row'
+          : mode === 'import' ? 'Nothing is saved yet — you review every row next'
+          : 'Rows with problems are skipped unless you fix them · duplicates checked again on save';
+      }
+      submit.addEventListener('click', function () { if (pane === 'import') setMode('review'); });
+      scrim.querySelector('[data-back]').addEventListener('click', function () { setMode('import'); });
+      scrim.querySelectorAll('.rv-x').forEach(function (x) {
+        x.addEventListener('click', function () { x.closest('.m-row').remove(); });
+      });
+      scrim.querySelectorAll('[data-mode]').forEach(function (b) {
+        b.addEventListener('click', function () { setMode(b.getAttribute('data-mode')); });
+      });
+      scrim.querySelectorAll('[data-src]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var src = b.getAttribute('data-src');
+          scrim.querySelectorAll('[data-src]').forEach(function (x) { x.classList.toggle('on', x === b); });
+          scrim.querySelectorAll('[data-srcpane]').forEach(function (p) { p.hidden = p.getAttribute('data-srcpane') !== src; });
+        });
+      });
+      var rowCount = 3;
+      scrim.querySelectorAll('.add-row').forEach(function (btn) { btn.addEventListener('click', function () {
+        rowCount++;
+        var r = document.createElement('div');
+        r.className = 'm-row';
+        r.innerHTML = '<div class="m-num">' + rowCount + '</div><div class="m-field"><input aria-label="Term ' + rowCount + '"><label>Term</label></div><div class="m-field"><input aria-label="Definition ' + rowCount + '"><label>Definition</label></div><button class="m-more">+ More fields (example, context, part of speech)</button>';
+        this.parentNode.insertBefore(r, this);
+        r.querySelector('input').focus();
+      }); });
+      function openAdd() { setMode('manual'); scrim.classList.add('open'); scrim.setAttribute('aria-hidden', 'false'); }
+      function closeAdd() { scrim.classList.remove('open'); scrim.setAttribute('aria-hidden', 'true'); }
+      document.querySelectorAll('[data-open-add]').forEach(function (b) { b.addEventListener('click', openAdd); });
+      scrim.querySelector('[data-close-add]').addEventListener('click', closeAdd);
+      scrim.addEventListener('click', function (e) { if (e.target === scrim) closeAdd(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAdd(); });
 
       // Quizlet-style click-to-flip on the review card
       var card = document.getElementById('reviewCard');
@@ -854,7 +1142,7 @@
         card.classList.toggle('flipped');
       });
       document.addEventListener('keydown', function (e) {
-        if (e.code === 'Space' && screens.review.classList.contains('active')) {
+        if (e.code === 'Space' && screens.review.classList.contains('active') && !scrim.classList.contains('open')) {
           e.preventDefault();
           card.classList.toggle('flipped');
         }
