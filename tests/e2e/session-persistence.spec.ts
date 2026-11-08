@@ -36,7 +36,7 @@ test("session survives a browser restart (persistent cookie, fresh context)", as
 
   const reopened = await browser.newContext({ storageState: persisted });
   const page2 = await reopened.newPage();
-  await page2.goto("/");
+  await page2.goto("/settings");
   await expect(page2.getByRole("button", { name: "Log out" })).toBeVisible();
   await reopened.close();
 });

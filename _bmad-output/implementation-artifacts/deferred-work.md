@@ -29,3 +29,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-3-user-login-logout.md`
   summary: Redirect already-authenticated visitors away from `/login` and `/register`, and give unauthenticated `/` a path to login (Story 1.5 route gating).
   evidence: A signed-in user can open `/login` and sign in again, creating a redundant session; a fresh visitor to the placeholder `/` sees no login link. Frozen Never excludes route gating from 1.3; Story 1.5 owns "unauthenticated visitors are redirected to login".
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-5-authenticated-app-shell-theme-toggle.md`
+  summary: Add a way to navigate and log out below 640px (bottom bar or menu), since the sidebar is hidden there and Settings is reachable only by URL.
+  evidence: The spec, DESIGN.md and EXPERIENCE.md all hide the sidebar on mobile and name no replacement; with logout now only in Settings, a phone user has no UI path to Classes, Stats, Settings or Log out. Needs a design decision before building.

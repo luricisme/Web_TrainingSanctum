@@ -5,6 +5,8 @@
  * valid session cookie, or `{ response }` — a `401` in the standard error
  * envelope — which the handler returns as-is.
  */
+import { cache } from "react";
+import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import type { ErrorEnvelope } from "@training-sanctum/domain";
 
@@ -26,3 +28,11 @@ export async function requireSession(request: Request): Promise<SessionResult> {
 
   return { session };
 }
+
+/**
+ * Server-component session lookup (spec-1-5). Cached per request so the shell
+ * layout and the auth-page layouts share one real `auth.api.getSession` check.
+ */
+export const getServerSession = cache(async () =>
+  auth.api.getSession({ headers: await headers() })
+);

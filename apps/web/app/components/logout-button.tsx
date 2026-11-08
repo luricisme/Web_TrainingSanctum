@@ -2,16 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signOut, useSession } from "@/lib/auth-client";
+import { signOut } from "@/lib/auth-client";
 
-/** Minimal logout control; moves to Settings in Story 1.5 (EXPERIENCE.md). */
+/** Logout control, rendered from Settings. */
 export function LogoutButton() {
   const router = useRouter();
-  const { data: session } = useSession();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-
-  if (!session) return null;
 
   async function handleClick() {
     setBusy(true);

@@ -2,9 +2,8 @@ import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 
 // AC1 (spec-1-2): filling and submitting the registration form logs the
-// user in immediately (no separate login step) and redirects to the
-// existing `/` landing page.
-test("registering redirects to / with a session cookie set", async ({
+// user in immediately (no separate login step) and redirects to /review.
+test("registering redirects to /review with a session cookie set", async ({
   page,
   context,
 }) => {
@@ -16,9 +15,9 @@ test("registering redirects to / with a session cookie set", async ({
   await page.getByLabel("Password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Create account" }).click();
 
-  await page.waitForURL("/");
+  await page.waitForURL("/review");
   await expect(
-    page.getByRole("heading", { name: "Training Sanctum" })
+    page.getByRole("heading", { name: "Review" })
   ).toBeVisible();
 
   const cookies = await context.cookies();
@@ -74,8 +73,10 @@ test("duplicate email shows the existing-account message on the email field", as
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL("/review");
 
+  // /register redirects logged-in users, so clear the session first.
+  await page.context().clearCookies();
   await page.goto("/register");
   await page.getByLabel("Full name").fill("Registration Test");
   await page.getByLabel("Email").fill(email);

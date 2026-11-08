@@ -10,12 +10,13 @@ async function registerAndLogOut(page: Page, email: string) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL("/review");
+  await page.goto("/settings");
   await page.getByRole("button", { name: "Log out" }).click();
   await page.waitForURL(/\/login$/);
 }
 
-test("register, log out, log in via the UI and land on /", async ({ page }) => {
+test("register, log out, log in via the UI and land on /review", async ({ page }) => {
   const email = `e2e-login-${randomUUID()}@example.test`;
   await registerAndLogOut(page, email);
 
@@ -23,7 +24,8 @@ test("register, log out, log in via the UI and land on /", async ({ page }) => {
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Log in" }).click();
 
-  await page.waitForURL("/");
+  await page.waitForURL("/review");
+  await page.goto("/settings");
   await expect(page.getByRole("button", { name: "Log out" })).toBeVisible();
 });
 
