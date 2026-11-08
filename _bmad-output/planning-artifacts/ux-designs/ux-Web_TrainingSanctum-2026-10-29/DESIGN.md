@@ -141,21 +141,21 @@ components:
   button-primary:
     background: '{colors.accent}'
     foreground: '{colors.on-accent}'
-    radius: '{rounded.lg}'
+    radius: '{rounded.full}'
     hover-background: '{colors.accent-hover}'
   button-secondary:
     background: transparent
     border: '{colors.border}'
     foreground: '{colors.text-secondary}'
-    radius: '{rounded.lg}'
+    radius: '{rounded.full}'
   grade-button-again:
     border: '{colors.error}'
     foreground: '{colors.error}'
-    radius: '{rounded.lg}'
+    radius: '{rounded.full}'
   grade-button-neutral:
     border: '{colors.border}'
     foreground: '{colors.text-secondary}'
-    radius: '{rounded.lg}'
+    radius: '{rounded.full}'
   review-card:
     background: '{colors.card}'
     radius: '{rounded.lg}'
@@ -255,8 +255,8 @@ Soft, generous corner radius throughout — Quizlet-like friendliness, not sharp
 
 - `{rounded.sm}` (6px) — inputs, list rows, nav items, folder icon chips.
 - `{rounded.md}` (12px) — cards within browsing grids, manual rows, summary strips, popup menus.
-- `{rounded.lg}` (20px) — primary/secondary/danger buttons and grade buttons (revised 2026-11-08: the 12px button read as hard against the soft indigo surfaces), the review card itself, modals. Still short of the pill: `{rounded.full}` stays reserved for switchers and chips, so a button never reads as a tab.
-- `{rounded.full}` (999px) — pill-style elements only: tab switchers, tag chips, screen-selector pills.
+- `{rounded.lg}` (20px) — the review card itself, modals.
+- `{rounded.full}` (999px) — all buttons (primary, secondary, danger, grade; revised 2026-11-08 after 12px and then 20px still read as hard against the soft indigo surfaces), plus tab switchers, tag chips and screen-selector pills. Buttons and switchers are told apart by role and fill (a switcher is a grouped track, a button stands alone), not by radius.
 
 Subtle 1px borders (`{colors.border}` / `{colors.divider}`) outline inputs and card edges; most separation still relies on surface-color contrast.
 
@@ -265,7 +265,7 @@ Subtle 1px borders (`{colors.border}` / `{colors.divider}`) outline inputs and c
 Live interactive reference for all components below: [`mockups/key-screens.html`](./mockups/key-screens.html) (Review Session with working 3D flip, Classes list, Folder detail with the Add cards panel in Manual and Import modes, Empty due-queue state, theme toggle).
 
 - **Review card (`components.review-card`)** — Large, soft-rounded (`{rounded.lg}`) surface, center-aligned content, fixed bounds that never resize between prompt and revealed states. Clicking/tapping the card (or pressing Space) triggers a Quizlet-style 3D Y-axis flip (520ms, ease-out) revealing the answer on the back face — not a content swap. Small icon row (pin / audio / star) sits top-right, inert until explicitly tapped.
-- **Grade buttons (`components.grade-button-again` / `grade-button-neutral`)** — Live **outside** the card, below it, appearing only after flip. Four buttons: Again / Hard / Good / Easy, each labeled with its keyboard shortcut. Flat/outline style, `{rounded.lg}`. Again is styled with the error color (`{colors.error}` border+text), not the accent; Hard/Good/Easy are neutral/outline with equal weight to each other — deliberately non-symmetric with Again, since classical SM-2 (PRD FR-8) makes Hard/Good/Easy produce the same next interval, so the UI must not visually imply Hard is "between" Again and Good in severity.
+- **Grade buttons (`components.grade-button-again` / `grade-button-neutral`)** — Live **outside** the card, below it, appearing only after flip. Four buttons: Again / Hard / Good / Easy, each labeled with its keyboard shortcut. Flat/outline style, `{rounded.full}`. Again is styled with the error color (`{colors.error}` border+text), not the accent; Hard/Good/Easy are neutral/outline with equal weight to each other — deliberately non-symmetric with Again, since classical SM-2 (PRD FR-8) makes Hard/Good/Easy produce the same next interval, so the UI must not visually imply Hard is "between" Again and Good in severity.
 - **Sidebar nav (`components.sidebar`)** — Fixed 240px, four flat icon+label items: Review, Classes, Stats, Settings. No Import item — import is a mode of a Folder's Add cards panel. Classes stays active while drilled into a Class or Folder. Active item gets `{colors.elevated}` background + `{colors.accent}` text. Hidden entirely during review (focus mode) and on mobile (<640px).
 - **List row — class, folder, card (`components.folder-tile`)** — Used for Class rows (Folder + Card counts), Folder rows (Card count; the Unsorted Folder is pinned first and has no rename/delete) and Card rows (term + definition). Rows grouped under section headers (e.g. "Recently studied", "All folders"), each header preceded by a small accent-colored square bullet (`components.section-bullet`, lifted from spy-family.net's marker motif). Hover lightens to `{colors.row-hover}`; trailing "..." overflow menu per row.
 - **Progress counter** — Mono-font "X / Y" display beneath the review card; streak indicator (flame icon + day count) alongside it, visible outside review only per FR-11/FR-12.
