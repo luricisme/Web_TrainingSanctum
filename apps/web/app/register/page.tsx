@@ -9,9 +9,15 @@
  * redirects to `/` on success — Better Auth's own post-signup session
  * issuance leaves the user logged in, so no separate login step is needed.
  *
- * No UI polish beyond a minimal functional form using the existing
- * dual-theme Tailwind tokens (spec-1-2 Boundaries "Never"): no design spec
- * exists for this screen.
+ * Styled per DESIGN.md ("Focus Indigo") and the Design DNA `design_style`
+ * (_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/),
+ * spec-restyle-register-focus-indigo: editorial split, with an overline
+ * masthead and section-bullet marker on the left and the form on a `card`
+ * surface on the right, stacked below 1024px. Values come from DESIGN.md
+ * tokens: colors and radii via the globals.css utilities, while type-scale
+ * values (overline/heading-1 size, line-height, tracking) and the bullet
+ * size are inlined until typography tokens are coded. The accent marks the
+ * submit button (plus the section bullet and input focus).
  */
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -109,90 +115,126 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
-      <div className="w-full max-w-sm rounded-[var(--radius-lg)] border border-border bg-card p-6">
-        <h1 className="mb-6 text-2xl font-bold text-foreground">
-          Create your account
-        </h1>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="name" className="text-sm text-foreground-secondary">
-              Full name
-            </label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              autoComplete="name"
-              required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="rounded-[var(--radius-sm)] border border-border bg-elevated px-3 py-2 text-foreground"
-              aria-invalid={Boolean(fieldErrors.name)}
-              aria-describedby={fieldErrors.name ? "name-error" : undefined}
+    <main className="flex min-h-screen bg-background px-4 py-12 lg:items-center lg:py-16">
+      <div className="mx-auto grid w-full max-w-[1200px] content-start gap-8 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] lg:gap-16">
+        <header className="mx-auto w-full max-w-md lg:mx-0 lg:justify-self-end">
+          <p className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase leading-[1.3] tracking-[0.08em] text-foreground-tertiary">
+            <span
+              aria-hidden="true"
+              className="size-[7px] shrink-0 rounded-[1px] bg-accent"
             />
-            {fieldErrors.name ? (
-              <p id="name-error" className="text-sm text-error">
-                {fieldErrors.name}
+            Training Sanctum
+          </p>
+          <h1 className="mt-6 text-[2rem] font-bold leading-[1.2] tracking-[-0.01em] text-foreground">
+            Create your account
+          </h1>
+          <hr aria-hidden="true" className="mt-6 border-0 border-t border-divider" />
+          <p className="mt-6 text-base leading-[1.5] text-foreground-secondary">
+            Your daily vocabulary review, kept quiet.
+          </p>
+        </header>
+
+        <div aria-hidden="true" className="hidden bg-divider lg:block" />
+
+        <div className="mx-auto w-full max-w-md self-start rounded-lg border border-divider bg-card p-6 lg:mx-0 lg:justify-self-start lg:p-8">
+          <form className="flex flex-col gap-6" onSubmit={handleSubmit} noValidate>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="name" className={labelClass}>
+                Full name
+              </label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className={inputClass}
+                aria-invalid={Boolean(fieldErrors.name)}
+                aria-describedby={fieldErrors.name ? "name-error" : undefined}
+              />
+              {fieldErrors.name ? (
+                <p id="name-error" className={fieldErrorClass}>
+                  {fieldErrors.name}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="email" className={labelClass}>
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className={inputClass}
+                aria-invalid={Boolean(fieldErrors.email)}
+                aria-describedby={fieldErrors.email ? "email-error" : undefined}
+              />
+              {fieldErrors.email ? (
+                <p id="email-error" className={fieldErrorClass}>
+                  {fieldErrors.email}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="password" className={labelClass}>
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className={inputClass}
+                aria-invalid={Boolean(fieldErrors.password)}
+                aria-describedby={fieldErrors.password ? "password-error" : undefined}
+              />
+              {fieldErrors.password ? (
+                <p id="password-error" className={fieldErrorClass}>
+                  {fieldErrors.password}
+                </p>
+              ) : null}
+            </div>
+
+            {formError ? (
+              <p className="break-words border-l-2 border-error py-1 pl-3 text-sm leading-[1.45] text-error">
+                {formError}
               </p>
             ) : null}
-          </div>
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor="email" className="text-sm text-foreground-secondary">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="rounded-[var(--radius-sm)] border border-border bg-elevated px-3 py-2 text-foreground"
-              aria-invalid={Boolean(fieldErrors.email)}
-              aria-describedby={fieldErrors.email ? "email-error" : undefined}
-            />
-            {fieldErrors.email ? (
-              <p id="email-error" className="text-sm text-error">
-                {fieldErrors.email}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="password" className="text-sm text-foreground-secondary">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="rounded-[var(--radius-sm)] border border-border bg-elevated px-3 py-2 text-foreground"
-              aria-invalid={Boolean(fieldErrors.password)}
-              aria-describedby={fieldErrors.password ? "password-error" : undefined}
-            />
-            {fieldErrors.password ? (
-              <p id="password-error" className="text-sm text-error">
-                {fieldErrors.password}
-              </p>
-            ) : null}
-          </div>
-
-          {formError ? <p className="text-sm text-error">{formError}</p> : null}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-2 rounded-[var(--radius-sm)] bg-accent px-4 py-2 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60"
-          >
-            {submitting ? "Creating account..." : "Create account"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="mt-1 rounded-md bg-accent px-4 py-3 text-base font-semibold text-on-accent transition-colors duration-150 ease-in-out hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-accent"
+            >
+              {submitting ? "Creating account..." : "Create account"}
+            </button>
+          </form>
+        </div>
       </div>
     </main>
   );
 }
+
+// DESIGN.md typography `body-small` (0.875rem / 1.45) for labels and inline
+// errors; inputs use `rounded.sm` and a 1px `border` outline. Focus uses the
+// same 2px accent outline (offset 2px) as the submit button, plus an accent
+// border on valid fields; invalid fields keep the `error` border (DNA
+// error_tone: plain, inline, non-alarming). State changes run 150ms
+// ease-in-out (motion.normal).
+const labelClass =
+  "text-sm leading-[1.45] text-foreground-secondary";
+
+const inputClass =
+  "rounded-sm border border-border bg-background px-3 py-3 text-base text-foreground transition-colors duration-150 ease-in-out focus:border-accent focus:outline-2 focus:outline-offset-2 focus:outline-accent aria-[invalid=true]:border-error aria-[invalid=true]:focus:border-error";
+
+const fieldErrorClass = "break-words text-sm leading-[1.45] text-error";
