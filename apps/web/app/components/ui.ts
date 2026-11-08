@@ -7,14 +7,14 @@
 
 /** The one actionable thing per screen: accent fill with `on-accent` text. */
 export const buttonPrimary =
-  "rounded-md bg-accent px-6 py-3 text-body font-medium text-on-accent transition-state hover:bg-accent-hover focus-ring disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-accent";
+  "rounded-lg bg-accent px-6 py-3 text-body font-medium text-on-accent transition-state hover:bg-accent-hover focus-ring disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-accent";
 
 export const buttonSecondary =
-  "rounded-md border border-border px-6 py-3 text-body text-foreground-secondary transition-state hover:bg-row-hover hover:text-foreground focus-ring disabled:cursor-not-allowed disabled:opacity-60";
+  "rounded-lg border border-border px-6 py-3 text-body text-foreground-secondary transition-state hover:bg-row-hover hover:text-foreground focus-ring disabled:cursor-not-allowed disabled:opacity-60";
 
 /** Danger action: error colour, never the accent (DESIGN.md Do's and Don'ts). */
 export const buttonDanger =
-  "rounded-md border border-error px-6 py-3 text-body text-error transition-state hover:bg-row-hover focus-ring disabled:cursor-not-allowed disabled:opacity-40";
+  "rounded-lg border border-error px-6 py-3 text-body text-error transition-state hover:bg-row-hover focus-ring disabled:cursor-not-allowed disabled:opacity-40";
 
 /** Quiet text-level action (e.g. Log out in Settings). */
 export const buttonQuiet =

@@ -129,7 +129,7 @@
       "philosophy": "minimal functional — motion exists only to clarify a state change (card reveal, grade feedback, row removal), never decorative. Review-loop transitions must stay under the PRD's sub-100ms perceived-latency NFR (FR-9)."
     },
     "components": {
-      "button_style": "soft-rounded filled primary button in accent red; ghost/outline secondary buttons; small tag-style chips use full pill radius, but primary/secondary buttons use medium radius (less pill-extreme than Quizlet's fully rounded buttons)",
+      "button_style": "soft-rounded filled primary button in accent red; ghost/outline secondary buttons; small tag-style chips use full pill radius, but primary/secondary buttons use large radius (20px, revised 2026-11-08 for a softer feel; still short of the pill used by switchers)",
       "input_style": "rounded rectangle inputs, subtle 1px border, accent-colored focus ring",
       "card_style": "large soft-rounded surface for the review card (elevated above background, center-aligned content, same bounds before/after reveal per locked decision); smaller rounded tiles for folder/library browsing",
       "navigation_pattern": "left icon+label sidebar (Quizlet-derived structure), five flat sections: Review, Folders, Import, Stats, Settings",
