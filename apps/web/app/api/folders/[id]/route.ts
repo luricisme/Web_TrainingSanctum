@@ -1,5 +1,7 @@
 import { prisma } from "@training-sanctum/db";
 import {
+  type CardSummary,
+  type FolderCardsResponse,
   type FolderSummary,
   deleteFolderSchema,
   isFolderNameTaken,
@@ -21,6 +23,46 @@ function logDelete(entry: Record<string, unknown>): void {
 }
 
 const UNSORTED_LOCKED = "The Unsorted folder cannot be changed.";
+
+export async function GET(
+  request: Request,
+  { params }: Context
+): Promise<Response> {
+  const result = await requireSession(request);
+  if (result.response) return result.response;
+  const userId = result.session.user.id;
+  const { id } = await params;
+
+  const folder = await prisma.folder.findFirst({
+    where: { id, userId },
+    select: {
+      id: true,
+      name: true,
+      isUnsorted: true,
+      class: { select: { id: true, name: true } },
+      cards: {
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: {
+          id: true,
+          term: true,
+          definition: true,
+          example: true,
+          context: true,
+          partOfSpeech: true,
+        },
+      },
+    },
+  });
+  if (!folder) return fail(404, "NOT_FOUND", "Folder not found.");
+
+  const cards: CardSummary[] = folder.cards;
+  const data: FolderCardsResponse = {
+    folder: { id: folder.id, name: folder.name, isUnsorted: folder.isUnsorted },
+    class: folder.class,
+    cards,
+  };
+  return ok(data);
+}
 
 export async function PATCH(
   request: Request,

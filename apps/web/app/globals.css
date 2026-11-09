@@ -122,6 +122,7 @@
   /* Layout (DESIGN.md spacing): `max-w-content`, `w-sidebar`, `max-w-review-card`. */
   --container-content: 1200px;
   --container-review-card: 640px;
+  --container-panel: 880px; /* add-cards-panel max-width */
   --spacing-sidebar: 240px;
   --spacing-bullet: 7px; /* section-bullet size */
   --radius-bullet: 1px;

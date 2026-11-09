@@ -3,6 +3,7 @@
  */
 import type { ZodError } from "zod";
 import type {
+  ErrorDetail,
   ErrorEnvelope,
   SuccessEnvelope,
 } from "@training-sanctum/domain";
@@ -16,10 +17,16 @@ export function fail(
   status: number,
   code: string,
   message: string,
-  fields?: Record<string, string>
+  fields?: Record<string, string>,
+  details?: ErrorDetail[]
 ): Response {
   const body: ErrorEnvelope = {
-    error: { code, message, ...(fields ? { fields } : {}) },
+    error: {
+      code,
+      message,
+      ...(fields ? { fields } : {}),
+      ...(details ? { details } : {}),
+    },
   };
   return Response.json(body, { status });
 }
@@ -58,12 +65,13 @@ export class HttpError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
-    readonly fields?: Record<string, string>
+    readonly fields?: Record<string, string>,
+    readonly details?: ErrorDetail[]
   ) {
     super(message);
   }
 
   toResponse(): Response {
-    return fail(this.status, this.code, this.message, this.fields);
+    return fail(this.status, this.code, this.message, this.fields, this.details);
   }
 }

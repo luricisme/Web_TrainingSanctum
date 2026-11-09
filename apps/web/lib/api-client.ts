@@ -2,14 +2,15 @@
  * Fetch wrapper that unwraps the AD-10 envelope. Success resolves with `data`;
  * an error envelope (or a network failure) rejects with an `ApiError`.
  */
-import type { ApiResponse } from "@training-sanctum/domain";
+import type { ApiResponse, ErrorDetail } from "@training-sanctum/domain";
 
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
     message: string,
-    readonly fields?: Record<string, string>
+    readonly fields?: Record<string, string>,
+    readonly details?: ErrorDetail[]
   ) {
     super(message);
   }
@@ -46,7 +47,8 @@ export async function apiFetch<T>(
       response.status,
       body.error.code,
       body.error.message,
-      body.error.fields
+      body.error.fields,
+      body.error.details
     );
   }
   if (!response.ok || !body) {
