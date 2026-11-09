@@ -11,3 +11,5 @@ export * from "./auth/registration";
 export * from "./auth/login";
 export * from "./classes";
 export * from "./folders";
+export * from "./time";
+export * from "./cards";
