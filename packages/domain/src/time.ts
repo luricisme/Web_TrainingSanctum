@@ -32,11 +32,14 @@ function wallClockAsUtc(instant: number, timeZone: string): number {
  * `timeZone` (an IANA name such as "Asia/Ho_Chi_Minh").
  */
 export function toLocalCalendarDay(now: Date, timeZone: string): Date {
-  const wallNow = wallClockAsUtc(now.getTime(), timeZone);
+  // Whole seconds only: the wall-clock helper drops milliseconds, which would
+  // otherwise leak into the result as a sub-second offset from midnight.
+  const nowMs = Math.floor(now.getTime() / 1000) * 1000;
+  const wallNow = wallClockAsUtc(nowMs, timeZone);
   const wallMidnight = Math.floor(wallNow / 86_400_000) * 86_400_000;
   // Offset (wall - real) at `now`; refine once so a DST change between local
   // midnight and `now` does not shift the result.
-  let guess = now.getTime() - (wallNow - wallMidnight);
+  let guess = nowMs - (wallNow - wallMidnight);
   const refined = wallClockAsUtc(guess, timeZone);
   guess += wallMidnight - refined;
   return new Date(guess);

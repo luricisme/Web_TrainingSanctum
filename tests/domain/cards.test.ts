@@ -107,6 +107,14 @@ describe("createCardsBatchSchema and validateCardRows", () => {
   });
 });
 
+describe("toLocalCalendarDay milliseconds", () => {
+  it("returns an exact day start even when now has milliseconds", () => {
+    expect(
+      toLocalCalendarDay(new Date("2026-11-09T05:30:12.345Z"), "Asia/Ho_Chi_Minh").toISOString()
+    ).toBe("2026-11-08T17:00:00.000Z");
+  });
+});
+
 describe("createCardWithSchedulingRecords (AD-9)", () => {
   it("returns the Card and exactly two Scheduling Records at SM-2 defaults", () => {
     const { card, schedulingRecords } = createCardWithSchedulingRecords(

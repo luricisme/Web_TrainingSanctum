@@ -72,7 +72,7 @@ test.describe("POST /api/cards/batch and GET /api/folders/:id", () => {
     const cards = await prisma.card.findMany({
       where: { folderId: folder.id },
       include: { schedulingRecords: true },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
     expect(cards).toHaveLength(2);
     expect(cards[0]).toMatchObject({

@@ -41,3 +41,13 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-1-class-crud.md`
   summary: Verify that `prisma migrate dev` does not drop the raw-SQL partial unique index `folders_classId_isUnsorted_key` as drift (unverified, would be medium if true).
   evidence: The index enforcing one Unsorted Folder per Class exists only in `migration.sql` because Prisma cannot express a partial index in `schema.prisma`. To settle it, run `prisma migrate dev` against a shadow database and check whether the generated SQL contains `DROP INDEX "folders_classId_isUnsorted_key"`.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-add-cards-manual-mode.md`
+  summary: Cards from one batch list in id order rather than entry order.
+  evidence: They share a `createdAt`, and Card has no position field; fixing needs a schema change.
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-add-cards-manual-mode.md`
+  summary: The Add cards Folder picker and last-used-Folder restore are unreachable and untested.
+  evidence: `AddCardsPanel` is only rendered with a `folder` prop; test it when a global Add cards entry adds a caller.
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-add-cards-manual-mode.md`
+  summary: No e2e test checks that class-folders/classes counts refresh via client-side navigation after a batch save.
+  evidence: The only count assertion uses `page.goto`, which refetches regardless of cache invalidation.

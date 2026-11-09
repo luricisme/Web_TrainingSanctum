@@ -470,6 +470,11 @@ function ManualRow({
     );
   }
 
+  // A row with an error in a collapsed field always shows those fields.
+  const hiddenError = Boolean(
+    errors?.example || errors?.context || errors?.partOfSpeech
+  );
+
   return (
     <div className="flex gap-4 rounded-md bg-elevated p-4">
       <span
@@ -483,7 +488,7 @@ function ManualRow({
           {field("term")}
           {field("definition")}
         </div>
-        {row.more ? (
+        {row.more || hiddenError ? (
           <div className="grid gap-4 sm:grid-cols-2 sm:gap-6">
             <div className="sm:col-span-2">{field("example")}</div>
             {field("context")}
@@ -492,12 +497,12 @@ function ManualRow({
         ) : null}
         <button
           type="button"
-          aria-expanded={row.more}
-          aria-label={`${row.more ? "Fewer" : "More"} fields, row ${n}`}
+          aria-expanded={row.more || hiddenError}
+          aria-label={`${row.more || hiddenError ? "Fewer" : "More"} fields, row ${n}`}
           onClick={() => onChange({ more: !row.more })}
           className="self-start rounded-sm text-body-sm text-foreground-secondary underline-offset-2 transition-state hover:text-foreground hover:underline focus-ring"
         >
-          {row.more ? "Fewer fields" : "More fields"}
+          {row.more || hiddenError ? "Fewer fields" : "More fields"}
         </button>
       </div>
     </div>

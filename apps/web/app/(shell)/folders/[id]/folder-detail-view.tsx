@@ -150,7 +150,7 @@ function CardRow({
   total: number;
 }) {
   return (
-    <li className="overflow-hidden rounded-md border border-border bg-card shadow-low transition-state hover:border-accent">
+    <li className="overflow-hidden rounded-md border border-border bg-card shadow-low transition-state hover:bg-row-hover">
       <div className="flex items-center justify-between border-b border-divider px-5 py-2 text-caption text-foreground-tertiary">
         <span>
           {index} / {total}

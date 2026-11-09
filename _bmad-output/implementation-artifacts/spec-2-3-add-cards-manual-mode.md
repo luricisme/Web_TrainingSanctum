@@ -2,7 +2,7 @@
 title: 'Add Cards: Manual Mode'
 type: 'feature'
 created: '2026-11-09'
-status: 'in-progress'
+status: 'done'
 baseline_commit: 'd79be9046c6afb368231f1b6f6be8e3b815a9448'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -67,12 +67,12 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `packages/domain/src/time.ts`, `cards.ts` + barrel -- helper, schemas, shared creation function -- AD-8, AD-9
-- [ ] `app/api/cards/batch/route.ts`, `app/api/folders/[id]/route.ts` GET -- batch create in a transaction, Folder detail -- every matrix row
-- [ ] `(shell)/folders/[id]/*`, `classes/modal.tsx`, `class-detail-view.tsx` -- Folder page, panel, picker, row links, focus handling
-- [ ] `tests/domain/cards.test.ts` -- timezone day boundaries (incl. a non-UTC zone), defaults, Unicode untouched, validation
-- [ ] `tests/api/cards.spec.ts` -- every matrix row, cross-user `404`, two Scheduling Records per Card, rollback on a bad row
-- [ ] `tests/e2e/cards.spec.ts` -- open Folder, add rows with keyboard only, mixed rows, Unicode, discard prompt, light and dark screenshots
+- [x] `packages/domain/src/time.ts`, `cards.ts` + barrel -- helper, schemas, shared creation function -- AD-8, AD-9
+- [x] `app/api/cards/batch/route.ts`, `app/api/folders/[id]/route.ts` GET -- batch create in a transaction, Folder detail -- every matrix row
+- [x] `(shell)/folders/[id]/*`, `classes/modal.tsx`, `class-detail-view.tsx` -- Folder page, panel, picker, row links, focus handling
+- [x] `tests/domain/cards.test.ts` -- timezone day boundaries (incl. a non-UTC zone), defaults, Unicode untouched, validation
+- [x] `tests/api/cards.spec.ts` -- every matrix row, cross-user `404`, two Scheduling Records per Card, rollback on a bad row
+- [x] `tests/e2e/cards.spec.ts` -- open Folder, add rows with keyboard only, mixed rows, Unicode, discard prompt, light and dark screenshots
 
 **Acceptance Criteria:**
 - Given a Folder page, when "Add cards" is pressed, then a panel opens in Manual mode naming the Folder, with Manual and Import in a switcher.
@@ -86,6 +86,25 @@ context:
 ## Spec Change Log
 
 ## Review Triage Log
+
+| Finding | Verdict | Route | Evidence |
+|---|---|---|---|
+| nextReviewDate carries ms of `now` (time.ts) | medium | patch | Reproduced: `05:30:12.345Z` gave `17:00:00.345Z`; floored `now` to seconds, regression test added. |
+| Error in collapsed "More fields" is hidden, save silently blocked (add-cards-panel) | medium | patch | Errors are only rendered when `row.more`; rows with a hidden-field error now force-show the fields. |
+| `hover:border-accent` on card rows (folder-detail-view) | low | patch | Spends the accent decoratively; DNA hover is row-hover. Changed to `hover:bg-row-hover`. |
+| API test orders by `createdAt` only; batch rows tie | low | patch | Added `id` tiebreak to the test's orderBy. |
+| Within-batch list order is by id desc, not entry order | low | defer | Needs a position field or schema change, which the spec forbids. |
+| Folder picker / last-folder restore has no caller and no test | medium | defer | Only exercised once a global Add cards entry exists. |
+| No test for client-side navigation refreshing `class-folders` / `classes` counts | low | defer | Invalidation exists in code; e2e only uses full page loads. |
+| Zod optional over-length message lost to `invalid_union` | false | rejected | Probed: issue is `too_big` "Use 1000 characters or fewer." |
+| Invalid `User.timezone` throws RangeError (500) | low | rejected | Value comes from the browser's Intl at registration; fix adds guard branches. |
+| Server `details` not mapped to rows in panel | low | rejected | Spec makes per-row tolerance client-side; server rejection is the strict fallback. |
+| Escape bypasses dirty check | false | rejected | `Modal` routes `onCancel` to `onClose`, which is `requestClose`. |
+| createManyAndReturn order vs `built[i]` | low | rejected | Records are identical per Card; no observable harm. |
+| FK race on folder delete returns 500 not 404 | low | rejected | Same transaction re-checks the Folder; narrow race, guard adds complexity. |
+| Unpaginated folder GET, no idempotency key, batch-count `line` shape, log content, unrouted logging of 400 count errors, discard focus, picker error states, 200-row Enter feedback, rollback test is pre-validation | low | rejected | Cosmetic or out of intent for this story; fix is more than a direct correction. |
+| Screenshot tests have no assertions | low | rejected | The spec asks for screenshots as a manual check, not comparisons. |
+| Card row structure/labels/strip, `py-1.5`, modal calc widths, Discard not styled as danger | low | rejected | Design interpretation or cosmetic; fix is more than a direct correction. |
 
 ## Verification
 
