@@ -140,6 +140,112 @@ test("saving nothing shows an inline message; discard closes the panel", async (
   await expect(dialog).toBeHidden();
 });
 
+// spec-2-4: Edit a Card.
+async function seedCard(email: string) {
+  const { user, folder } = await seedFolder(email);
+  const card = await prisma.card.create({
+    data: {
+      term: "under the weather",
+      definition: "slightly ill",
+      folderId: folder.id,
+      userId: user.id,
+    },
+  });
+  return { user, folder, card };
+}
+
+test("edit a card with the keyboard, field error keeps old text, discard prompt", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { folder, card } = await seedCard(email);
+  await page.goto(`/folders/${folder.id}`);
+
+  await page.getByRole("button", { name: /^Edit card 1/ }).click();
+  const dialog = page.getByRole("dialog");
+  const term = dialog.getByLabel("Term", { exact: true });
+  await expect(dialog.getByRole("heading", { name: "Edit card" })).toBeVisible();
+  await expect(term).toHaveValue("under the weather");
+  await expect(term).toBeFocused();
+
+  // Clearing Term shows a field error and the row keeps its old text.
+  await term.fill("");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(dialog.getByText("Enter a term.")).toBeVisible();
+  await expect(page.getByText("under the weather")).toBeVisible();
+  expect((await prisma.card.findUniqueOrThrow({ where: { id: card.id } })).term).toBe(
+    "under the weather"
+  );
+
+  // Fix by keyboard, change the definition, add Part of speech, save.
+  await expect(term).toBeFocused();
+  await page.keyboard.type("café 日本語");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("/ˈkɒl.ə.keɪt/");
+  await dialog.getByRole("button", { name: "More fields" }).click();
+  await dialog.getByLabel("Part of speech").fill("noun");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("café 日本語")).toBeVisible();
+  await expect(page.getByText("/ˈkɒl.ə.keɪt/")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Edit card 1/ })).toBeFocused();
+  const row = await prisma.card.findUniqueOrThrow({
+    where: { id: card.id },
+    include: { schedulingRecords: true },
+  });
+  expect(row).toMatchObject({ term: "café 日本語", partOfSpeech: "noun" });
+
+  // Unsaved changes ask before discarding.
+  await page.getByRole("button", { name: /^Edit card 1/ }).click();
+  await term.fill("changed");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog.getByText("Discard your changes?")).toBeVisible();
+  await dialog.getByRole("button", { name: "Keep editing" }).click();
+  await expect(term).toHaveValue("changed");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await dialog.getByRole("button", { name: "Discard" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("café 日本語")).toBeVisible();
+
+  // Escape with unsaved changes also asks before discarding.
+  await page.getByRole("button", { name: /^Edit card 1/ }).click();
+  await term.fill("changed again");
+  await page.keyboard.press("Escape");
+  await expect(dialog.getByText("Discard your changes?")).toBeVisible();
+});
+
+for (const theme of ["dark", "light"] as const) {
+  test(`edit modal screenshots (${theme})`, async ({ page }) => {
+    mkdirSync("test-results/screenshots", { recursive: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const email = await register(page);
+    const { folder } = await seedCard(email);
+    await page.goto(`/folders/${folder.id}`);
+    await page.evaluate((t) => {
+      if (t === "light") document.documentElement.dataset.theme = "light";
+      else delete document.documentElement.dataset.theme;
+    }, theme);
+    const shot = (name: string) =>
+      page.screenshot({
+        path: `test-results/screenshots/edit-card-${name}-${theme}.png`,
+        animations: "disabled",
+      });
+
+    await expect(page.getByRole("button", { name: /^Edit card 1/ })).toBeVisible();
+    await shot("row");
+    await page.getByRole("button", { name: /^Edit card 1/ }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "More fields" }).click();
+    await dialog.getByLabel("Example sentence").fill("I am feeling under the weather today.");
+    await shot("prefilled");
+    await dialog.getByLabel("Term", { exact: true }).fill("");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog.getByText("Enter a term.")).toBeVisible();
+    await shot("error");
+  });
+}
+
 // Visual check: screenshots land in test-results/screenshots.
 for (const theme of ["dark", "light"] as const) {
   test(`folder page and panel screenshots (${theme})`, async ({ page }) => {

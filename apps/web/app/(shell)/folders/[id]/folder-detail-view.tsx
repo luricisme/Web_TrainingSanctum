@@ -9,6 +9,7 @@ import { SectionMarker } from "@/app/components/section-marker";
 import { PageHeader } from "../../page-header";
 import { buttonPrimary, buttonSecondary, pluralize } from "../../classes/ui";
 import { AddCardsPanel } from "./add-cards-panel";
+import { EditCardModal } from "./edit-card-modal";
 
 const crumbLink =
   "rounded-sm underline-offset-2 hover:text-foreground hover:underline focus-ring";
@@ -47,6 +48,7 @@ function Breadcrumb({
 
 export function FolderDetailView({ folderId }: { folderId: string }) {
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<CardSummary | null>(null);
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ["folder", folderId],
     queryFn: () => apiFetch<FolderCardsResponse>(`/api/folders/${folderId}`),
@@ -123,11 +125,26 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
         ) : (
           <ul className="flex flex-col gap-3">
             {cards.map((card, index) => (
-              <CardRow key={card.id} card={card} index={index + 1} total={cards.length} />
+              <CardRow
+                key={card.id}
+                card={card}
+                index={index + 1}
+                total={cards.length}
+                onEdit={() => setEditing(card)}
+              />
             ))}
           </ul>
         )}
       </section>
+
+      {editing ? (
+        <EditCardModal
+          key={editing.id}
+          card={editing}
+          folderId={folder.id}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
 
       {adding ? (
         <AddCardsPanel
@@ -139,15 +156,17 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
   );
 }
 
-/** Plain Card row: Term and Definition only (edit, delete and move are 2.4 to 2.6). */
+/** Card row: Term and Definition plus a quiet Edit control (delete and move are 2.5, 2.6). */
 function CardRow({
   card,
   index,
   total,
+  onEdit,
 }: {
   card: CardSummary;
   index: number;
   total: number;
+  onEdit: () => void;
 }) {
   return (
     <li className="overflow-hidden rounded-md border border-border bg-card shadow-low transition-state hover:bg-row-hover">
@@ -155,6 +174,14 @@ function CardRow({
         <span>
           {index} / {total}
         </span>
+        <button
+          type="button"
+          onClick={onEdit}
+          aria-label={`Edit card ${index}: ${card.term}`}
+          className="-my-1 rounded-full px-3 py-1 text-body-sm text-foreground-secondary underline-offset-2 transition-state hover:text-foreground hover:underline focus-ring"
+        >
+          Edit
+        </button>
       </div>
       <div className="grid sm:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]">
         <div className="flex flex-col gap-1 px-5 py-4">
