@@ -51,3 +51,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-3-add-cards-manual-mode.md`
   summary: No e2e test checks that class-folders/classes counts refresh via client-side navigation after a batch save.
   evidence: The only count assertion uses `page.goto`, which refetches regardless of cache invalidation.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-4-edit-a-card.md`
+  summary: Add a Playwright test (via `page.route`) for the edit modal's server 404 and 400 `fields` error branches.
+  evidence: The e2e test only reaches the client-side validation path; the `onError` mapping in edit-card-modal.tsx is untested in the browser.

@@ -186,3 +186,113 @@ test.describe("POST /api/cards/batch and GET /api/folders/:id", () => {
     expect(res.status()).toBe(400);
   });
 });
+
+// spec-2-4: Edit a Card.
+test.describe("PATCH /api/cards/:id", () => {
+  async function seedCard(s: Session, base: string) {
+    const folder = await createFolder(s, base, "Words");
+    await s.request.post(`${base}/api/cards/batch`, {
+      data: {
+        folderId: folder.id,
+        cards: [{ term: "old", definition: "old def", example: "ex", context: "ctx" }],
+      },
+    });
+    const card = await prisma.card.findFirstOrThrow({ where: { folderId: folder.id } });
+    return { folder, card };
+  }
+
+  test("replaces fields, clears optionals, keeps Unicode and Scheduling Records", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const { folder, card } = await seedCard(s, base);
+    const snapshot = () =>
+      prisma.schedulingRecord.findMany({
+        where: { cardId: card.id },
+        orderBy: { direction: "asc" },
+      });
+    const before = await snapshot();
+    expect(before).toHaveLength(2);
+
+    const res = await s.request.patch(`${base}/api/cards/${card.id}`, {
+      data: {
+        term: "  café ",
+        definition: "/ˈkɒl.ə.keɪt/ 日本語",
+        example: "",
+        partOfSpeech: "noun",
+      },
+    });
+    expect(res.status()).toBe(200);
+    expect((await res.json()).data).toEqual({
+      id: card.id,
+      term: "café",
+      definition: "/ˈkɒl.ə.keɪt/ 日本語",
+      example: null,
+      context: null,
+      partOfSpeech: "noun",
+    });
+
+    const after = await prisma.card.findUniqueOrThrow({ where: { id: card.id } });
+    expect(after).toMatchObject({
+      term: "café",
+      example: null,
+      context: null,
+      folderId: folder.id,
+    });
+    expect(after.createdAt.getTime()).toBe(card.createdAt.getTime());
+    expect(await snapshot()).toEqual(before);
+  });
+
+  test("empty or over-length fields return 400 fields and change nothing", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const { card } = await seedCard(s, base);
+    const cases: [Record<string, string>, string][] = [
+      [{ term: "   ", definition: "d" }, "term"],
+      [{ term: "t", definition: "" }, "definition"],
+      [{ term: "t".repeat(201), definition: "d" }, "term"],
+    ];
+    for (const [data, field] of cases) {
+      const res = await s.request.patch(`${base}/api/cards/${card.id}`, { data });
+      expect(res.status()).toBe(400);
+      const body = await res.json();
+      expect(body.error.code).toBe("VALIDATION_ERROR");
+      expect(body.error.fields[field]).toBeTruthy();
+      expect(body.error.details).toBeUndefined();
+    }
+    const row = await prisma.card.findUniqueOrThrow({ where: { id: card.id } });
+    expect(row.term).toBe("old");
+    expect(row.definition).toBe("old def");
+  });
+
+  test("foreign or unknown Card 404, unauthenticated 401, bad JSON 400", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const owner = await newUser(playwright, base);
+    const other = await newUser(playwright, base);
+    const { card } = await seedCard(owner, base);
+    const data = { term: "hacked", definition: "x" };
+
+    for (const id of [card.id, "does-not-exist"]) {
+      expect((await other.request.patch(`${base}/api/cards/${id}`, { data })).status()).toBe(404);
+    }
+    expect((await prisma.card.findUniqueOrThrow({ where: { id: card.id } })).term).toBe("old");
+
+    const anon = await playwright.request.newContext();
+    expect((await anon.patch(`${base}/api/cards/${card.id}`, { data })).status()).toBe(401);
+
+    const bad = await owner.request.patch(`${base}/api/cards/${card.id}`, {
+      headers: { "Content-Type": "application/json" },
+      data: Buffer.from("{not json"),
+    });
+    expect(bad.status()).toBe(400);
+    expect((await bad.json()).error.code).toBe("INVALID_JSON");
+  });
+});
