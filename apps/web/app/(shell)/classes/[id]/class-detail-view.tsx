@@ -94,13 +94,15 @@ export function ClassDetailView({ classId }: { classId: string }) {
   }
 
   const customCount = folders.filter((f) => !f.isUnsorted).length;
+  const totalFlashcards = folders.reduce((sum, f) => sum + f.flashcardCount, 0);
   const totalCards = folders.reduce((sum, f) => sum + f.cardCount, 0);
 
   return (
     <>
       <Breadcrumb name={data.class.name} />
       <PageHeader title={data.class.name}>
-        {pluralize(folders.length, "folder")} · {pluralize(totalCards, "card")}
+        {pluralize(folders.length, "folder")} · {pluralize(totalFlashcards, "flashcard")} ·{" "}
+        {pluralize(totalCards, "card")}
       </PageHeader>
 
       <section aria-labelledby="all-folders" className="mt-8">
@@ -128,7 +130,7 @@ export function ClassDetailView({ classId }: { classId: string }) {
         </ul>
         {customCount === 0 ? (
           <p className="mt-6 max-w-sm text-body text-foreground-secondary">
-            Create a folder to group cards by topic.
+            Create a folder to group flashcards by topic.
           </p>
         ) : null}
       </section>
@@ -193,7 +195,7 @@ function FolderRow({
         <div className="min-w-0 flex-1">
           <p className="truncate text-body font-semibold text-foreground">{folder.name}</p>
           <p className="text-caption text-foreground-tertiary">
-            {pluralize(folder.cardCount, "card")}
+            {pluralize(folder.flashcardCount, "flashcard")} · {pluralize(folder.cardCount, "card")}
           </p>
         </div>
       </Link>

@@ -20,15 +20,26 @@ export async function GET(request: Request): Promise<Response> {
     }),
     prisma.folder.findMany({
       where: { userId },
-      select: { classId: true, _count: { select: { cards: true } } },
+      select: {
+        classId: true,
+        flashcards: { select: { _count: { select: { cards: true } } } },
+      },
     }),
   ]);
 
-  const counts = new Map<string, { folders: number; cards: number }>();
+  const counts = new Map<
+    string,
+    { folders: number; flashcards: number; cards: number }
+  >();
   for (const folder of folders) {
-    const entry = counts.get(folder.classId) ?? { folders: 0, cards: 0 };
+    const entry = counts.get(folder.classId) ?? {
+      folders: 0,
+      flashcards: 0,
+      cards: 0,
+    };
     entry.folders += 1;
-    entry.cards += folder._count.cards;
+    entry.flashcards += folder.flashcards.length;
+    entry.cards += folder.flashcards.reduce((n, f) => n + f._count.cards, 0);
     counts.set(folder.classId, entry);
   }
 
@@ -37,6 +48,7 @@ export async function GET(request: Request): Promise<Response> {
       id: c.id,
       name: c.name,
       folderCount: counts.get(c.id)?.folders ?? 0,
+      flashcardCount: counts.get(c.id)?.flashcards ?? 0,
       cardCount: counts.get(c.id)?.cards ?? 0,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -76,6 +88,7 @@ export async function POST(request: Request): Promise<Response> {
     id: created.id,
     name: created.name,
     folderCount: 1,
+    flashcardCount: 0,
     cardCount: 0,
   };
   return ok(data, 201);

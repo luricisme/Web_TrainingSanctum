@@ -73,7 +73,8 @@ export function DeleteClassModal({
       }}
     >
       <p className="text-body text-foreground-secondary">
-        This class has {pluralize(target.folderCount, "folder")} and{" "}
+        This class has {pluralize(target.folderCount, "folder")},{" "}
+        {pluralize(target.flashcardCount, "flashcard")} and{" "}
         {pluralize(target.cardCount, "card")}.
       </p>
 
@@ -91,13 +92,14 @@ export function DeleteClassModal({
             {others.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} ({pluralize(c.folderCount, "folder")} ·{" "}
+                {pluralize(c.flashcardCount, "flashcard")} ·{" "}
                 {pluralize(c.cardCount, "card")})
               </option>
             ))}
           </select>
           <p className="text-body-sm text-foreground-tertiary">
-            Unsorted cards merge into that class&apos;s Unsorted folder. A folder
-            name already in use there gets a number added.
+            Unsorted flashcards merge into that class&apos;s Unsorted folder. A
+            folder or flashcard name already in use there gets a number added.
           </p>
           <div>
             <button

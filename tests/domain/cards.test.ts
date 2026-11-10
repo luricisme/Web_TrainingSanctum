@@ -3,7 +3,6 @@ import {
   cardInputSchema,
   createCardWithSchedulingRecords,
   createCardsBatchSchema,
-  moveCardSchema,
   toLocalCalendarDay,
   validateCardRows,
 } from "@training-sanctum/domain";
@@ -88,12 +87,12 @@ describe("cardInputSchema", () => {
 
 describe("createCardsBatchSchema and validateCardRows", () => {
   it("bounds the row count to 1..200", () => {
-    expect(createCardsBatchSchema.safeParse({ folderId: "f", cards: [] }).success).toBe(false);
+    expect(createCardsBatchSchema.safeParse({ flashcardId: "f", cards: [] }).success).toBe(false);
     expect(
-      createCardsBatchSchema.safeParse({ folderId: "f", cards: Array(201).fill({}) }).success
+      createCardsBatchSchema.safeParse({ flashcardId: "f", cards: Array(201).fill({}) }).success
     ).toBe(false);
     expect(
-      createCardsBatchSchema.safeParse({ folderId: "f", cards: Array(200).fill({}) }).success
+      createCardsBatchSchema.safeParse({ flashcardId: "f", cards: Array(200).fill({}) }).success
     ).toBe(true);
   });
 
@@ -130,17 +129,6 @@ describe("createCardWithSchedulingRecords (AD-9)", () => {
     for (const record of schedulingRecords) {
       expect(record).toMatchObject({ easeFactor: 2.5, repetitions: 0, interval: 0 });
       expect(record.nextReviewDate.toISOString()).toBe("2026-11-08T17:00:00.000Z");
-    }
-  });
-});
-
-describe("moveCardSchema (spec-2-6)", () => {
-  it("accepts a non-empty folderId", () => {
-    expect(moveCardSchema.parse({ folderId: "abc" })).toEqual({ folderId: "abc" });
-  });
-  it("rejects missing, empty and non-string folderId", () => {
-    for (const body of [{}, { folderId: "" }, { folderId: 7 }, { folderId: null }]) {
-      expect(moveCardSchema.safeParse(body).success).toBe(false);
     }
   });
 });

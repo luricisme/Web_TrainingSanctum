@@ -1,60 +1,59 @@
-# Epic 2 Context: Class, Folder & Card Management
+# Epic 2 Context: Class, Folder, Flashcard & Card Management
 
 <!-- Compiled from planning artifacts. Edit freely. Regenerate with compile-epic-context if planning docs change. -->
 
 ## Goal
 
-A user can organize study material as Class → Folder → Card: create, rename, and delete Classes and Folders (each Class with its built-in "Unsorted" Folder), add Cards inside a Folder through the Manual mode of "Add cards", and edit, delete, and move Cards. Deleting a Folder or Class always gives the user a safe, explicit choice of what happens to its contents. This epic produces the data the rest of the product (import, review, stats) operates on, and establishes the shared card-creation path that import reuses.
+A user can organize study material in a fixed four-level hierarchy, Class > Folder > Flashcard > Card (a Flashcard is a named set of Cards, like a Quizlet set). They can create, rename and delete Classes, Folders and Flashcards, add Cards inside a Flashcard through Manual mode of "Add cards", edit and delete Cards, and move Flashcards between Folders, with safe, explicit choices for what happens to contents on delete. This epic also owns the shared card-creation path that import (Epic 3) reuses. Stories 2.1-2.6 were built against the old three-level model; 2.7 (the Flashcard level) is a prerequisite and 2.3-2.6 are rework.
 
 ## Stories
 
 - Story 2.1: Class CRUD
 - Story 2.2: Folder CRUD inside a Class
-- Story 2.3: Add Cards — Manual Mode
+- Story 2.3: Add Cards - Manual Mode
 - Story 2.4: Edit a Card
 - Story 2.5: Delete a Card
-- Story 2.6: Move & Browse Cards
+- Story 2.6: Move & Browse Flashcards
+- Story 2.7: Flashcard CRUD inside a Folder (prerequisite; implement first)
 
 ## Requirements & Constraints
 
-- Fixed hierarchy Class → Folder → Card. A Folder lives in exactly one Class; a Card lives in exactly one Folder. No sub-folders, no sub-classes.
-- Every Class has exactly one built-in "Unsorted" Folder, created in the same transaction as the Class; it cannot be renamed or deleted.
-- Card fields: Term, Definition, Example Sentence, Context/Collocation, Part of Speech. Term and Definition required; the rest optional. Full Unicode (IPA, accents, non-Latin scripts) must be stored and rendered without normalization or stripping.
-- Each new Card gets two Scheduling Records (one per Recall Direction) at SM-2 defaults (`ease_factor = 2.5`, `repetitions = 0`, `next_review_date` = start of today in the user's local day).
-- Editing a Card never touches its Scheduling Records. Deleting a Card removes both Scheduling Records and drops it from any due queue immediately.
-- Moving a Card to any Folder in any Class is allowed; it always ends up in exactly one Folder.
-- Folder delete: user chooses "Move cards to Unsorted" (default, same Class's Unsorted) or "Delete cards too".
-- Class delete: user chooses "Move folders to…" (default, target-Class picker) or "Delete class and everything in it" (enabled only after typing the Class name). On move, Unsorted Cards merge into the target's Unsorted, other Folders move with their Cards, and Folder-name clashes in the target get a " (2)" suffix. When no other Class exists, only the delete option is offered.
-- Both delete cascades are atomic: no partial moves, no orphaned or silently deleted Cards.
-- Manual save is per-row tolerant: rows with empty Term/Definition show field-level errors and are not created, while valid rows are still created.
-- Stats shown in browsing: each Class shows Folder count and Card count; each Folder shows card count.
+- Card fields: Term, Definition (both required), Example Sentence, Context/Collocation, Part of Speech (optional). Full Unicode (IPA, diacritics, non-Latin scripts) must be stored and rendered unchanged, with no normalization or stripping.
+- Every Card is in exactly one Flashcard, every Flashcard in exactly one Folder, every Folder in exactly one Class. No nesting of Folders or Classes.
+- A Flashcard has only a name, unique per Folder case-insensitively; create, rename or move into a clash gives a field-level error and changes nothing.
+- Every Class has one built-in "Unsorted" Folder, created in the same transaction as the Class; it cannot be renamed or deleted.
+- Deleting a Card removes both of its Scheduling Records immediately, so it leaves any due queue. Editing a Card never touches its Scheduling Records.
+- Deleting a Flashcard: confirmation names it and its Card count; its Cards and Scheduling Records are removed.
+- Deleting a Folder: move its Flashcards to the same Class's Unsorted (default) or delete them with their Cards.
+- Deleting a Class: move its Folders to another Class (default; Unsorted Flashcards merge into the target's Unsorted; clashing Folder or Flashcard names get " (2)"), or delete everything after typing the Class name. If no other Class exists, only the delete option is offered.
+- All delete and move cascades are atomic: no partial moves or deletes, no orphans.
+- Class and Folder rows show Flashcard and Card counts; the Classes view shows Folder, Flashcard and Card counts.
+- Moving a Flashcard can target any Folder in any Class.
 
 ## Technical Decisions
 
-- All three card-creation paths (manual now, paste and CSV import in Epic 3) call one domain function, `createCardWithSchedulingRecords`, in `packages/domain`. It takes the five Card fields and returns a Card plus exactly two fresh Scheduling Records. No Route Handler constructs a Scheduling Record by hand. Epic 3 commits through a shared `POST /api/cards/batch`, so build that batch endpoint here so Manual mode and later import share it.
-- Domain stays framework-free (no `next`, `react`, `@prisma/client`); only `app/api/**` Route Handlers import it. Postgres is touched only through the Prisma client in `packages/db`, with schema changes via Prisma migrations only.
-- Routes: `app/api/classes/**` (Class CRUD plus class-delete), `app/api/folders/**` (Folder CRUD, always under a Class), plus card routes. Every Route Handler validates body/query with Zod before calling domain/db code.
-- Response envelope `{ data: T }` for success. Error envelope `{ error: { code, message, fields?, details? } }`: use `fields` for single-record field errors (card edit) and `details` for multi-row batch errors (multi-row Manual save); never both, never a bare string.
-- Folder-delete cascade and class-delete (both move and delete variants) each run inside one Prisma transaction, and log a structured single-line summary (operation, record counts, outcome).
-- Prisma model names match domain vocabulary: `Class` (fall back to `StudyClass` with `@@map("class")` only if Prisma rejects `Class` as reserved, keeping "Class" in UI and API paths), `Folder`, `Card`, `SchedulingRecord`. Keys are `cuid()` strings; timestamps in UTC. All data is scoped to `user_id`; every route requires the session (401 otherwise).
-- `next_review_date` default uses the shared `toLocalCalendarDay` helper keyed on `User.timezone`. If that helper is not yet present in the codebase, introduce it in `packages/domain` for this epic (Epic 4 reuses it).
-- Text columns are Postgres TEXT/UTF-8.
+- Each new Card gets exactly two Scheduling Records (one per Recall Direction) at defaults: ease_factor 2.5, repetitions 0, next_review_date = start of today in the user's local day. All creation goes through the single domain function `createCardWithSchedulingRecords`; no Route Handler builds a Scheduling Record by hand. Epic 3 import calls the same function.
+- Layering: `packages/domain` is pure (no next/react/prisma imports); only `app/api/**` imports it; UI calls Route Handlers over HTTP. Postgres only via the Prisma client in `packages/db`; schema changes only via Prisma migrations. No Server Actions.
+- Every Route Handler validates body/query with Zod first. Success: `{ data: T }` (or `{ data: T[], meta? }`). Errors: `{ error: { code, message, fields?, details? } }`; `fields` for single-record errors, `details` (line/reason) for multi-row batch saves; never both.
+- All routes require the Better Auth session (401 otherwise); all data is scoped to `userId` (Card also carries `userId`).
+- Routes: `app/api/classes/**`, `app/api/folders/**` (GET returns the folder's Flashcards with card counts), `app/api/flashcards/**` (CRUD, `POST /api/flashcards/[id]/move`), `app/api/cards/**` (CRUD; `POST /api/cards/batch` takes `flashcardId`, is the single multi-row create used by Manual mode and import commit).
+- Schema (Story 2.7): new `Flashcard` model between Folder and Card; `Card.folderId` becomes `Card.flashcardId`. Existing data is test data and is wiped (no data migration); the reset against the Neon DB in `apps/web/.env.local` requires explicit confirmation before it runs. Unique `(cardId, direction)` on Scheduling Records; partial unique index on `(classId) WHERE isUnsorted`. IDs are cuid. Model names match the domain vocabulary (fallback `StudyClass` with `@@map("class")` only if Prisma rejects `Class`).
+- Folder-delete, flashcard-delete and class-delete (both options, including merges and renames) each run in one Prisma `$transaction`, and log a single-line structured summary (operation, record counts including flashcard counts, outcome).
+- Tests: Vitest for domain, Playwright request fixture for API, Playwright browser for E2E; update existing suites and add flashcard CRUD and move cases.
 
 ## UX & Interaction Patterns
 
-- Classes view: Classes listed as rows grouped under section headers with the small accent-colored square section-bullet marker; row hover state; trailing "..." overflow menu for rename/delete. Folder rows follow the same pattern (the Unsorted Folder's menu omits rename/delete).
-- Empty Classes state shows a primary "Create class" button.
-- Breadcrumb inside a Folder: "Classes / {Class} / {Folder}"; Cards shown as rows.
-- "Add cards" panel opened from inside a Folder: header shows the target Folder; pill switcher offers Manual and Import (Import mode itself is Epic 3, so leave its slot for it). Manual mode is a Quizlet-style editor: numbered Term/Definition rows, optional fields (Example Sentence, Context/Collocation, Part of Speech) expandable per row, "+ Add row", Tab moves to the next field, Enter in the last field of the last row adds a row, one Save creates all valid rows.
-- Empty due-queue state's "+ Add card" opens Manual mode in the last-used Folder with a Folder picker to change the target (the empty state itself is built in Epic 4; here only the Manual-mode entry with a picker is needed).
-- Modals: folder-delete has two explicit buttons ("Move cards to Unsorted" primary, "Delete cards too" secondary-danger, no checkbox); class-delete has "Move folders to…" with a target-Class picker as primary and "Delete class and everything in it" as secondary-danger, enabled only after typing the Class name.
-- Voice: direct, imperative, no cheerleading or emoji. Every interactive element needs a visible `:focus-visible` ring and keyboard operability.
+- List rows use section headers with the small accent square bullet, `row-hover` state, and a trailing "..." menu. Flashcard rows: Rename, Move to..., Delete. Card rows: Edit and Delete only (no Move). Unsorted Folder has no rename or delete.
+- Breadcrumbs: Folder page "Classes / {Class} / {Folder}"; Flashcard page "Classes / {Class} / {Folder} / {Flashcard}". The Flashcard page hosts the Cards list, Add cards, and Edit/Delete.
+- Modals: folder-delete (two buttons, "Move flashcards to Unsorted" primary / "Delete flashcards too" secondary-danger, no checkbox); flashcard-delete (names Flashcard and Card count); move-flashcard (Folder picker across Classes); class-delete ("Move folders to..." with target-Class picker as primary; "Delete class and everything in it" enabled only after typing the Class name).
+- "Add cards" panel opens from inside a Flashcard, target Flashcard shown in the header, pill switcher Manual / Import (Import arrives in Epic 3). Manual: numbered Term/Definition rows, optional fields expandable per row, "+ Add row", Tab moves to next field, Enter in the last field of the last row adds a row, one Save creates all valid rows; invalid rows show field-level errors while valid rows are still created.
+- Empty Classes view: primary "Create class" button. Empty due-queue "+ Add card" opens Manual mode in the last-used Flashcard with a Flashcard picker.
+- Microcopy is direct and imperative, with no cheerleading or emoji. Every interactive element needs a visible `:focus-visible` state.
 
 ## Cross-Story Dependencies
 
-- Depends on Epic 1: authenticated session and `user_id` scoping, the response/error envelope conventions, the app shell (Classes nav item and placeholder page), and design tokens.
-- Story 2.1 (Class plus its Unsorted Folder) must precede 2.2 (Folders live in a Class) and 2.3 (Cards need a target Folder).
-- Story 2.3 introduces `createCardWithSchedulingRecords` and the batch card endpoint; 2.4, 2.5 and 2.6 build on Cards existing.
-- Class-delete (2.1) and Folder-delete (2.2) cascades must remove or move Cards consistently with card delete (2.5), including their Scheduling Records.
-- Story 2.6's browsing views (Folder/Class lists, Folder entry point to "Add cards") are the host for 2.3's panel; the Folder page can be stubbed in 2.2 and completed in 2.6.
-- Downstream: Epic 3 reuses the Add cards panel shell, `createCardWithSchedulingRecords`, and `POST /api/cards/batch`; Epic 4's Review-this-class/folder scoping and due queue read the Class → Folder → Card data created here; Epic 5 export/restore must cover this hierarchy.
+- Story 2.7 first: it introduces the Flashcard schema, API and UI that 2.3-2.6 are re-pointed to, and it changes the counts and delete cascade shown in 2.1 and 2.2.
+- 2.2 and 2.1 delete cascades depend on the Flashcard level (Folders contain Flashcards, not Cards).
+- 2.6 replaces the committed "Move Card between Folders" code with Move Flashcard.
+- 2.3's `createCardWithSchedulingRecords` and `POST /api/cards/batch` are reused by Epic 3 import (target is a Flashcard; duplicates are checked within it).
+- Epic 4 review scopes (Class, Folder, Flashcard) and Epic 5 export/restore/stats depend on this hierarchy and its data model.

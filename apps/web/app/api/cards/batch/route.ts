@@ -48,12 +48,12 @@ export async function POST(request: Request): Promise<Response> {
     }
     return validationFailure(parsed.error);
   }
-  const { folderId, cards: rows } = parsed.data;
+  const { flashcardId, cards: rows } = parsed.data;
 
   const validated = validateCardRows(rows);
   if (!validated.ok) {
     logBatch({
-      folderId,
+      flashcardId,
       rows: rows.length,
       outcome: "rejected:400",
     });
@@ -68,11 +68,13 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const created = await prisma.$transaction(async (tx) => {
-      const folder = await tx.folder.findFirst({
-        where: { id: folderId, userId },
+      const flashcard = await tx.flashcard.findFirst({
+        where: { id: flashcardId, userId },
         select: { id: true },
       });
-      if (!folder) throw new HttpError(404, "NOT_FOUND", "Folder not found.");
+      if (!flashcard) {
+        throw new HttpError(404, "NOT_FOUND", "Flashcard not found.");
+      }
       const user = await tx.user.findUniqueOrThrow({
         where: { id: userId },
         select: { timezone: true },
@@ -85,7 +87,7 @@ export async function POST(request: Request): Promise<Response> {
       const cards = await tx.card.createManyAndReturn({
         data: built.map(({ card }) => ({
           ...card,
-          folderId: folder.id,
+          flashcardId: flashcard.id,
           userId,
         })),
         select: { id: true },
@@ -101,16 +103,16 @@ export async function POST(request: Request): Promise<Response> {
       return validated.cards.length;
     });
 
-    logBatch({ folderId, rows: rows.length, created, outcome: "success" });
+    logBatch({ flashcardId, rows: rows.length, created, outcome: "success" });
     const data: CreateCardsBatchResponse = { created };
     return ok(data, 201);
   } catch (error) {
     if (error instanceof HttpError) {
-      logBatch({ folderId, rows: rows.length, outcome: `rejected:${error.status}` });
+      logBatch({ flashcardId, rows: rows.length, outcome: `rejected:${error.status}` });
       return error.toResponse();
     }
     logBatch({
-      folderId,
+      flashcardId,
       rows: rows.length,
       outcome: "failed",
       error: error instanceof Error ? error.message : String(error),

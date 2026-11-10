@@ -3,6 +3,7 @@ import {
   type ClassSummary,
   deleteClassSchema,
   renameClassSchema,
+  uniqueFlashcardName,
   uniqueFolderName,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
@@ -44,13 +45,19 @@ export async function PATCH(
 
   const folders = await prisma.folder.findMany({
     where: { classId: id, userId },
-    select: { _count: { select: { cards: true } } },
+    select: {
+      flashcards: { select: { _count: { select: { cards: true } } } },
+    },
   });
   const data: ClassSummary = {
     id,
     name: parsed.data.name,
     folderCount: folders.length,
-    cardCount: folders.reduce((sum, f) => sum + f._count.cards, 0),
+    flashcardCount: folders.reduce((n, f) => n + f.flashcards.length, 0),
+    cardCount: folders.reduce(
+      (sum, f) => sum + f.flashcards.reduce((n, fc) => n + fc._count.cards, 0),
+      0
+    ),
   };
   return ok(data);
 }
@@ -91,16 +98,20 @@ export async function DELETE(
           );
         }
         const folderIds = source.folders.map((f) => f.id);
-        const cards = await tx.card.count({
+        const flashcards = await tx.flashcard.count({
           where: { folderId: { in: folderIds } },
         });
+        const cards = await tx.card.count({
+          where: { flashcard: { folderId: { in: folderIds } } },
+        });
         const schedulingRecords = await tx.schedulingRecord.count({
-          where: { card: { folderId: { in: folderIds } } },
+          where: { card: { flashcard: { folderId: { in: folderIds } } } },
         });
         await tx.class.delete({ where: { id } });
         return {
           mode: "delete" as const,
           folders: folderIds.length,
+          flashcards,
           cards,
           schedulingRecords,
         };
@@ -128,18 +139,36 @@ export async function DELETE(
         throw new Error(`Class ${target.id} has no Unsorted folder`);
       }
 
-      // Unsorted Cards merge into the target's Unsorted Folder.
+      // Unsorted Flashcards merge into the target's Unsorted Folder; a
+      // clashing name gets " (2)", " (3)".
+      let flashcardsMerged = 0;
       let cardsMerged = 0;
       const sourceUnsorted = source.folders.find((f) => f.isUnsorted);
       if (sourceUnsorted) {
-        const merged = await tx.card.updateMany({
+        const takenFlashcards = (
+          await tx.flashcard.findMany({
+            where: { folderId: targetUnsorted.id },
+            select: { name: true },
+          })
+        ).map((f) => f.name);
+        const unsortedFlashcards = await tx.flashcard.findMany({
           where: { folderId: sourceUnsorted.id },
-          data: { folderId: targetUnsorted.id },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, name: true, _count: { select: { cards: true } } },
         });
-        cardsMerged = merged.count;
+        for (const flashcard of unsortedFlashcards) {
+          const name = uniqueFlashcardName(flashcard.name, takenFlashcards);
+          takenFlashcards.push(name);
+          await tx.flashcard.update({
+            where: { id: flashcard.id },
+            data: { folderId: targetUnsorted.id, name },
+          });
+          flashcardsMerged += 1;
+          cardsMerged += flashcard._count.cards;
+        }
       }
 
-      // Every other Folder moves with its Cards; a clashing name gets a suffix.
+      // Every other Folder moves with its Flashcards; a clashing name gets a suffix.
       const taken = new Set(target.folders.map((f) => f.name));
       const moving = source.folders.filter((f) => !f.isUnsorted);
       for (const folder of moving) {
@@ -150,15 +179,21 @@ export async function DELETE(
           data: { classId: target.id, name },
         });
       }
+      const movingIds = moving.map((f) => f.id);
+      const flashcardsMoved = await tx.flashcard.count({
+        where: { folderId: { in: movingIds } },
+      });
       const cardsMoved = await tx.card.count({
-        where: { folderId: { in: moving.map((f) => f.id) } },
+        where: { flashcard: { folderId: { in: movingIds } } },
       });
 
       await tx.class.delete({ where: { id } });
       return {
         mode: "move" as const,
         foldersMoved: moving.length,
+        flashcardsMoved,
         cardsMoved,
+        flashcardsMerged,
         cardsMerged,
       };
     });

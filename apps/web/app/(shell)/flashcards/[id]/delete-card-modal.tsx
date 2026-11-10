@@ -30,6 +30,7 @@ export function DeleteCardModal({
   });
 
   function finish() {
+    void queryClient.invalidateQueries({ queryKey: ["folder"] });
     void queryClient.invalidateQueries({ queryKey: ["class-folders"] });
     void queryClient.invalidateQueries({ queryKey: ["classes"] });
     onDeleted(card.id);

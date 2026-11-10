@@ -44,8 +44,9 @@ model User {
   sessions Session[]
   accounts Account[]
   classes  Class[]
-  folders  Folder[]
-  cards    Card[]
+  folders    Folder[]
+  flashcards Flashcard[]
+  cards      Card[]
 
   @@map("users")
 }
@@ -127,11 +128,31 @@ model Folder {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  cards Card[]
+  flashcards Flashcard[]
 
   @@index([classId])
   @@index([userId])
   @@map("folders")
+}
+
+// Story 2.7: a named set of Cards inside one Folder. The unique name per Folder
+// (case-insensitive) is a raw SQL index on `flashcards("folderId", lower("name"))`
+// in the add_flashcard migration, which Prisma cannot express.
+model Flashcard {
+  id        String   @id @default(cuid())
+  name      String
+  folderId  String
+  folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cards Card[]
+
+  @@index([folderId])
+  @@index([userId])
+  @@map("flashcards")
 }
 
 model Card {
@@ -141,8 +162,8 @@ model Card {
   example      String?
   context      String?
   partOfSpeech String?
-  folderId     String
-  folder       Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  flashcardId  String
+  flashcard    Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
@@ -150,7 +171,7 @@ model Card {
 
   schedulingRecords SchedulingRecord[]
 
-  @@index([folderId])
+  @@index([flashcardId])
   @@index([userId])
   @@map("cards")
 }

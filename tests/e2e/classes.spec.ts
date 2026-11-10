@@ -35,7 +35,7 @@ test("empty state offers Create class", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Create class" })).toHaveCount(1);
 });
 
-test("create shows the row at once with 1 folder, 0 cards; blank name errors inline", async ({
+test("create shows the row at once with 1 folder, 0 flashcards, 0 cards; blank name errors inline", async ({
   page,
 }) => {
   await register(page);
@@ -46,7 +46,7 @@ test("create shows the row at once with 1 folder, 0 cards; blank name errors inl
   await page.getByRole("dialog").getByRole("button", { name: "Create class" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.getByText("IELTS", { exact: true })).toBeVisible();
-  await expect(page.getByText("1 folder · 0 cards")).toBeVisible();
+  await expect(page.getByText("1 folder · 0 flashcards · 0 cards")).toBeVisible();
 });
 
 test("rename updates the list and the delete modal; Escape closes modals", async ({ page }) => {
@@ -82,13 +82,19 @@ test("delete via move removes the class and keeps the folders in the target", as
   const extra = await prisma.folder.create({
     data: { name: "Extra", classId: source.id, userId: user.id },
   });
-  for (const [folderId, term] of [
-    [extra.id, "a"],
-    [extra.id, "b"],
-    [source.folders[0].id, "c"],
+  const extraSet = await prisma.flashcard.create({
+    data: { name: "Extra set", folderId: extra.id, userId: user.id },
+  });
+  const unsortedSet = await prisma.flashcard.create({
+    data: { name: "Loose set", folderId: source.folders[0].id, userId: user.id },
+  });
+  for (const [flashcardId, term] of [
+    [extraSet.id, "a"],
+    [extraSet.id, "b"],
+    [unsortedSet.id, "c"],
   ] as const) {
     await prisma.card.create({
-      data: { term, definition: term, folderId, userId: user.id },
+      data: { term, definition: term, flashcardId, userId: user.id },
     });
   }
   await page.reload();
@@ -100,10 +106,10 @@ test("delete via move removes the class and keeps the folders in the target", as
   await expect(dialog).toBeHidden();
   await expect(page.getByText("Source", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Target", { exact: true })).toBeVisible();
-  await expect(page.getByText("2 folders · 3 cards")).toBeVisible();
+  await expect(page.getByText("2 folders · 2 flashcards · 3 cards")).toBeVisible();
   await page.reload();
   await expect(page.getByText("Source", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("2 folders · 3 cards")).toBeVisible();
+  await expect(page.getByText("2 folders · 2 flashcards · 3 cards")).toBeVisible();
 });
 
 test("delete-all enables only after the exact name is typed", async ({ page }) => {

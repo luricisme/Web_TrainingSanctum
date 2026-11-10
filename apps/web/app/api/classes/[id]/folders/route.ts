@@ -31,7 +31,7 @@ export async function GET(
       id: true,
       name: true,
       isUnsorted: true,
-      _count: { select: { cards: true } },
+      flashcards: { select: { _count: { select: { cards: true } } } },
     },
   });
   const folders: FolderSummary[] = rows
@@ -39,7 +39,8 @@ export async function GET(
       id: f.id,
       name: f.name,
       isUnsorted: f.isUnsorted,
-      cardCount: f._count.cards,
+      flashcardCount: f.flashcards.length,
+      cardCount: f.flashcards.reduce((n, fc) => n + fc._count.cards, 0),
     }))
     .sort((a, b) =>
       a.isUnsorted !== b.isUnsorted
@@ -97,6 +98,7 @@ export async function POST(
     id: created.id,
     name: created.name,
     isUnsorted: false,
+    flashcardCount: 0,
     cardCount: 0,
   };
   return ok(data, 201);

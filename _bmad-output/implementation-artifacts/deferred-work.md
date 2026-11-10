@@ -59,3 +59,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-5-delete-a-card.md`
   summary: Add an e2e check that Class and Folder card counts drop after a client-side navigation following a Card delete.
   evidence: The delete modal invalidates `["classes"]` and `["class-folders"]`, but the e2e test only asserts the Folder page count.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-7-flashcard-crud-inside-a-folder.md`
+  summary: Add a forced-failure rollback test for `DELETE /api/flashcards/[id]` (trigger-based, like the Folder delete rollback test).
+  evidence: The delete runs in one transaction with a 500 "Nothing was changed" path, but only success and 404 cases are tested.

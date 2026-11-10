@@ -11,8 +11,8 @@ type Mode = "move" | "delete";
 
 /**
  * Folder-delete modal (EXPERIENCE.md): two explicit buttons, no checkbox and
- * no typed-name gate. "Move cards to Unsorted" is primary; "Delete cards too"
- * is the danger action.
+ * no typed-name gate. "Move flashcards to Unsorted" is primary; "Delete
+ * flashcards too" is the danger action.
  */
 export function DeleteFolderModal({
   classId,
@@ -66,9 +66,9 @@ export function DeleteFolderModal({
       }}
     >
       <p className="text-body text-foreground-secondary">
-        {target.cardCount === 0
-          ? "This folder has no cards."
-          : `This folder has ${pluralize(target.cardCount, "card")}.`}{" "}
+        {target.flashcardCount === 0
+          ? "This folder has no flashcards."
+          : `This folder has ${pluralize(target.flashcardCount, "flashcard")} and ${pluralize(target.cardCount, "card")}.`}{" "}
         Choose what happens to them.
       </p>
 
@@ -86,7 +86,7 @@ export function DeleteFolderModal({
           onClick={() => run("move")}
           className={`${buttonPrimary} w-full`}
         >
-          Move cards to Unsorted
+          Move flashcards to Unsorted
         </button>
         <button
           type="button"
@@ -94,7 +94,7 @@ export function DeleteFolderModal({
           onClick={() => run("delete")}
           className={`${buttonDanger} w-full`}
         >
-          Delete cards too
+          Delete flashcards too
         </button>
       </div>
     </Modal>

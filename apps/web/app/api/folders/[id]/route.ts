@@ -1,11 +1,11 @@
 import { prisma } from "@training-sanctum/db";
 import {
-  type CardSummary,
-  type FolderCardsResponse,
+  type FolderFlashcardsResponse,
   type FolderSummary,
   deleteFolderSchema,
   isFolderNameTaken,
   renameFolderSchema,
+  uniqueFlashcardName,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
 import {
@@ -24,6 +24,7 @@ function logDelete(entry: Record<string, unknown>): void {
 
 const UNSORTED_LOCKED = "The Unsorted folder cannot be changed.";
 
+/** spec-2-7: a Folder lists its Flashcards (with Card counts), not Cards. */
 export async function GET(
   request: Request,
   { params }: Context
@@ -40,26 +41,23 @@ export async function GET(
       name: true,
       isUnsorted: true,
       class: { select: { id: true, name: true } },
-      cards: {
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      flashcards: {
         select: {
           id: true,
-          term: true,
-          definition: true,
-          example: true,
-          context: true,
-          partOfSpeech: true,
+          name: true,
+          _count: { select: { cards: true } },
         },
       },
     },
   });
   if (!folder) return fail(404, "NOT_FOUND", "Folder not found.");
 
-  const cards: CardSummary[] = folder.cards;
-  const data: FolderCardsResponse = {
+  const data: FolderFlashcardsResponse = {
     folder: { id: folder.id, name: folder.name, isUnsorted: folder.isUnsorted },
     class: folder.class,
-    cards,
+    flashcards: folder.flashcards
+      .map((f) => ({ id: f.id, name: f.name, cardCount: f._count.cards }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
   };
   return ok(data);
 }
@@ -109,13 +107,16 @@ export async function PATCH(
       const updated = await tx.folder.update({
         where: { id },
         data: { name: parsed.data.name },
-        include: { _count: { select: { cards: true } } },
+        include: {
+          flashcards: { select: { _count: { select: { cards: true } } } },
+        },
       });
       const summary: FolderSummary = {
         id: updated.id,
         name: updated.name,
         isUnsorted: false,
-        cardCount: updated._count.cards,
+        flashcardCount: updated.flashcards.length,
+        cardCount: updated.flashcards.reduce((n, f) => n + f._count.cards, 0),
       };
       return summary;
     });
@@ -151,7 +152,15 @@ export async function DELETE(
       if (folder.isUnsorted) {
         throw new HttpError(400, "UNSORTED_LOCKED", UNSORTED_LOCKED);
       }
-      const cards = await tx.card.count({ where: { folderId: id } });
+      const flashcards = await tx.flashcard.findMany({
+        where: { folderId: id, userId },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true },
+      });
+      const flashcardIds = flashcards.map((f) => f.id);
+      const cards = await tx.card.count({
+        where: { flashcardId: { in: flashcardIds } },
+      });
 
       if (mode === "move") {
         const unsorted = await tx.folder.findFirst({
@@ -160,24 +169,44 @@ export async function DELETE(
         if (!unsorted) {
           throw new Error(`Class ${folder.classId} has no Unsorted folder`);
         }
-        await tx.card.updateMany({
-          where: { folderId: id },
-          data: { folderId: unsorted.id },
-        });
+        // A clashing Flashcard name gets " (2)", " (3)" in the Unsorted Folder.
+        const taken = (
+          await tx.flashcard.findMany({
+            where: { folderId: unsorted.id },
+            select: { name: true },
+          })
+        ).map((f) => f.name);
+        for (const flashcard of flashcards) {
+          const name = uniqueFlashcardName(flashcard.name, taken);
+          taken.push(name);
+          await tx.flashcard.update({
+            where: { id: flashcard.id },
+            data: { folderId: unsorted.id, name },
+          });
+        }
         await tx.folder.delete({ where: { id } });
-        return { cards, schedulingRecords: 0 };
+        return { flashcards: flashcards.length, cards, schedulingRecords: 0 };
       }
 
       const schedulingRecords = await tx.schedulingRecord.count({
-        where: { card: { folderId: id } },
+        where: { card: { flashcardId: { in: flashcardIds } } },
       });
-      await tx.schedulingRecord.deleteMany({ where: { card: { folderId: id } } });
-      await tx.card.deleteMany({ where: { folderId: id } });
+      await tx.schedulingRecord.deleteMany({
+        where: { card: { flashcardId: { in: flashcardIds } } },
+      });
+      await tx.card.deleteMany({ where: { flashcardId: { in: flashcardIds } } });
+      await tx.flashcard.deleteMany({ where: { folderId: id } });
       await tx.folder.delete({ where: { id } });
-      return { cards, schedulingRecords };
+      return { flashcards: flashcards.length, cards, schedulingRecords };
     });
 
-    logDelete({ mode, folderId: id, cardCount: summary.cards, outcome: "success" });
+    logDelete({
+      mode,
+      folderId: id,
+      flashcardCount: summary.flashcards,
+      cardCount: summary.cards,
+      outcome: "success",
+    });
     return ok({ id, mode, ...summary });
   } catch (error) {
     if (error instanceof HttpError) {

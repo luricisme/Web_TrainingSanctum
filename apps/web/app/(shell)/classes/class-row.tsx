@@ -47,7 +47,9 @@ export function ClassRow({
           {item.name}
         </Link>
         <p className="text-caption text-foreground-tertiary">
-          {pluralize(item.folderCount, "folder")} · {pluralize(item.cardCount, "card")}
+          {pluralize(item.folderCount, "folder")} ·{" "}
+          {pluralize(item.flashcardCount, "flashcard")} ·{" "}
+          {pluralize(item.cardCount, "card")}
         </p>
       </div>
 
