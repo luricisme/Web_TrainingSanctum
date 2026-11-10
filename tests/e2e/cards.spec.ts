@@ -294,3 +294,119 @@ for (const theme of ["dark", "light"] as const) {
     await shot("panel-error");
   });
 }
+
+// spec-2-5: Delete a Card.
+test("delete a card: Cancel and Escape keep it, confirm removes it and shows empty state", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { user, folder, card } = await seedCard(email);
+  await prisma.card.create({
+    data: { term: "second card", definition: "other", folderId: folder.id, userId: user.id },
+  });
+  await page.goto(`/folders/${folder.id}`);
+  await expect(page.getByText("2 cards")).toBeVisible();
+
+  const dialog = page.getByRole("dialog");
+  const del = page.getByRole("button", { name: /^Delete card \d: under the weather/ });
+  await del.focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog.getByRole("heading", { name: "Delete card" })).toBeVisible();
+  await expect(dialog).toContainText("under the weather");
+  await expect(dialog).toContainText("cannot be undone");
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(del).toBeFocused();
+  await del.click();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  expect(await prisma.card.count({ where: { folderId: folder.id } })).toBe(2);
+
+  // Confirm: row and count go, focus moves to the next row's Delete.
+  await del.click();
+  await dialog.getByRole("button", { name: "Delete card" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("under the weather")).toHaveCount(0);
+  await expect(page.getByText("1 card", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Delete card 1: second card/ })).toBeFocused();
+  expect(await prisma.card.findUnique({ where: { id: card.id } })).toBeNull();
+
+  // Last card: empty state with Add cards, focus on it.
+  await page.getByRole("button", { name: /^Delete card 1/ }).click();
+  await dialog.getByRole("button", { name: "Delete card" }).click();
+  await expect(page.getByText("This folder has no cards yet.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add cards" })).toBeFocused();
+});
+
+test("delete: a server failure keeps the card and modal; a 404 counts as already deleted", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { folder } = await seedCard(email);
+  await page.goto(`/folders/${folder.id}`);
+  const dialog = page.getByRole("dialog");
+  const open = page.getByRole("button", { name: /^Delete card 1: under the weather/ });
+
+  // 5xx: modal stays open with a message, the card is still listed and still in the DB.
+  await page.route("**/api/cards/*", (route) =>
+    route.request().method() === "DELETE"
+      ? route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "INTERNAL", message: "Could not delete the card." } }),
+        })
+      : route.continue()
+  );
+  await open.click();
+  await dialog.getByRole("button", { name: "Delete card" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("Could not delete the card.");
+  await expect(dialog.getByRole("button", { name: "Delete card" })).toBeEnabled();
+  await expect(page.getByText("under the weather").first()).toBeVisible();
+  expect(await prisma.card.count({ where: { folderId: folder.id } })).toBe(1);
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await page.unroute("**/api/cards/*");
+
+  // 404: the card is already gone, so the modal closes and the row disappears.
+  await page.route("**/api/cards/*", (route) =>
+    route.request().method() === "DELETE"
+      ? route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Card not found." } }),
+        })
+      : route.continue()
+  );
+  await open.click();
+  // Another tab deletes the card while the modal is open.
+  await prisma.card.deleteMany({ where: { folderId: folder.id } });
+  await dialog.getByRole("button", { name: "Delete card" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("This folder has no cards yet.")).toBeVisible();
+});
+
+for (const theme of ["dark", "light"] as const) {
+  test(`delete modal screenshots (${theme})`, async ({ page }) => {
+    mkdirSync("test-results/screenshots", { recursive: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const email = await register(page);
+    const { folder } = await seedCard(email);
+    await page.goto(`/folders/${folder.id}`);
+    await page.evaluate((t) => {
+      if (t === "light") document.documentElement.dataset.theme = "light";
+      else delete document.documentElement.dataset.theme;
+    }, theme);
+    await expect(page.getByRole("button", { name: /^Delete card 1/ })).toBeVisible();
+    await page.screenshot({
+      path: `test-results/screenshots/delete-card-row-${theme}.png`,
+      animations: "disabled",
+    });
+    await page.getByRole("button", { name: /^Delete card 1/ }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.screenshot({
+      path: `test-results/screenshots/delete-card-modal-${theme}.png`,
+      animations: "disabled",
+    });
+  });
+}
