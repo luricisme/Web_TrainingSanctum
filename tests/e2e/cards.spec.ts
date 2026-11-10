@@ -410,3 +410,154 @@ for (const theme of ["dark", "light"] as const) {
     });
   });
 }
+
+// spec-2-6: Move a Card.
+async function seedSecondClass(userId: string) {
+  return prisma.class.create({
+    data: {
+      name: "TOEFL",
+      userId,
+      folders: {
+        create: [
+          { name: "Unsorted", isUnsorted: true, userId },
+          { name: "Academic", userId },
+        ],
+      },
+    },
+    include: { folders: true },
+  });
+}
+
+test("move a card: Cancel and Escape keep it, move across Classes removes the row, last card shows empty state", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { user, folder, card } = await seedCard(email);
+  const toefl = await seedSecondClass(user.id);
+  const academic = toefl.folders.find((f) => f.name === "Academic")!;
+  await page.goto(`/folders/${folder.id}`);
+
+  const dialog = page.getByRole("dialog");
+  const move = page.getByRole("button", { name: /^Move card \d: under the weather/ });
+  await move.focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog.getByRole("heading", { name: "Move card" })).toBeVisible();
+  await expect(dialog).toContainText("under the weather");
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "Move card" })).toBeDisabled();
+  // Current Class preselected; the current Folder is not offered.
+  await expect(dialog.getByLabel("Class").locator("option:checked")).toHaveText("IELTS");
+  await expect(dialog.getByLabel("Folder").locator("option", { hasText: "Weather idioms" })).toHaveCount(0);
+
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toBeHidden();
+  await move.click();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  expect((await prisma.card.findUniqueOrThrow({ where: { id: card.id } })).folderId).toBe(folder.id);
+
+  // Move across Classes.
+  await move.click();
+  await dialog.getByLabel("Class").selectOption({ label: "TOEFL" });
+  await dialog.getByLabel("Folder").selectOption({ label: "Academic" });
+  await dialog.getByRole("button", { name: "Move card" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("This folder has no cards yet.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add cards" })).toBeFocused();
+  expect((await prisma.card.findUniqueOrThrow({ where: { id: card.id } })).folderId).toBe(academic.id);
+
+  await page.goto(`/folders/${academic.id}`);
+  await expect(page.getByText("under the weather")).toBeVisible();
+  await expect(page.getByText("1 card", { exact: true })).toBeVisible();
+});
+
+test("move: a server failure keeps the card and modal open", async ({ page }) => {
+  const email = await register(page);
+  const { user, folder, card } = await seedCard(email);
+  await seedSecondClass(user.id);
+  await page.goto(`/folders/${folder.id}`);
+  await page.route("**/api/cards/*/move", (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "INTERNAL", message: "Could not move the card." } }),
+    })
+  );
+  const dialog = page.getByRole("dialog");
+  await page.getByRole("button", { name: /^Move card 1/ }).click();
+  await dialog.getByLabel("Class").selectOption({ label: "TOEFL" });
+  await dialog.getByLabel("Folder").selectOption({ label: "Academic" });
+  await dialog.getByRole("button", { name: "Move card" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("Could not move the card.");
+  await expect(dialog.getByRole("button", { name: "Move card" })).toBeEnabled();
+  await expect(page.getByText("under the weather").first()).toBeVisible();
+  expect((await prisma.card.findUniqueOrThrow({ where: { id: card.id } })).folderId).toBe(folder.id);
+});
+
+test("move: a missing folder keeps the modal open; a missing card closes it and drops the row", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { user, folder } = await seedCard(email);
+  await seedSecondClass(user.id);
+  await page.goto(`/folders/${folder.id}`);
+  const dialog = page.getByRole("dialog");
+  const pickAndMove = async () => {
+    await page.getByRole("button", { name: /^Move card 1/ }).click();
+    await dialog.getByLabel("Class").selectOption({ label: "TOEFL" });
+    await dialog.getByLabel("Folder").selectOption({ label: "Academic" });
+    await dialog.getByRole("button", { name: "Move card" }).click();
+  };
+
+  await page.route("**/api/cards/*/move", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "FOLDER_NOT_FOUND", message: "Folder not found." } }),
+    })
+  );
+  await pickAndMove();
+  await expect(dialog.getByRole("alert")).toContainText("That folder no longer exists");
+  await expect(page.getByText("under the weather").first()).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await page.unroute("**/api/cards/*/move");
+
+  await page.route("**/api/cards/*/move", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Card not found." } }),
+    })
+  );
+  await pickAndMove();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("This folder has no cards yet.")).toBeVisible();
+});
+
+for (const theme of ["dark", "light"] as const) {
+  test(`move modal screenshots (${theme})`, async ({ page }) => {
+    mkdirSync("test-results/screenshots", { recursive: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const email = await register(page);
+    const { user, folder } = await seedCard(email);
+    await seedSecondClass(user.id);
+    await page.goto(`/folders/${folder.id}`);
+    await page.evaluate((t) => {
+      if (t === "light") document.documentElement.dataset.theme = "light";
+      else delete document.documentElement.dataset.theme;
+    }, theme);
+    await expect(page.getByRole("button", { name: /^Move card 1/ })).toBeVisible();
+    await page.screenshot({
+      path: `test-results/screenshots/move-card-row-${theme}.png`,
+      animations: "disabled",
+    });
+    await page.getByRole("button", { name: /^Move card 1/ }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Class").selectOption({ label: "TOEFL" });
+    await dialog.getByLabel("Folder").selectOption({ label: "Academic" });
+    await page.screenshot({
+      path: `test-results/screenshots/move-card-modal-${theme}.png`,
+      animations: "disabled",
+    });
+  });
+}

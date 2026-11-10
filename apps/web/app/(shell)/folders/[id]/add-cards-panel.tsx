@@ -509,19 +509,29 @@ function ManualRow({
   );
 }
 
-/** Class then Folder picker; preselects the last-used Folder from localStorage. */
-function FolderPicker({
+/**
+ * Class then Folder picker. By default it preselects the last-used Folder from
+ * localStorage; the Move modal preselects the current Class, hides the current
+ * Folder and skips that restore.
+ */
+export function FolderPicker({
   value,
   onChange,
+  initialClassId,
+  excludeFolderId,
+  restoreLast = true,
 }: {
   value: { classId: string; folderId: string } | null;
   onChange: (value: { classId: string; folderId: string } | null) => void;
+  initialClassId?: string;
+  excludeFolderId?: string;
+  restoreLast?: boolean;
 }) {
   const classes = useQuery({
     queryKey: ["classes"],
     queryFn: () => apiFetch<ClassSummary[]>("/api/classes"),
   });
-  const [classId, setClassId] = useState("");
+  const [classId, setClassId] = useState(initialClassId ?? "");
   const folders = useQuery({
     queryKey: ["class-folders", classId],
     queryFn: () => apiFetch<ClassFoldersResponse>(`/api/classes/${classId}/folders`),
@@ -532,12 +542,12 @@ function FolderPicker({
 
   // Restore the last-used Folder once the Classes are known.
   useEffect(() => {
-    if (restored.current || !classes.data) return;
+    if (restored.current || !classes.data || !restoreLast) return;
     restored.current = true;
     last.current = readLastFolder();
     const known = classes.data.find((c) => c.id === last.current?.classId);
     if (known) setClassId(known.id);
-  }, [classes.data]);
+  }, [classes.data, restoreLast]);
 
   useEffect(() => {
     if (!folders.data || !classId) return;
@@ -550,6 +560,8 @@ function FolderPicker({
     // Only react to a freshly loaded Folder list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [folders.data, classId]);
+
+  const otherFolders = (folders.data?.folders ?? []).filter((f) => f.id !== excludeFolderId);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -590,9 +602,11 @@ function FolderPicker({
           className={inputClass}
         >
           <option value="" disabled>
-            Choose a folder
+            {folders.data && otherFolders.length === 0
+              ? "No other folders in this class"
+              : "Choose a folder"}
           </option>
-          {(folders.data?.folders ?? []).map((f) => (
+          {otherFolders.map((f) => (
             <option key={f.id} value={f.id}>
               {f.name}
             </option>

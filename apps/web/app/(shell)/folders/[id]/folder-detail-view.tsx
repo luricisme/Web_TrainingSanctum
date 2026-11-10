@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CardSummary, FolderCardsResponse } from "@training-sanctum/domain";
@@ -11,6 +11,7 @@ import { buttonPrimary, buttonSecondary, pluralize } from "../../classes/ui";
 import { AddCardsPanel } from "./add-cards-panel";
 import { DeleteCardModal } from "./delete-card-modal";
 import { EditCardModal } from "./edit-card-modal";
+import { MoveCardModal } from "./move-card-modal";
 
 const crumbLink =
   "rounded-sm underline-offset-2 hover:text-foreground hover:underline focus-ring";
@@ -51,9 +52,24 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<CardSummary | null>(null);
   const [deleting, setDeleting] = useState<CardSummary | null>(null);
+  const [moving, setMoving] = useState<CardSummary | null>(null);
   const queryClient = useQueryClient();
   const listRef = useRef<HTMLUListElement>(null);
   const addRef = useRef<HTMLButtonElement>(null);
+  const pendingFocus = useRef<{ selector: string; index: number } | null>(null);
+  const [focusTick, setFocusTick] = useState(0);
+
+  // After a Card leaves the list (delete or move), focus the next row's control, else Add cards.
+  // Runs after React commits, so it cannot race the modal's own focus restore.
+  useEffect(() => {
+    const target = pendingFocus.current;
+    if (!target) return;
+    pendingFocus.current = null;
+    const controls = listRef.current?.querySelectorAll<HTMLButtonElement>(target.selector);
+    const count = controls?.length ?? 0;
+    if (count > 0) controls?.[Math.min(target.index, count - 1)]?.focus();
+    else addRef.current?.focus();
+  }, [focusTick]);
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ["folder", folderId],
     queryFn: () => apiFetch<FolderCardsResponse>(`/api/folders/${folderId}`),
@@ -146,6 +162,7 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
                 index={index + 1}
                 total={cards.length}
                 onEdit={() => setEditing(card)}
+                onMove={() => setMoving(card)}
                 onDelete={() => setDeleting(card)}
               />
             ))}
@@ -174,16 +191,29 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
               old ? { ...old, cards: old.cards.filter((c) => c.id !== id) } : old
             );
             void queryClient.invalidateQueries({ queryKey: ["folder", folderId] });
-            // The modal refocuses the removed button, so move focus on the next frame:
-            // the next row's Delete control, else the last row's, else Add cards.
-            requestAnimationFrame(() => {
-              const deletes = listRef.current?.querySelectorAll<HTMLButtonElement>(
-                "button[data-card-delete]"
-              );
-              const count = deletes?.length ?? 0;
-              if (count > 0) deletes?.[Math.min(index, count - 1)]?.focus();
-              else addRef.current?.focus();
-            });
+            // The modal refocuses the removed button; focus the next row's control after commit.
+            pendingFocus.current = { selector: "button[data-card-delete]", index };
+            setFocusTick((t) => t + 1);
+          }}
+        />
+      ) : null}
+
+      {moving ? (
+        <MoveCardModal
+          key={moving.id}
+          card={moving}
+          folderId={folder.id}
+          classId={data.class.id}
+          onClose={() => setMoving(null)}
+          onMoved={(id) => {
+            const index = Math.max(0, cards.findIndex((c) => c.id === id));
+            setMoving(null);
+            queryClient.setQueryData<FolderCardsResponse>(["folder", folderId], (old) =>
+              old ? { ...old, cards: old.cards.filter((c) => c.id !== id) } : old
+            );
+            void queryClient.invalidateQueries({ queryKey: ["folder", folderId] });
+            pendingFocus.current = { selector: "button[data-card-move]", index };
+            setFocusTick((t) => t + 1);
           }}
         />
       ) : null}
@@ -198,18 +228,20 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
   );
 }
 
-/** Card row: Term and Definition plus quiet Edit and Delete controls (move is 2.6). */
+/** Card row: Term and Definition plus quiet Edit, Move and Delete controls. */
 function CardRow({
   card,
   index,
   total,
   onEdit,
+  onMove,
   onDelete,
 }: {
   card: CardSummary;
   index: number;
   total: number;
   onEdit: () => void;
+  onMove: () => void;
   onDelete: () => void;
 }) {
   return (
@@ -226,6 +258,15 @@ function CardRow({
             className="-my-1 rounded-full px-3 py-1 text-body-sm text-foreground-secondary underline-offset-2 transition-state hover:text-foreground hover:underline focus-ring"
           >
             Edit
+          </button>
+          <button
+            type="button"
+            data-card-move
+            onClick={onMove}
+            aria-label={`Move card ${index}: ${card.term}`}
+            className="-my-1 rounded-full px-3 py-1 text-body-sm text-foreground-secondary underline-offset-2 transition-state hover:text-foreground hover:underline focus-ring"
+          >
+            Move
           </button>
           <button
             type="button"

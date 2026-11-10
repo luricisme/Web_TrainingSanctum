@@ -149,3 +149,16 @@ export interface FolderCardsResponse {
 export interface CreateCardsBatchResponse {
   created: number;
 }
+
+/** Request body of `POST /api/cards/:id/move` (spec-2-6). */
+export const moveCardSchema = z.object({
+  folderId: z.string({ error: "Choose a folder." }).min(1, "Choose a folder."),
+});
+
+export type MoveCardInput = z.infer<typeof moveCardSchema>;
+
+/** Shape returned by `POST /api/cards/:id/move`. */
+export interface MoveCardResponse {
+  id: string;
+  folderId: string;
+}

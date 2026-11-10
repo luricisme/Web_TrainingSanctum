@@ -3,6 +3,7 @@ import {
   cardInputSchema,
   createCardWithSchedulingRecords,
   createCardsBatchSchema,
+  moveCardSchema,
   toLocalCalendarDay,
   validateCardRows,
 } from "@training-sanctum/domain";
@@ -129,6 +130,17 @@ describe("createCardWithSchedulingRecords (AD-9)", () => {
     for (const record of schedulingRecords) {
       expect(record).toMatchObject({ easeFactor: 2.5, repetitions: 0, interval: 0 });
       expect(record.nextReviewDate.toISOString()).toBe("2026-11-08T17:00:00.000Z");
+    }
+  });
+});
+
+describe("moveCardSchema (spec-2-6)", () => {
+  it("accepts a non-empty folderId", () => {
+    expect(moveCardSchema.parse({ folderId: "abc" })).toEqual({ folderId: "abc" });
+  });
+  it("rejects missing, empty and non-string folderId", () => {
+    for (const body of [{}, { folderId: "" }, { folderId: 7 }, { folderId: null }]) {
+      expect(moveCardSchema.safeParse(body).success).toBe(false);
     }
   });
 });

@@ -364,3 +364,146 @@ test.describe("DELETE /api/cards/:id", () => {
     expect((await anon.delete(`${base}/api/cards/${gone.id}`)).status()).toBe(401);
   });
 });
+
+// spec-2-6: Move a Card.
+test.describe("POST /api/cards/:id/move", () => {
+  async function seedCard(s: Session, base: string) {
+    const from = await createFolder(s, base, "From");
+    await s.request.post(`${base}/api/cards/batch`, {
+      data: { folderId: from.id, cards: [{ term: "mover", definition: "x" }] },
+    });
+    const card = await prisma.card.findFirstOrThrow({ where: { folderId: from.id } });
+    return { from, card };
+  }
+
+  async function counts(s: Session, base: string) {
+    const res = await s.request.get(`${base}/api/classes`);
+    const list = (await res.json()).data as {
+      id: string;
+      folderCount: number;
+      cardCount: number;
+    }[];
+    return list;
+  }
+
+  test("moves within a Class and across Classes, Scheduling Records unchanged", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const { from, card } = await seedCard(s, base);
+    const before = await prisma.schedulingRecord.findMany({
+      where: { cardId: card.id },
+      orderBy: { direction: "asc" },
+    });
+    const fromFolder = await prisma.folder.findUniqueOrThrow({ where: { id: from.id } });
+
+    // Same Class: the Class's Unsorted Folder.
+    const unsorted = await prisma.folder.findFirstOrThrow({
+      where: { classId: fromFolder.classId, isUnsorted: true },
+    });
+    let res = await s.request.post(`${base}/api/cards/${card.id}/move`, {
+      data: { folderId: unsorted.id },
+    });
+    expect(res.status()).toBe(200);
+    expect((await res.json()).data).toEqual({ id: card.id, folderId: unsorted.id });
+    expect((await prisma.card.findUniqueOrThrow({ where: { id: card.id } })).folderId).toBe(
+      unsorted.id
+    );
+
+    // Another Class.
+    const other = await createFolder(s, base, "Elsewhere");
+    res = await s.request.post(`${base}/api/cards/${card.id}/move`, {
+      data: { folderId: other.id },
+    });
+    expect(res.status()).toBe(200);
+    const after = await prisma.card.findUniqueOrThrow({
+      where: { id: card.id },
+      include: { schedulingRecords: { orderBy: { direction: "asc" } } },
+    });
+    expect(after.folderId).toBe(other.id);
+    expect(after.term).toBe("mover");
+    expect(after.createdAt).toEqual(card.createdAt);
+    expect(after.schedulingRecords).toEqual(before);
+
+    const detail = await (await s.request.get(`${base}/api/folders/${other.id}`)).json();
+    expect(detail.data.cards.map((c: { id: string }) => c.id)).toEqual([card.id]);
+    const old = await (await s.request.get(`${base}/api/folders/${from.id}`)).json();
+    expect(old.data.cards).toEqual([]);
+
+    const otherFolder = await prisma.folder.findUniqueOrThrow({ where: { id: other.id } });
+    const list = await counts(s, base);
+    expect(list.find((c) => c.id === otherFolder.classId)?.cardCount).toBe(1);
+    expect(list.find((c) => c.id === fromFolder.classId)?.cardCount).toBe(0);
+  });
+
+  test("moving to the current Folder is a no-op 200", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const { from, card } = await seedCard(s, base);
+    const res = await s.request.post(`${base}/api/cards/${card.id}/move`, {
+      data: { folderId: from.id },
+    });
+    expect(res.status()).toBe(200);
+    expect((await prisma.card.findUniqueOrThrow({ where: { id: card.id } })).folderId).toBe(
+      from.id
+    );
+  });
+
+  test("foreign or unknown Card and Folder return 404 and change nothing", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const owner = await newUser(playwright, base);
+    const other = await newUser(playwright, base);
+    const { from, card } = await seedCard(owner, base);
+    const mine = await createFolder(owner, base, "Mine");
+    const theirs = await createFolder(other, base, "Theirs");
+
+    let res = await other.request.post(`${base}/api/cards/${card.id}/move`, {
+      data: { folderId: theirs.id },
+    });
+    expect(res.status()).toBe(404);
+    expect((await res.json()).error.message).toBe("Card not found.");
+    res = await owner.request.post(`${base}/api/cards/does-not-exist/move`, {
+      data: { folderId: mine.id },
+    });
+    expect(res.status()).toBe(404);
+
+    for (const folderId of [theirs.id, "does-not-exist"]) {
+      res = await owner.request.post(`${base}/api/cards/${card.id}/move`, {
+        data: { folderId },
+      });
+      expect(res.status()).toBe(404);
+      expect((await res.json()).error.message).toBe("Folder not found.");
+      expect((await res.json()).error.code).toBe("FOLDER_NOT_FOUND");
+    }
+    expect((await prisma.card.findUniqueOrThrow({ where: { id: card.id } })).folderId).toBe(
+      from.id
+    );
+  });
+
+  test("bad body 400, unauthenticated 401", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const { card } = await seedCard(s, base);
+    for (const data of [{}, { folderId: 5 }, { folderId: "" }]) {
+      const res = await s.request.post(`${base}/api/cards/${card.id}/move`, { data });
+      expect(res.status()).toBe(400);
+    }
+    const bad = await s.request.post(`${base}/api/cards/${card.id}/move`, {
+      headers: { "Content-Type": "application/json" },
+      data: Buffer.from("{not json"),
+    });
+    expect(bad.status()).toBe(400);
+    expect((await bad.json()).error.code).toBe("INVALID_JSON");
+
+    const anon = await playwright.request.newContext();
+    const res = await anon.post(`${base}/api/cards/${card.id}/move`, {
+      data: { folderId: "x" },
+    });
+    expect(res.status()).toBe(401);
+  });
+});
