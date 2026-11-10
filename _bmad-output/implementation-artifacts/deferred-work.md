@@ -55,3 +55,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-4-edit-a-card.md`
   summary: Add a Playwright test (via `page.route`) for the edit modal's server 404 and 400 `fields` error branches.
   evidence: The e2e test only reaches the client-side validation path; the `onError` mapping in edit-card-modal.tsx is untested in the browser.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-5-delete-a-card.md`
+  summary: Add an e2e check that Class and Folder card counts drop after a client-side navigation following a Card delete.
+  evidence: The delete modal invalidates `["classes"]` and `["class-folders"]`, but the e2e test only asserts the Folder page count.

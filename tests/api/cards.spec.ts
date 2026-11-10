@@ -296,3 +296,71 @@ test.describe("PATCH /api/cards/:id", () => {
     expect((await bad.json()).error.code).toBe("INVALID_JSON");
   });
 });
+
+// spec-2-5: Delete a Card.
+test.describe("DELETE /api/cards/:id", () => {
+  async function seedTwo(s: Session, base: string) {
+    const folder = await createFolder(s, base, "Words");
+    await s.request.post(`${base}/api/cards/batch`, {
+      data: {
+        folderId: folder.id,
+        cards: [
+          { term: "gone", definition: "x" },
+          { term: "stays", definition: "y" },
+        ],
+      },
+    });
+    const gone = await prisma.card.findFirstOrThrow({
+      where: { folderId: folder.id, term: "gone" },
+    });
+    const stays = await prisma.card.findFirstOrThrow({
+      where: { folderId: folder.id, term: "stays" },
+    });
+    return { folder, gone, stays };
+  }
+
+  test("removes the Card and both Scheduling Records, siblings untouched, second delete 404", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const { gone, stays } = await seedTwo(s, base);
+    expect(await prisma.schedulingRecord.count({ where: { cardId: gone.id } })).toBe(2);
+
+    const res = await s.request.delete(`${base}/api/cards/${gone.id}`);
+    expect(res.status()).toBe(200);
+    expect((await res.json()).data).toEqual({ id: gone.id });
+    expect(await prisma.card.findUnique({ where: { id: gone.id } })).toBeNull();
+    expect(await prisma.schedulingRecord.count({ where: { cardId: gone.id } })).toBe(0);
+    // Not in any due queue: no Scheduling Record remains for it.
+    expect(
+      await prisma.schedulingRecord.count({
+        where: { cardId: gone.id, nextReviewDate: { lte: new Date() } },
+      })
+    ).toBe(0);
+    expect(await prisma.card.findUnique({ where: { id: stays.id } })).not.toBeNull();
+    expect(await prisma.schedulingRecord.count({ where: { cardId: stays.id } })).toBe(2);
+
+    expect((await s.request.delete(`${base}/api/cards/${gone.id}`)).status()).toBe(404);
+  });
+
+  test("foreign or unknown Card 404 and intact, unauthenticated 401", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const owner = await newUser(playwright, base);
+    const other = await newUser(playwright, base);
+    const { gone } = await seedTwo(owner, base);
+
+    for (const id of [gone.id, "does-not-exist"]) {
+      expect((await other.request.delete(`${base}/api/cards/${id}`)).status()).toBe(404);
+    }
+    expect(await prisma.card.findUnique({ where: { id: gone.id } })).not.toBeNull();
+    expect(await prisma.schedulingRecord.count({ where: { cardId: gone.id } })).toBe(2);
+
+    const anon = await playwright.request.newContext();
+    expect((await anon.delete(`${base}/api/cards/${gone.id}`)).status()).toBe(401);
+  });
+});
