@@ -423,7 +423,7 @@ So that I can find and reorganize related vocabulary.
 
 **Given** an existing Flashcard
 **When** I choose "Move to…" and pick another Folder (in the same or another Class)
-**Then** it leaves the old Folder's list and appears in the new one with all its Cards (always exactly one Folder); a name clash in the target Folder is rejected with a field-level error
+**Then** it leaves the old Folder's list and appears in the new one with all its Cards (always exactly one Folder); a name clash in the target Folder gets a number added (" (2)", " (3)"), as in the delete cascades
 
 **Given** a Folder
 **When** I open it
