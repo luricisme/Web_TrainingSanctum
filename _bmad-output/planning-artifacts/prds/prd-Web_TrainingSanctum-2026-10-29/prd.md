@@ -38,11 +38,11 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 
 *Single-operator product — journeys are lighter-weight JTBD restatements rather than full multi-actor narratives, per the product's scope.*
 
-- **UJ-1. Logging a word in under 5 seconds.** The user, mid-conversation or mid-reading, hits a word worth keeping. They open the app, hit "Add card" (from a Folder, or the quick-add shortcut, which remembers the last Folder used), type it with the structured fields, and it's saved to the right Folder before they lose their train of thought. *(realizes FR-3, FR-5)*
+- **UJ-1. Logging a word in under 5 seconds.** The user, mid-conversation or mid-reading, hits a word worth keeping. They open the app, hit "Add card" (from a Flashcard, or the quick-add shortcut, which remembers the last Flashcard used), type it with the structured fields, and it's saved to the right Flashcard before they lose their train of thought. *(realizes FR-3, FR-5)*
 
 - **UJ-2. The daily review session.** Each day, the user opens the app to a single focused review screen — no nav, no sidebar, no streak badge competing for attention. They flip through due cards in both directions, grading recall with one keystroke per card (Space to reveal, 1–4/J/K/L/; to grade), until the session queue (capped at a digestible daily batch) is empty — though grading even one card today is enough to keep the streak alive; the queue doesn't have to fully clear. *(realizes FR-9, FR-10, FR-11)*
 
-- **UJ-3. Bulk import after a study binge.** The user has accumulated 30 new words in a notes app over a week. They open the target Folder, choose "Add cards → Import", and paste the list or upload a CSV; the system parses term/definition pairs (and optional extra fields) into the same row editor as manual entry, flagging malformed lines and duplicates. They fix two typos, press Save, and the cards land in that Folder in one pass, instead of 30 manual entries. *(realizes FR-6, FR-7)*
+- **UJ-3. Bulk import after a study binge.** The user has accumulated 30 new words in a notes app over a week. They open the target Flashcard, choose "Add cards → Import", and paste the list or upload a CSV; the system parses term/definition pairs (and optional extra fields) into the same row editor as manual entry, flagging malformed lines and duplicates. They fix two typos, press Save, and the cards land in that Flashcard in one pass, instead of 30 manual entries. *(realizes FR-6, FR-7)*
 
 ## 3. Glossary
 
@@ -52,9 +52,10 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 - **Ease Factor (EF)** — SM-2's per-item difficulty multiplier. Starts at 2.5, floor of 1.3.
 - **Grade** — The recall-quality rating the user gives after revealing a card: Again / Hard / Good / Easy, mapped to SM-2 quality values 1 / 3 / 4 / 5 respectively.
 - **New Card** — A Card for which neither Scheduling Record has ever received a Grade. The daily batch cap (FR-10) counts Cards, not Scheduling Records, against this definition. A Card that failed back to `repetitions = 0` via an "Again" Grade (FR-8) is **not** a New Card — it has been graded before and is treated as already-due, uncapped.
-- **Class** — The top-level, user-defined container (e.g. "IELTS", "Business English"). A Class holds Folders; it never holds Cards directly. Every Class has exactly one built-in "Unsorted" Folder.
-- **Folder** — A user-defined grouping of Cards (the brief's "collections/sets") inside exactly one Class. Folders do not nest: the hierarchy is fixed at three levels, Class → Folder → Card.
-- **Unsorted Folder** — The built-in Folder every Class gets on creation. It cannot be renamed or deleted, and it receives Cards when another Folder in the same Class is deleted with "move cards".
+- **Class** — The top-level, user-defined container (e.g. "IELTS", "Business English"). A Class holds Folders; it never holds Flashcards or Cards directly. Every Class has exactly one built-in "Unsorted" Folder.
+- **Folder** — A user-defined grouping of Flashcards inside exactly one Class. Folders do not nest: the hierarchy is fixed at four levels, Class → Folder → Flashcard → Card.
+- **Flashcard** — A named set of Cards (the brief's "collections/sets") inside exactly one Folder. A Flashcard has only a name, unique within its Folder (case-insensitive). It can be created, renamed, deleted, and moved to any Folder.
+- **Unsorted Folder** — The built-in Folder every Class gets on creation. It cannot be renamed or deleted, and it receives Flashcards when another Folder in the same Class is deleted with "move flashcards".
 - **Review Session** — A single sitting in which the user grades one or more due Scheduling Records; a session need not clear the entire due queue to count toward the streak (see FR-12).
 - **Due Queue** — The set of Scheduling Records (not Cards) whose `next_review_date` has arrived, pulled per-direction.
 - **Streak** — Count of consecutive calendar days on which at least one Scheduling Record was graded (local-timezone day boundary, same basis as `next_review_date` — see FR-12).
@@ -70,8 +71,8 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 A user can create an account and log in/out with email and password.
 
 **Consequences (testable):**
-- Unauthenticated requests to any class/folder/card/review endpoint are rejected.
-- All persisted data (Classes, Folders, Cards, Scheduling Records, streak history) is scoped to a `user_id`, even though only one account exists in practice.
+- Unauthenticated requests to any class/folder/flashcard/card/review endpoint are rejected.
+- All persisted data (Classes, Folders, Flashcards, Cards, Scheduling Records, streak history) is scoped to a `user_id`, even though only one account exists in practice.
 
 #### FR-2: Session persistence
 
@@ -92,10 +93,10 @@ A logged-in user stays authenticated across browser sessions until explicit logo
 
 A user can create and edit a Card with fields: Term, Definition, Example Sentence, Context/Collocation, Part of Speech. Term and Definition are required; the other three are optional.
 
-Cards are created from inside a Folder. "Add cards" in a Folder offers two modes: **Manual** (a Quizlet-style editor of term/definition rows, one Card per row, with the optional fields expandable per row) and **Import** (FR-6/FR-7). Both modes create Cards in that Folder.
+Cards are created from inside a Flashcard. "Add cards" in a Flashcard offers two modes: **Manual** (a Quizlet-style editor of term/definition rows, one Card per row, with the optional fields expandable per row) and **Import** (FR-6/FR-7). Both modes create Cards in that Flashcard.
 
 **Consequences (testable):**
-- Every Card belongs to exactly one Folder at all times; there is no way to create a Card without a target Folder.
+- Every Card belongs to exactly one Flashcard at all times; there is no way to create a Card without a target Flashcard.
 - Manual mode can save several Cards in one action; each row is validated independently and invalid rows are reported per row.
 - Saving a Card with only Term + Definition succeeds.
 - Saving a Card with Term or Definition empty is rejected with a field-level error.
@@ -112,24 +113,25 @@ A user can delete a Card, which removes both its Scheduling Records.
 
 ### 4.3 Organization
 
-**Description:** A fixed three-level hierarchy — Class → Folder → Card — so cards can be organized by course/goal and then by topic/source, without the overhead of per-card template configuration.
+**Description:** A fixed four-level hierarchy — Class → Folder → Flashcard → Card — so cards can be organized by course/goal, then by topic/source, then into named sets, without the overhead of per-card template configuration.
 
-#### FR-5: Class & Folder CRUD
+#### FR-5: Class, Folder & Flashcard CRUD
 
-A user can create, rename, and delete Classes; create, rename, and delete Folders inside a Class; and move a Card to any other Folder (in the same or a different Class). Every Card is in exactly one Folder, and every Folder is in exactly one Class.
+A user can create, rename, and delete Classes; create, rename, and delete Folders inside a Class; create, rename, and delete Flashcards inside a Folder; and move a Flashcard to any other Folder (in the same or a different Class). Every Card is in exactly one Flashcard, every Flashcard is in exactly one Folder, and every Folder is in exactly one Class. A Flashcard's name is unique within its Folder (case-insensitive).
 
 **Consequences (testable):**
 - Creating a Class also creates its "Unsorted" Folder. The Unsorted Folder cannot be renamed or deleted.
-- Deleting a Folder prompts for how to handle its Cards: move them to the same Class's Unsorted Folder (default), or delete them with the Folder. Cards are never silently orphaned or silently deleted.
-- Deleting a Class prompts for how to handle its Folders: move all of them to another existing Class (default when another Class exists), or delete the Class with all its Folders and Cards. On move, the deleted Class's Unsorted Cards merge into the target Class's Unsorted Folder; its other Folders keep their names (a name clash in the target Class gets a " (2)" suffix). Deleting everything requires typing the Class name to confirm.
-- Folder delete and Class delete each complete atomically — no partial moves or partial deletes.
-- The hierarchy is fixed: a Folder cannot contain Folders, and a Class cannot contain Classes or Cards directly (see §5 Non-Goals).
+- Deleting a Folder prompts for how to handle its Flashcards: move them to the same Class's Unsorted Folder (default), or delete them, with their Cards, along with the Folder. Flashcards and Cards are never silently orphaned or silently deleted.
+- Deleting a Flashcard requires a confirmation that names the Flashcard and its Card count; deleting removes its Cards and their Scheduling Records.
+- Deleting a Class prompts for how to handle its Folders: move all of them to another existing Class (default when another Class exists), or delete the Class with all its Folders and their Flashcards and Cards. On move, the deleted Class's Unsorted Flashcards merge into the target Class's Unsorted Folder (a Flashcard name that clashes inside that Folder gets a " (2)" suffix); its other Folders keep their names (a name clash in the target Class gets a " (2)" suffix). Deleting everything requires typing the Class name to confirm.
+- Folder delete, Flashcard delete and Class delete each complete atomically — no partial moves or partial deletes.
+- The hierarchy is fixed: a Folder cannot contain Folders or Cards directly, a Flashcard cannot contain Flashcards, and a Class cannot contain Classes, Flashcards or Cards directly (see §5 Non-Goals).
 
 ---
 
 ### 4.4 Import
 
-**Description:** Fast bulk entry via paste or file import, so vocabulary captured elsewhere doesn't require manual re-entry. Import is the second mode of a Folder's "Add cards" action (see FR-3), not a separate top-level screen: the target Folder is always the Folder it was opened from. Import never writes straight to the database: parsed rows first open in the same row editor Manual mode uses (the **import review editor**), where the user can fix, edit or remove rows before pressing Save. Only Save persists Cards. Realizes UJ-3.
+**Description:** Fast bulk entry via paste or file import, so vocabulary captured elsewhere doesn't require manual re-entry. Import is the second mode of a Flashcard's "Add cards" action (see FR-3), not a separate top-level screen: the target Flashcard is always the Flashcard it was opened from. Import never writes straight to the database: parsed rows first open in the same row editor Manual mode uses (the **import review editor**), where the user can fix, edit or remove rows before pressing Save. Only Save persists Cards. Realizes UJ-3.
 
 #### FR-6: Paste import
 
@@ -137,9 +139,9 @@ A user can paste line-delimited term/definition pairs (configurable delimiter, c
 
 **Consequences (testable):**
 - Preview shows every parsed line as an editable row, labelled with its source line number; nothing is persisted until Save.
-- A pasted block of N valid lines, saved without edits, creates N Cards (each with two fresh Scheduling Records) in under 5 seconds of system time. The budget is the Preview step (click → editor shown) plus the Save step (click → Cards persisted and visible in the Folder); the time the user spends editing rows is excluded.
+- A pasted block of N valid lines, saved without edits, creates N Cards (each with two fresh Scheduling Records) in under 5 seconds of system time. The budget is the Preview step (click → editor shown) plus the Save step (click → Cards persisted and visible in the Flashcard); the time the user spends editing rows is excluded.
 - Malformed lines appear in the editor as rows with an inline reason (e.g. "No delimiter found") so the user can fix them; a row still invalid at Save is not created and is reported (line number + reason), without discarding the valid rows in the same batch.
-- A line whose Term exactly matches (case-insensitive, whitespace-trimmed) an existing Card's Term in the target Folder is flagged in the editor as a duplicate that will be skipped. Editing its Term clears the flag. Duplicate detection runs again at Save; a row still duplicate then is skipped and reported, never silently creating a second Card.
+- A line whose Term exactly matches (case-insensitive, whitespace-trimmed) an existing Card's Term in the target Flashcard is flagged in the editor as a duplicate that will be skipped. Editing its Term clears the flag. Duplicate detection runs again at Save; a row still duplicate then is skipped and reported, never silently creating a second Card.
 - The user can remove any row from the editor before Save; removed rows are neither created nor reported.
 - After Save, a results view shows exactly three groups: Created (N), Duplicates skipped (N), Errors (N, with line number + reason).
 
@@ -201,7 +203,7 @@ The system presents due Scheduling Records (pulled per-direction, not per-card) 
 
 **Consequences (testable):**
 - A Card with both directions due in the same session appears as two separate queue entries, gradable independently and in any order.
-- The default session pulls due entries from all Classes. A user can also start a session scoped to one Class ("Review this class") or one Folder ("Review this folder"); a scoped session pulls only that scope's due entries and otherwise follows every rule in FR-9–FR-11. Grades from any scope count toward the same streak (FR-12).
+- The default session pulls due entries from all Classes. A user can also start a session scoped to one Class ("Review this class") one Folder ("Review this folder") or one Flashcard ("Review this flashcard"); a scoped session pulls only that scope's due entries and otherwise follows every rule in FR-9–FR-11. Grades from any scope count toward the same streak (FR-12).
 - Within the due queue, entries are ordered oldest-due-first (by `next_review_date` ascending); this is the only ordering guarantee required for v1 — no randomization or direction-interleaving rule is required.
 - Reveal and grade actions are fully keyboard-operable: Space reveals the answer; 1–4 or J/K/L/; submit a Grade. No action in the review loop requires the mouse.
 - Grading a card and advancing to the next renders with no perceptible lag under rapid sequential key presses. "Instantaneous" is the standard for architecture: sub-100ms perceived transition latency.
@@ -243,7 +245,7 @@ The system tracks consecutive calendar days with at least one graded Scheduling 
 A user can export their full Card + Scheduling Record + streak history to a portable format (e.g. JSON) on demand.
 
 **Consequences (testable):**
-- Export completes and produces a file containing every Class, every Folder, every Card (with its Folder), both Scheduling Records per Card, and streak history, sufficient to reconstruct state.
+- Export completes and produces a file containing every Class, every Folder, every Flashcard (with its Folder), every Card (with its Flashcard), both Scheduling Records per Card, and streak history, sufficient to reconstruct state.
 
 **Feature-specific NFRs:**
 - Data durability for Cards, Scheduling Records, and streak history is treated as a hard non-functional requirement, not best-effort — this is addressed system-wide in §6 Cross-Cutting NFRs, since a daily-dependency tool losing history is a stated dealbreaker risk in the brief.
@@ -253,7 +255,7 @@ A user can export their full Card + Scheduling Record + streak history to a port
 A user can import a previously-exported FR-13 JSON file to fully reconstruct their data, including both Scheduling Records per Card (interval, repetitions, ease_factor, next_review_date) and streak history — not just the five Card content fields.
 
 **Consequences (testable):**
-- Restoring a valid FR-13 export recreates the same Class → Folder structure and every Card in its original Folder, with both of its Scheduling Records in exactly the state captured at export time (same interval/repetitions/ease_factor/next_review_date), and restores streak history.
+- Restoring a valid FR-13 export recreates the same Class → Folder → Flashcard structure and every Card in its original Flashcard, with both of its Scheduling Records in exactly the state captured at export time (same interval/repetitions/ease_factor/next_review_date), and restores streak history.
 - Restoring into an account that already has data requires explicit confirmation before proceeding (default: restore replaces existing data; the system does not silently merge or silently overwrite without confirmation).
 - This closes the loop the brief's durability dealbreaker requires: an export with no restore path is not a backup, so FR-13 and FR-14 ship together in Phase 1 MVP.
 
@@ -274,7 +276,7 @@ A user can view a basic stats screen, outside of active review (per FR-11), show
 - Custom card templates/fields beyond the fixed five (the brief's whole point is *not* requiring template setup).
 - Any functionality belonging to future Sanctum modules (Pomodoro timer, task manager) — these must not be scaffolded into this codebase "for later."
 - Manual editing of a Scheduling Record's `interval`/`ease_factor`/`next_review_date`, or a "reset this card's progress" action — v1 scheduling state only changes through FR-8's grading flow.
-- Hierarchy deeper than Class → Folder → Card (see Glossary and FR-5) — no sub-folders, no sub-classes.
+- Hierarchy deeper than Class → Folder → Flashcard → Card (see Glossary and FR-5) — no sub-folders, no sub-flashcards, no sub-classes.
 
 ## 6. Cross-Cutting NFRs
 
@@ -297,8 +299,8 @@ A user can view a basic stats screen, outside of active review (per FR-11), show
 
 - Account/session (FR-1, FR-2)
 - Card CRUD (FR-3, FR-4)
-- Class → Folder organization (FR-5)
-- Paste + CSV import as a mode of a Folder's "Add cards" (FR-6, FR-7)
+- Class → Folder → Flashcard organization (FR-5)
+- Paste + CSV import as a mode of a Flashcard's "Add cards" (FR-6, FR-7)
 - Dual-direction SM-2 engine (FR-8)
 - Keyboard-driven review session with batch cap and focus mode (FR-9, FR-10, FR-11)
 - Streak tracking (FR-12)

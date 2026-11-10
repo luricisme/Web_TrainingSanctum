@@ -45,11 +45,12 @@ development_status:
 
   epic-2: in-progress
   2-1-class-crud: review
-  2-2-folder-crud-inside-a-class: review
-  2-3-add-cards-manual-mode: review
-  2-4-edit-a-card: review
-  2-5-delete-a-card: review
-  2-6-move-browse-cards: review
+  2-2-folder-crud-inside-a-class: in-progress # rework: delete cascade and counts
+  2-3-add-cards-manual-mode: in-progress # rework: re-point to Flashcard (sprint change 2026-11-10)
+  2-4-edit-a-card: in-progress # rework
+  2-5-delete-a-card: in-progress # rework
+  2-6-move-browse-cards: in-progress # rework: Move & Browse Flashcards
+  2-7-flashcard-crud-inside-a-folder: backlog # prerequisite for 2-2..2-6 rework; implement first
   epic-2-retrospective: optional
 
   epic-3: backlog
