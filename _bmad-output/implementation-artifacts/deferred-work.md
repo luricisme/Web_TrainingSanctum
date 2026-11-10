@@ -63,3 +63,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-7-flashcard-crud-inside-a-folder.md`
   summary: Add a forced-failure rollback test for `DELETE /api/flashcards/[id]` (trigger-based, like the Folder delete rollback test).
   evidence: The delete runs in one transaction with a 500 "Nothing was changed" path, but only success and 404 cases are tested.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-add-cards-manual-mode.md`
+  summary: Build the Class -> Folder -> Flashcard picker for the Empty due-queue "+ Add card" entry (Story 2.3 last AC, UX-DR8), in Epic 4 with the empty state itself.
+  evidence: Story 2.7 removed the old Folder picker and last-used storage from the Add cards panel because no screen opens the panel without a target Flashcard until the Epic 4 empty state exists.

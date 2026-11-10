@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-07-2026 00:00
-last_updated: 11-11-2026 11:00
+last_updated: 11-11-2026 12:00
 project: Web_TrainingSanctum
 project_key: NOKEY
 tracking_system: file-system
@@ -45,10 +45,10 @@ development_status:
 
   epic-2: in-progress
   2-1-class-crud: review
-  2-2-folder-crud-inside-a-class: in-progress # rework: delete cascade and counts
-  2-3-add-cards-manual-mode: in-progress # rework: re-point to Flashcard (sprint change 2026-11-10)
-  2-4-edit-a-card: in-progress # rework
-  2-5-delete-a-card: in-progress # rework
+  2-2-folder-crud-inside-a-class: review # reworked onto the Flashcard level by 2-7
+  2-3-add-cards-manual-mode: review # reworked onto the Flashcard level by 2-7
+  2-4-edit-a-card: review # reworked onto the Flashcard level by 2-7
+  2-5-delete-a-card: review # reworked onto the Flashcard level by 2-7
   2-6-move-browse-cards: in-progress # rework: Move & Browse Flashcards
   2-7-flashcard-crud-inside-a-folder: review # prerequisite for 2-2..2-6 rework; done
   epic-2-retrospective: optional
