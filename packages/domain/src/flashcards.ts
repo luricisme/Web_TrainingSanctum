@@ -22,8 +22,23 @@ export const flashcardNameSchema = z
 export const createFlashcardSchema = z.object({ name: flashcardNameSchema });
 export const renameFlashcardSchema = z.object({ name: flashcardNameSchema });
 
+export const moveFlashcardSchema = z.object({
+  folderId: z
+    .string({ error: "Choose a folder." })
+    .trim()
+    .min(1, "Choose a folder."),
+});
+
 export type CreateFlashcardInput = z.infer<typeof createFlashcardSchema>;
 export type RenameFlashcardInput = z.infer<typeof renameFlashcardSchema>;
+export type MoveFlashcardInput = z.infer<typeof moveFlashcardSchema>;
+
+/** Shape returned by `POST /api/flashcards/:id/move`. */
+export interface MoveFlashcardResponse {
+  id: string;
+  folderId: string;
+  name: string;
+}
 
 export const FLASHCARD_NAME_TAKEN =
   "A flashcard with this name already exists in this folder.";

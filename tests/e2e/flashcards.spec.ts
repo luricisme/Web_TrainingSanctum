@@ -35,7 +35,7 @@ async function seedFolder(email: string) {
   return { user, cls, folder };
 }
 
-async function openMenu(page: Page, name: string, item: "Rename" | "Delete") {
+async function openMenu(page: Page, name: string, item: "Rename" | "Move to…" | "Delete") {
   await page.getByRole("button", { name: `Options for ${name}` }).click();
   await page.getByRole("menuitem", { name: item }).click();
 }
@@ -208,6 +208,177 @@ test("open a Flashcard and add, edit and delete Cards in it", async ({ page }) =
   await crumbs.getByRole("link", { name: folder.name }).click();
   await expect(page.getByText("0 cards", { exact: true }).first()).toBeVisible();
 });
+
+async function seedMoveWorld(email: string) {
+  const { user, cls, folder } = await seedFolder(email);
+  const other = await prisma.class.create({
+    data: {
+      name: "Work",
+      userId: user.id,
+      folders: {
+        create: [
+          { name: "Unsorted", isUnsorted: true, userId: user.id },
+          { name: "Meetings", userId: user.id },
+        ],
+      },
+    },
+    include: { folders: true },
+  });
+  const meetings = other.folders.find((f) => f.name === "Meetings")!;
+  const flashcard = await prisma.flashcard.create({
+    data: { name: "Idioms", folderId: folder.id, userId: user.id },
+  });
+  await prisma.card.create({
+    data: { term: "t", definition: "d", flashcardId: flashcard.id, userId: user.id },
+  });
+  return { user, cls, folder, other, meetings, flashcard };
+}
+
+test("Move to… via keyboard; Cancel and Escape keep it; across Classes renames on a clash", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { user, folder, meetings, flashcard } = await seedMoveWorld(email);
+  await prisma.flashcard.create({
+    data: { name: "idioms", folderId: meetings.id, userId: user.id },
+  });
+  await page.goto(`/folders/${folder.id}`);
+  const dialog = page.getByRole("dialog");
+
+  await page.getByRole("button", { name: "Options for Idioms" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem")).toHaveText(["Rename", "Move to…", "Delete"]);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(dialog.getByRole("heading", { name: "Move flashcard" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await expect(dialog.getByLabel("Class")).toHaveValue(folder.classId);
+  // Current Folder is omitted; only Unsorted remains in this Class.
+  await expect(dialog.getByLabel("Folder").locator("option")).toHaveText([
+    "Choose a folder",
+    "Unsorted",
+  ]);
+  await expect(dialog.getByRole("button", { name: "Move flashcard" })).toBeDisabled();
+
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toBeHidden();
+  await openMenu(page, "Idioms", "Move to…");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  expect((await prisma.flashcard.findUniqueOrThrow({ where: { id: flashcard.id } })).folderId).toBe(
+    folder.id
+  );
+
+  await openMenu(page, "Idioms", "Move to…");
+  await dialog.getByLabel("Class").selectOption({ label: "Work" });
+  await dialog.getByLabel("Folder").selectOption({ label: "Meetings" });
+  await dialog.getByRole("button", { name: "Move flashcard" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("Idioms", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Create a flashcard to start adding cards.")).toBeVisible();
+  const moved = await prisma.flashcard.findUniqueOrThrow({ where: { id: flashcard.id } });
+  expect(moved.folderId).toBe(meetings.id);
+  expect(moved.name).toBe("Idioms (2)");
+  expect(await prisma.card.count({ where: { flashcardId: flashcard.id } })).toBe(1);
+
+  await page.goto(`/folders/${meetings.id}`);
+  await expect(page.getByText("Idioms (2)", { exact: true })).toBeVisible();
+});
+
+test("Move modal handles a Class with no other Folder, 5xx and both 404 branches", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { user, folder, flashcard } = await seedMoveWorld(email);
+  const empty = await prisma.class.create({
+    data: {
+      name: "Empty",
+      userId: user.id,
+      folders: { create: [{ name: "Unsorted", isUnsorted: true, userId: user.id }] },
+    },
+    include: { folders: true },
+  });
+  const lone = empty.folders[0];
+  await prisma.flashcard.create({ data: { name: "Solo", folderId: lone.id, userId: user.id } });
+  await page.goto(`/folders/${folder.id}`);
+  const dialog = page.getByRole("dialog");
+  const moveButton = dialog.getByRole("button", { name: "Move flashcard" });
+  const url = `**/api/flashcards/${flashcard.id}/move`;
+  const respond = (status: number, code: string, message: string) =>
+    page.route(url, (route) =>
+      route.fulfill({
+        status,
+        contentType: "application/json",
+        body: JSON.stringify({ error: { code, message } }),
+      })
+    );
+
+  await openMenu(page, "Idioms", "Move to…");
+  await dialog.getByLabel("Class").selectOption({ label: "Work" });
+  await dialog.getByLabel("Folder").selectOption({ label: "Meetings" });
+
+  // 5xx: modal stays open with an inline message, row still listed.
+  await respond(500, "INTERNAL_ERROR", "boom");
+  await moveButton.click();
+  await expect(dialog.getByRole("alert")).toContainText("Could not move the flashcard");
+  await page.unroute(url);
+
+  // FOLDER_NOT_FOUND: modal stays open with the specific message.
+  await respond(404, "FOLDER_NOT_FOUND", "Folder not found.");
+  await dialog.getByLabel("Folder").selectOption({ label: "Meetings" });
+  await moveButton.click();
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "That folder no longer exists. Choose another."
+  );
+  await page.unroute(url);
+
+  // NAME_CONFLICT: a racing duplicate keeps the modal open and asks for a retry.
+  await respond(409, "NAME_CONFLICT", "That name was just taken. Try again.");
+  await dialog.getByLabel("Folder").selectOption({ label: "Meetings" });
+  await moveButton.click();
+  await expect(dialog.getByRole("alert")).toContainText("Try again");
+  await expect(moveButton).toBeEnabled();
+  await page.unroute(url);
+
+  // NOT_FOUND: already gone, so the modal closes.
+  await respond(404, "NOT_FOUND", "Flashcard not found.");
+  await dialog.getByLabel("Folder").selectOption({ label: "Meetings" });
+  await moveButton.click();
+  await expect(dialog).toBeHidden();
+  await page.unroute(url);
+
+  // A Class whose only Folder is the current one says so and keeps Move disabled.
+  await page.goto(`/folders/${lone.id}`);
+  await openMenu(page, "Solo", "Move to…");
+  await expect(dialog.getByLabel("Folder")).toContainText("No other folders in this class");
+  await expect(dialog.getByLabel("Folder")).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Move flashcard" })).toBeDisabled();
+});
+
+for (const theme of ["dark", "light"] as const) {
+  test(`move modal and row menu screenshots (${theme})`, async ({ page }) => {
+    mkdirSync("test-results/screenshots", { recursive: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const email = await register(page);
+    const { folder } = await seedMoveWorld(email);
+    await page.goto(`/folders/${folder.id}`);
+    await setTheme(page, theme);
+    await page.getByRole("button", { name: "Options for Idioms" }).click();
+    await page.screenshot({
+      path: `test-results/screenshots/flashcards-move-menu-${theme}.png`,
+      animations: "disabled",
+    });
+    await page.getByRole("menuitem", { name: "Move to…" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Class").selectOption({ label: "Work" });
+    await dialog.getByLabel("Folder").selectOption({ label: "Meetings" });
+    await setTheme(page, theme);
+    await page.screenshot({
+      path: `test-results/screenshots/flashcards-move-modal-${theme}.png`,
+      animations: "disabled",
+    });
+  });
+}
 
 // Visual check: screenshots land in test-results/screenshots.
 for (const theme of ["dark", "light"] as const) {

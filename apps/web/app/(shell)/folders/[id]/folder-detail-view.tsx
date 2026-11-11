@@ -14,10 +14,12 @@ import { RowMenu } from "../../classes/row-menu";
 import { buttonPrimary, buttonSecondary, pluralize } from "../../classes/ui";
 import { DeleteFlashcardModal } from "./delete-flashcard-modal";
 import { FlashcardFormModal } from "./flashcard-form-modal";
+import { MoveFlashcardModal } from "./move-flashcard-modal";
 
 type Dialog =
   | { kind: "create" }
   | { kind: "rename"; id: string }
+  | { kind: "move"; id: string }
   | { kind: "delete"; id: string }
   | null;
 
@@ -156,6 +158,7 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
                 key={flashcard.id}
                 flashcard={flashcard}
                 onRename={() => setDialog({ kind: "rename", id: flashcard.id })}
+                onMove={() => setDialog({ kind: "move", id: flashcard.id })}
                 onDelete={() => setDialog({ kind: "delete", id: flashcard.id })}
               />
             ))}
@@ -175,6 +178,15 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
           onClose={close}
         />
       ) : null}
+      {dialog?.kind === "move" && selected ? (
+        <MoveFlashcardModal
+          key={selected.id}
+          folderId={folderId}
+          classId={data.class.id}
+          target={selected}
+          onClose={close}
+        />
+      ) : null}
       {dialog?.kind === "delete" && selected ? (
         <DeleteFlashcardModal
           key={selected.id}
@@ -191,10 +203,12 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
 function FlashcardRow({
   flashcard,
   onRename,
+  onMove,
   onDelete,
 }: {
   flashcard: FlashcardSummary;
   onRename: () => void;
+  onMove: () => void;
   onDelete: () => void;
 }) {
   return (
@@ -234,6 +248,7 @@ function FlashcardRow({
         name={flashcard.name}
         items={[
           { label: "Rename", onSelect: onRename },
+          { label: "Move to…", onSelect: onMove },
           { label: "Delete", onSelect: onDelete, danger: true },
         ]}
       />

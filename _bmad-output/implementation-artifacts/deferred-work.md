@@ -67,3 +67,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-3-add-cards-manual-mode.md`
   summary: Build the Class -> Folder -> Flashcard picker for the Empty due-queue "+ Add card" entry (Story 2.3 last AC, UX-DR8), in Epic 4 with the empty state itself.
   evidence: Story 2.7 removed the old Folder picker and last-used storage from the Add cards panel because no screen opens the panel without a target Flashcard until the Epic 4 empty state exists.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-6-move-flashcards.md`
+  summary: Add an in-app navigation e2e step after a Flashcard move that checks the destination Folder page and Classes counts without a reload.
+  evidence: The move e2e checks the source list through the cache update and the destination only after `page.goto`, which hides missing `["folder", toFolderId]` or `["classes"]` invalidations.

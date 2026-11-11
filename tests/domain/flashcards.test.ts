@@ -4,6 +4,7 @@ import {
   createFlashcardSchema,
   flashcardNameSchema,
   isFlashcardNameTaken,
+  moveFlashcardSchema,
   renameFlashcardSchema,
   uniqueFlashcardName,
 } from "@training-sanctum/domain";
@@ -50,5 +51,17 @@ describe("uniqueFlashcardName", () => {
     const result = uniqueFlashcardName(long, [long]);
     expect(result.length).toBe(FLASHCARD_NAME_MAX_LENGTH);
     expect(result.endsWith(" (2)")).toBe(true);
+  });
+});
+
+describe("moveFlashcardSchema (spec-2-6)", () => {
+  it("accepts a folderId and trims it", () => {
+    expect(moveFlashcardSchema.parse({ folderId: " abc " })).toEqual({ folderId: "abc" });
+  });
+
+  it("rejects missing, blank and non-string folderId", () => {
+    expect(moveFlashcardSchema.safeParse({}).success).toBe(false);
+    expect(moveFlashcardSchema.safeParse({ folderId: "  " }).success).toBe(false);
+    expect(moveFlashcardSchema.safeParse({ folderId: 5 }).success).toBe(false);
   });
 });
