@@ -3,19 +3,37 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  DEFAULT_IMPORT_SEPARATORS,
   MAX_CARDS_PER_BATCH,
   cardInputSchema,
   type CreateCardsBatchResponse,
+  type ImportCommitResult,
+  type ImportParseResponse,
+  type ImportPreviewRow,
+  type ImportSeparators,
+  IMPORT_EMPTY_MESSAGE,
+  countImportCards,
+  resolveSeparators,
 } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { formErrorClass } from "@/app/components/ui";
 import { Modal } from "../../classes/modal";
+import { buttonPrimary, buttonSecondary } from "../../classes/ui";
 import {
-  buttonPrimary,
-  buttonSecondary,
-  fieldErrorClass,
-  overlineClass,
-} from "../../classes/ui";
+  FIELD_LABELS,
+  type Field,
+  ManualRow,
+  type Row,
+  type RowErrors,
+  emptyRow,
+  isBlank,
+} from "./manual-row";
+import { ConfirmBar, PanelFooter, type PendingConfirm } from "./panel-footer";
+import { ImportPaste } from "./import-paste";
+import { ImportReview, type ImportCommitRow, type RowLabelMode } from "./import-review";
+import { ImportResults } from "./import-results";
+
+export { underlineInput } from "./manual-row";
 
 /** The Flashcard an Add cards panel writes into. */
 export interface TargetFlashcard {
@@ -25,55 +43,20 @@ export interface TargetFlashcard {
 
 const INITIAL_ROWS = 3;
 
-type Field = "term" | "definition" | "example" | "context" | "partOfSpeech";
+type Mode = "manual" | "import";
+type ImportStep = "paste" | "review" | "results";
 
-interface Row {
-  key: number;
-  term: string;
-  definition: string;
-  example: string;
-  context: string;
-  partOfSpeech: string;
-  more: boolean;
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.status === 404) return "This flashcard no longer exists.";
+  if (err instanceof ApiError) return err.message;
+  return fallback;
 }
 
-type RowErrors = Partial<Record<Field, string>>;
-
-const FIELD_LABELS: Record<Field, string> = {
-  term: "Term",
-  definition: "Definition",
-  example: "Example sentence",
-  context: "Context / collocation",
-  partOfSpeech: "Part of speech",
-};
-
-/** DESIGN.md `manual-row`: underlined field, underline turns accent on focus. */
-export const underlineInput =
-  "w-full rounded-none border-0 border-b-2 border-b-border bg-transparent px-0 py-2 text-body text-foreground transition-state placeholder:text-foreground-tertiary focus:border-b-accent focus:outline-none aria-[invalid=true]:border-b-error";
-
-function emptyRow(key: number): Row {
-  return {
-    key,
-    term: "",
-    definition: "",
-    example: "",
-    context: "",
-    partOfSpeech: "",
-    more: false,
-  };
-}
-
-function isBlank(row: Row): boolean {
-  return (
-    !row.term.trim() &&
-    !row.definition.trim() &&
-    !row.example.trim() &&
-    !row.context.trim() &&
-    !row.partOfSpeech.trim()
-  );
-}
-
-/** Add cards panel, Manual mode (spec-2-3). The target is always one Flashcard. */
+/**
+ * Add cards panel (spec-2-3, spec-3-1): Manual mode or Import → Paste, always
+ * into the one Flashcard it was opened from. Manual rows survive a mode
+ * switch; reviewed import rows are discarded only after a confirm.
+ */
 export function AddCardsPanel({
   flashcard,
   onClose,
@@ -89,16 +72,41 @@ export function AddCardsPanel({
   const [errors, setErrors] = useState<Record<number, RowErrors>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const [confirm, setConfirm] = useState<PendingConfirm | null>(null);
+  const [mode, setMode] = useState<Mode>("manual");
+  const [importStep, setImportStep] = useState<ImportStep>("paste");
+  const [pasteText, setPasteText] = useState("");
+  const [separators, setSeparators] = useState<ImportSeparators>(DEFAULT_IMPORT_SEPARATORS);
+  const [previewRows, setPreviewRows] = useState<ImportPreviewRow[]>([]);
+  // Rows are labelled by source line in New line mode, else by card number;
+  // fixed at Preview so the labels match the paste they came from.
+  const [labelMode, setLabelMode] = useState<RowLabelMode>("line");
+  const [importResult, setImportResult] = useState<ImportCommitResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const focusRequest = useRef<{ key: number; field: Field } | null>(null);
   const inputs = useRef(new Map<string, HTMLInputElement>());
-
 
   const save = useMutation({
     mutationFn: (cards: unknown[]) =>
       apiFetch<CreateCardsBatchResponse>("/api/cards/batch", {
         method: "POST",
         json: { flashcardId: flashcard.id, cards },
+      }),
+  });
+
+  const preview = useMutation({
+    mutationFn: (input: ImportSeparators & { text: string }) =>
+      apiFetch<ImportParseResponse>("/api/import/parse", {
+        method: "POST",
+        json: { flashcardId: flashcard.id, ...input },
+      }),
+  });
+
+  const commit = useMutation({
+    mutationFn: (cards: ImportCommitRow[]) =>
+      apiFetch<ImportCommitResult>("/api/cards/batch", {
+        method: "POST",
+        json: { flashcardId: flashcard.id, source: "import", cards },
       }),
   });
 
@@ -117,12 +125,63 @@ export function AddCardsPanel({
     inputs.current.get(`${request.key}:${request.field}`)?.focus();
   }, [rows]);
 
-  const dirty = rows.some((row) => !isBlank(row));
+  const manualDirty = rows.some((row) => !isBlank(row));
+  const importDirty =
+    importStep === "review" || (importStep === "paste" && pasteText.trim() !== "");
+  const busy = save.isPending || preview.isPending || commit.isPending;
+
+  function invalidateCards() {
+    void queryClient.invalidateQueries({ queryKey: ["flashcard", flashcard.id] });
+    void queryClient.invalidateQueries({ queryKey: ["folder"] });
+    void queryClient.invalidateQueries({ queryKey: ["class-folders"] });
+    void queryClient.invalidateQueries({ queryKey: ["classes"] });
+  }
 
   function requestClose() {
-    if (save.isPending) return;
-    if (dirty) setConfirmingDiscard(true);
-    else onClose();
+    if (busy) return;
+    if (!manualDirty && !importDirty) {
+      onClose();
+      return;
+    }
+    const importWork = importStep === "review" ? "the reviewed rows" : "the pasted text";
+    setConfirm({
+      message:
+        manualDirty && importDirty
+          ? `Discard the cards you have typed and ${importWork}?`
+          : manualDirty
+            ? "Discard the cards you have typed?"
+            : `Discard ${importWork}?`,
+      confirmLabel: "Discard",
+      onConfirm: onClose,
+    });
+  }
+
+  function leaveReview() {
+    setConfirm(null);
+    setImportError(null);
+    setPreviewRows([]);
+    setImportStep("paste");
+  }
+
+  function changeMode(next: Mode) {
+    if (next === mode || busy) return;
+    setConfirm(null);
+    if (next === "manual" && importStep === "review") {
+      setConfirm({
+        message: "Switch to Manual? The reviewed rows are discarded.",
+        confirmLabel: "Discard rows",
+        onConfirm: () => {
+          leaveReview();
+          setMode("manual");
+        },
+      });
+      return;
+    }
+    if (importStep === "results") {
+      setImportResult(null);
+      setImportStep("paste");
+    }
+    setMode(next);
   }
 
   function updateRow(key: number, patch: Partial<Row>) {
@@ -219,10 +278,7 @@ export function AddCardsPanel({
       valid.map((v) => v.card),
       {
         onSuccess: ({ created }) => {
-          void queryClient.invalidateQueries({ queryKey: ["flashcard", flashcard.id] });
-          void queryClient.invalidateQueries({ queryKey: ["folder"] });
-          void queryClient.invalidateQueries({ queryKey: ["class-folders"] });
-          void queryClient.invalidateQueries({ queryKey: ["classes"] });
+          invalidateCards();
 
           if (badCount === 0) {
             onClose();
@@ -240,226 +296,214 @@ export function AddCardsPanel({
         },
         onError: (err) => {
           setFormError(
-            err instanceof ApiError && err.status === 404
-              ? "This flashcard no longer exists."
-              : err instanceof ApiError
-                ? err.message
-                : "Something went wrong. Nothing was saved. Try again."
+            errorMessage(err, "Something went wrong. Nothing was saved. Try again.")
           );
         },
       }
     );
   }
 
+  function handlePreview() {
+    setImportError(null);
+    // Blank, or only card separators (e.g. ";;;" with Semicolon).
+    if (countImportCards(pasteText, separators.cardSeparator) === 0) {
+      setImportError(IMPORT_EMPTY_MESSAGE);
+      return;
+    }
+    // ImportPaste shows separator problems inline; the server checks again.
+    if (!resolveSeparators(separators).ok) return;
+    const mode: RowLabelMode = separators.cardSeparator.kind === "newline" ? "line" : "card";
+    preview.mutate(
+      { ...separators, text: pasteText },
+      {
+        onSuccess: ({ rows: parsed }) => {
+          setConfirm(null);
+          setLabelMode(mode);
+          setPreviewRows(parsed);
+          setImportStep("review");
+        },
+        onError: (err) => setImportError(errorMessage(err, "Something went wrong. Try again.")),
+      }
+    );
+  }
+
+  function handleCommit(cards: ImportCommitRow[]) {
+    setImportError(null);
+    commit.mutate(cards, {
+      onSuccess: (result) => {
+        invalidateCards();
+        setConfirm(null);
+        setImportResult(result);
+        setImportStep("results");
+      },
+      onError: (err) =>
+        setImportError(
+          errorMessage(err, "Something went wrong. Nothing was saved. Try again.")
+        ),
+    });
+  }
+
+  const confirmBar = confirm ? (
+    <ConfirmBar confirm={confirm} onKeep={() => setConfirm(null)} />
+  ) : undefined;
+
   return (
     <Modal
       title={`Add cards to ${flashcard.name}`}
       size="wide"
       onClose={requestClose}
-      headerAction={<ModeSwitcher />}
+      headerAction={<ModeSwitcher mode={mode} onChange={changeMode} disabled={busy} />}
     >
-      <form
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          handleSave();
-        }}
-        className="flex flex-col gap-6"
-      >
-        <ol className="flex flex-col gap-3">
-          {rows.map((row, index) => (
-            <li key={row.key}>
-              <ManualRow
-                row={row}
-                index={index}
-                errors={errors[row.key]}
-                registerInput={(field, el) => {
-                  const id = `${row.key}:${field}`;
-                  if (el) inputs.current.set(id, el);
-                  else inputs.current.delete(id);
-                }}
-                onChange={(patch) => updateRow(row.key, patch)}
-                onKeyDown={(event, field) => handleKeyDown(event, row, index, field)}
-              />
-            </li>
-          ))}
-        </ol>
-
-        <button
-          type="button"
-          onClick={addRow}
-          disabled={rows.length >= MAX_CARDS_PER_BATCH}
-          className="w-full rounded-md border border-dashed border-border px-4 py-3 text-body text-foreground-secondary transition-state hover:bg-row-hover hover:text-foreground focus-ring disabled:cursor-not-allowed disabled:opacity-60"
+      {mode === "manual" ? (
+        <form
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleSave();
+          }}
+          className="flex flex-col gap-6"
         >
-          + Add row
-        </button>
+          <ol className="flex flex-col gap-3">
+            {rows.map((row, index) => (
+              <li key={row.key}>
+                <ManualRow
+                  row={row}
+                  index={index}
+                  errors={errors[row.key]}
+                  registerInput={(field, el) => {
+                    const id = `${row.key}:${field}`;
+                    if (el) inputs.current.set(id, el);
+                    else inputs.current.delete(id);
+                  }}
+                  onChange={(patch) => updateRow(row.key, patch)}
+                  onKeyDown={(event, field) => handleKeyDown(event, row, index, field)}
+                />
+              </li>
+            ))}
+          </ol>
 
-        <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-3 border-t border-divider bg-card px-6 py-4 sm:-mx-8 sm:-mb-8 sm:px-8">
-          {notice ? (
-            <p role="status" className="text-body-sm text-foreground-secondary">
-              {notice}
-            </p>
-          ) : null}
-          {formError ? (
-            <p role="alert" className={formErrorClass}>
-              {formError}
-            </p>
-          ) : null}
-          {confirmingDiscard ? (
-            <div
-              role="alertdialog"
-              aria-label="Discard unsaved cards"
-              className="flex flex-wrap items-center justify-between gap-3"
-            >
-              <p className="text-body text-foreground">
-                Discard the cards you have typed?
+          <button
+            type="button"
+            onClick={addRow}
+            disabled={rows.length >= MAX_CARDS_PER_BATCH}
+            className="w-full rounded-md border border-dashed border-border px-4 py-3 text-body text-foreground-secondary transition-state hover:bg-row-hover hover:text-foreground focus-ring disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            + Add row
+          </button>
+
+          <PanelFooter>
+            {notice ? (
+              <p role="status" className="text-body-sm text-foreground-secondary">
+                {notice}
               </p>
-              <div className="flex flex-wrap gap-3">
+            ) : null}
+            {formError ? (
+              <p role="alert" className={formErrorClass}>
+                {formError}
+              </p>
+            ) : null}
+            {confirmBar ?? (
+              <div className="flex flex-wrap justify-end gap-3">
                 <button
                   type="button"
-                  autoFocus
-                  onClick={() => setConfirmingDiscard(false)}
+                  disabled={save.isPending}
+                  onClick={requestClose}
                   className={buttonSecondary}
                 >
-                  Keep editing
+                  Cancel
                 </button>
-                <button type="button" onClick={onClose} className={buttonSecondary}>
-                  Discard
+                <button type="submit" disabled={save.isPending} className={buttonPrimary}>
+                  {save.isPending ? "Saving" : "Save"}
                 </button>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-wrap justify-end gap-3">
-              <button
-                type="button"
-                disabled={save.isPending}
-                onClick={requestClose}
-                className={buttonSecondary}
-              >
-                Cancel
-              </button>
-              <button type="submit" disabled={save.isPending} className={buttonPrimary}>
-                {save.isPending ? "Saving" : "Save"}
-              </button>
-            </div>
-          )}
-        </div>
-      </form>
+            )}
+          </PanelFooter>
+        </form>
+      ) : importStep === "paste" ? (
+        <ImportPaste
+          text={pasteText}
+          separators={separators}
+          onTextChange={(text) => {
+            setPasteText(text);
+            setImportError(null);
+          }}
+          onSeparatorsChange={(next) => {
+            setSeparators(next);
+            setImportError(null);
+          }}
+          onPreview={handlePreview}
+          onCancel={requestClose}
+          pending={preview.isPending}
+          error={importError}
+          confirm={confirmBar}
+        />
+      ) : importStep === "review" ? (
+        <ImportReview
+          initialRows={previewRows}
+          labelMode={labelMode}
+          flashcardName={flashcard.name}
+          onBack={() =>
+            setConfirm({
+              message: "Go back to the paste box? Your edits to these rows are discarded.",
+              confirmLabel: "Discard edits",
+              onConfirm: leaveReview,
+            })
+          }
+          onCancel={requestClose}
+          onSave={handleCommit}
+          saving={commit.isPending}
+          error={importError}
+          confirm={confirmBar}
+        />
+      ) : importResult ? (
+        <ImportResults
+          result={importResult}
+          labelMode={labelMode}
+          flashcardName={flashcard.name}
+          onDone={onClose}
+        />
+      ) : null}
     </Modal>
   );
 }
 
-/** DESIGN.md `components.mode-switcher`. Import is shown but not available yet. */
-function ModeSwitcher() {
+/** DESIGN.md `components.mode-switcher`: the active option is the accent pill. */
+function ModeSwitcher({
+  mode,
+  onChange,
+  disabled,
+}: {
+  mode: Mode;
+  onChange: (mode: Mode) => void;
+  disabled: boolean;
+}) {
+  const option = (value: Mode, label: string) => {
+    const selected = mode === value;
+    return (
+      <button
+        type="button"
+        role="tab"
+        aria-selected={selected}
+        disabled={disabled && !selected}
+        onClick={() => onChange(value)}
+        className={
+          selected
+            ? "rounded-full bg-accent px-4 py-1.5 text-body-sm font-medium text-on-accent focus-ring"
+            : "rounded-full px-4 py-1.5 text-body-sm font-medium text-foreground-secondary transition-state hover:text-foreground focus-ring disabled:cursor-not-allowed disabled:opacity-60"
+        }
+      >
+        {label}
+      </button>
+    );
+  };
   return (
     <div
       role="tablist"
       aria-label="Add cards mode"
       className="flex gap-1 rounded-full bg-elevated p-1"
     >
-      <button
-        type="button"
-        role="tab"
-        aria-selected="true"
-        className="rounded-full bg-accent px-4 py-1.5 text-body-sm font-medium text-on-accent focus-ring"
-      >
-        Manual
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected="false"
-        disabled
-        className="cursor-not-allowed rounded-full px-4 py-1.5 text-body-sm text-foreground-tertiary opacity-60"
-      >
-        Import
-      </button>
-    </div>
-  );
-}
-
-function ManualRow({
-  row,
-  index,
-  errors,
-  registerInput,
-  onChange,
-  onKeyDown,
-}: {
-  row: Row;
-  index: number;
-  errors?: RowErrors;
-  registerInput: (field: Field, el: HTMLInputElement | null) => void;
-  onChange: (patch: Partial<Row>) => void;
-  onKeyDown: (event: KeyboardEvent<HTMLInputElement>, field: Field) => void;
-}) {
-  const n = index + 1;
-
-  function field(name: Field) {
-    const id = `row-${row.key}-${name}`;
-    const error = errors?.[name];
-    return (
-      <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor={id} className={overlineClass}>
-          {FIELD_LABELS[name]}
-        </label>
-        <input
-          id={id}
-          ref={(el) => registerInput(name, el)}
-          type="text"
-          autoComplete="off"
-          aria-label={`${FIELD_LABELS[name]}, row ${n}`}
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${id}-error` : undefined}
-          value={row[name]}
-          onChange={(event) => onChange({ [name]: event.target.value })}
-          onKeyDown={(event) => onKeyDown(event, name)}
-          className={underlineInput}
-        />
-        {error ? (
-          <p id={`${id}-error`} className={fieldErrorClass}>
-            {error}
-          </p>
-        ) : null}
-      </div>
-    );
-  }
-
-  // A row with an error in a collapsed field always shows those fields.
-  const hiddenError = Boolean(
-    errors?.example || errors?.context || errors?.partOfSpeech
-  );
-
-  return (
-    <div className="flex gap-4 rounded-md bg-elevated p-4">
-      <span
-        aria-hidden="true"
-        className="w-6 shrink-0 pt-6 font-mono text-body-sm text-foreground-tertiary"
-      >
-        {n}
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
-        <div className="grid gap-4 sm:grid-cols-2 sm:gap-6">
-          {field("term")}
-          {field("definition")}
-        </div>
-        {row.more || hiddenError ? (
-          <div className="grid gap-4 sm:grid-cols-2 sm:gap-6">
-            <div className="sm:col-span-2">{field("example")}</div>
-            {field("context")}
-            {field("partOfSpeech")}
-          </div>
-        ) : null}
-        <button
-          type="button"
-          aria-expanded={row.more || hiddenError}
-          aria-label={`${row.more || hiddenError ? "Fewer" : "More"} fields, row ${n}`}
-          onClick={() => onChange({ more: !row.more })}
-          className="self-start rounded-sm text-body-sm text-foreground-secondary underline-offset-2 transition-state hover:text-foreground hover:underline focus-ring"
-        >
-          {row.more || hiddenError ? "Fewer fields" : "More fields"}
-        </button>
-      </div>
+      {option("manual", "Manual")}
+      {option("import", "Import")}
     </div>
   );
 }

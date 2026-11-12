@@ -57,6 +57,11 @@ export const createCardsBatchSchema = z.object({
       MAX_CARDS_PER_BATCH,
       `Add at most ${MAX_CARDS_PER_BATCH} cards at a time.`
     ),
+  /**
+   * `manual` (default) is all-or-nothing. `import` (spec-3-1) saves the valid
+   * rows, skips duplicates and reports the rest; its rows carry `line`.
+   */
+  source: z.enum(["manual", "import"]).optional(),
 });
 
 export type CreateCardsBatchInput = z.infer<typeof createCardsBatchSchema>;
@@ -143,4 +148,21 @@ export interface CardSummary {
 /** Shape returned by `POST /api/cards/batch`. */
 export interface CreateCardsBatchResponse {
   created: number;
+}
+
+/** Source line of an import row: its paste line, or null for a row added in review. */
+export const importCardLineSchema = z.object({
+  line: z.number().int().positive().nullable().optional(),
+});
+
+/** One skipped or failed import row. `line` is null for rows added in review. */
+export interface ImportCommitIssue {
+  line: number | null;
+}
+
+/** Shape returned by `POST /api/cards/batch` with `source: "import"`. */
+export interface ImportCommitResult {
+  created: number;
+  duplicates: (ImportCommitIssue & { term: string })[];
+  errors: (ImportCommitIssue & { reason: string })[];
 }

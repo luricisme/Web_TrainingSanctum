@@ -11,7 +11,7 @@ export function SectionMarker({
   id,
   children,
 }: {
-  as?: "p" | "h2";
+  as?: "p" | "h2" | "h3";
   id?: string;
   children: ReactNode;
 }) {
