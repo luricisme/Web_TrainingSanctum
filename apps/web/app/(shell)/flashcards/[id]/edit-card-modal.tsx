@@ -16,7 +16,7 @@ import {
   fieldErrorClass,
   overlineClass,
 } from "../../classes/ui";
-import { underlineInput } from "./add-cards-panel";
+import { underlineInput } from "./manual-row";
 
 type Field = "term" | "definition" | "example" | "context" | "partOfSpeech";
 type Values = Record<Field, string>;

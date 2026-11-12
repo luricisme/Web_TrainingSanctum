@@ -1,9 +1,14 @@
 import { prisma } from "@training-sanctum/db";
 import {
+  type CardInput,
   type CreateCardsBatchResponse,
+  type ImportCommitResult,
   createCardWithSchedulingRecords,
   createCardsBatchSchema,
+  detectDuplicates,
+  importCardLineSchema,
   validateCardRows,
+  validateImportCard,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
 import {
@@ -18,7 +23,133 @@ function logBatch(entry: Record<string, unknown>): void {
   console.info(JSON.stringify({ operation: "cards.batch", ...entry }));
 }
 
-/** Creates every row (Card + two Scheduling Records) or none (AD-11). */
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/** Creates the Cards and their two Scheduling Records each (AD-9). */
+async function createCards(
+  tx: Tx,
+  inputs: readonly CardInput[],
+  flashcardId: string,
+  userId: string
+): Promise<void> {
+  if (inputs.length === 0) return;
+  const user = await tx.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { timezone: true },
+  });
+  const now = new Date();
+  const built = inputs.map((input) =>
+    createCardWithSchedulingRecords(input, { now, timezone: user.timezone })
+  );
+  const cards = await tx.card.createManyAndReturn({
+    data: built.map(({ card }) => ({ ...card, flashcardId, userId })),
+    select: { id: true },
+  });
+  await tx.schedulingRecord.createMany({
+    data: cards.flatMap((card, i) =>
+      built[i].schedulingRecords.map((record) => ({
+        ...record,
+        cardId: card.id,
+      }))
+    ),
+  });
+}
+
+/**
+ * Import commit (spec-3-1): saves the valid rows, skips duplicates (re-checked
+ * against the Flashcard's current Cards inside the transaction) and reports
+ * every invalid row by its source line.
+ */
+async function commitImport(
+  rows: readonly unknown[],
+  flashcardId: string,
+  userId: string
+): Promise<Response> {
+  const lineOf = (row: unknown): number | null => {
+    const parsed = importCardLineSchema.safeParse(row ?? {});
+    return parsed.success ? (parsed.data.line ?? null) : null;
+  };
+
+  const errors: ImportCommitResult["errors"] = [];
+  const valid: { line: number | null; card: CardInput }[] = [];
+  for (const row of rows) {
+    const checked = validateImportCard(row);
+    if (checked.ok) valid.push({ line: lineOf(row), card: checked.card });
+    else errors.push({ line: lineOf(row), reason: checked.problem.message });
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const flashcard = await tx.flashcard.findFirst({
+        where: { id: flashcardId, userId },
+        select: { id: true },
+      });
+      if (!flashcard) {
+        throw new HttpError(404, "NOT_FOUND", "Flashcard not found.");
+      }
+      // Serialize concurrent imports into this Flashcard so the duplicate
+      // re-check below cannot race another commit.
+      await tx.$queryRaw`SELECT id FROM "flashcards" WHERE id = ${flashcard.id} FOR UPDATE`;
+      const existing = await tx.card.findMany({
+        where: { flashcardId: flashcard.id },
+        select: { term: true },
+      });
+
+      const flags = detectDuplicates(
+        valid.map((v) => v.card),
+        existing.map((c) => c.term)
+      );
+      const duplicates: ImportCommitResult["duplicates"] = [];
+      const toCreate: CardInput[] = [];
+      valid.forEach((v, i) => {
+        if (flags[i]!.duplicate) duplicates.push({ line: v.line, term: v.card.term });
+        else toCreate.push(v.card);
+      });
+
+      await createCards(tx, toCreate, flashcard.id, userId);
+      return { created: toCreate.length, duplicates, errors };
+    });
+
+    logBatch({
+      source: "import",
+      flashcardId,
+      rows: rows.length,
+      created: result.created,
+      duplicates: result.duplicates.length,
+      errors: result.errors.length,
+      outcome: "success",
+    });
+    const data: ImportCommitResult = result;
+    return ok(data, 200);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      logBatch({
+        source: "import",
+        flashcardId,
+        rows: rows.length,
+        outcome: `rejected:${error.status}`,
+      });
+      return error.toResponse();
+    }
+    logBatch({
+      source: "import",
+      flashcardId,
+      rows: rows.length,
+      outcome: "failed",
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return fail(
+      500,
+      "INTERNAL_ERROR",
+      "Could not save the cards. Nothing was changed."
+    );
+  }
+}
+
+/**
+ * Manual mode creates every row (Card + two Scheduling Records) or none
+ * (AD-11). `source: "import"` takes the partial-save path above.
+ */
 export async function POST(request: Request): Promise<Response> {
   const result = await requireSession(request);
   if (result.response) return result.response;
@@ -48,7 +179,11 @@ export async function POST(request: Request): Promise<Response> {
     }
     return validationFailure(parsed.error);
   }
-  const { flashcardId, cards: rows } = parsed.data;
+  const { flashcardId, cards: rows, source } = parsed.data;
+
+  if (source === "import") {
+    return commitImport(rows, flashcardId, userId);
+  }
 
   const validated = validateCardRows(rows);
   if (!validated.ok) {
@@ -75,31 +210,7 @@ export async function POST(request: Request): Promise<Response> {
       if (!flashcard) {
         throw new HttpError(404, "NOT_FOUND", "Flashcard not found.");
       }
-      const user = await tx.user.findUniqueOrThrow({
-        where: { id: userId },
-        select: { timezone: true },
-      });
-
-      const now = new Date();
-      const built = validated.cards.map((input) =>
-        createCardWithSchedulingRecords(input, { now, timezone: user.timezone })
-      );
-      const cards = await tx.card.createManyAndReturn({
-        data: built.map(({ card }) => ({
-          ...card,
-          flashcardId: flashcard.id,
-          userId,
-        })),
-        select: { id: true },
-      });
-      await tx.schedulingRecord.createMany({
-        data: cards.flatMap((card, i) =>
-          built[i].schedulingRecords.map((record) => ({
-            ...record,
-            cardId: card.id,
-          }))
-        ),
-      });
+      await createCards(tx, validated.cards, flashcard.id, userId);
       return validated.cards.length;
     });
 

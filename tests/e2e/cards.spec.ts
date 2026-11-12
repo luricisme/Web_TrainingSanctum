@@ -78,7 +78,7 @@ test("add rows with the keyboard, save Unicode, mixed rows, discard prompt", asy
     "aria-selected",
     "true"
   );
-  await expect(dialog.getByRole("tab", { name: "Import" })).toBeDisabled();
+  await expect(dialog.getByRole("tab", { name: "Import" })).toBeEnabled();
   await expect(dialog.getByLabel("Term, row 1")).toBeFocused();
   await expect(dialog.getByLabel(/^Term, row/)).toHaveCount(3);
 
