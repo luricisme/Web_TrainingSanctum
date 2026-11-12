@@ -4,6 +4,8 @@ import { prisma } from "@training-sanctum/db";
 
 const PASSWORD = "correct-horse-battery";
 const FALLBACK_BASE = "http://localhost:3100";
+/** Default separators: Tab between term and definition, one card per line. */
+const TAB = { termSeparator: { kind: "tab" }, cardSeparator: { kind: "newline" } };
 
 interface Session {
   request: APIRequestContext;
@@ -54,7 +56,7 @@ test.describe("POST /api/import/parse", () => {
     const base = baseURL ?? FALLBACK_BASE;
     const ctx = await playwright.request.newContext();
     const res = await ctx.post(`${base}/api/import/parse`, {
-      data: { flashcardId: "x", delimiter: "tab", text: "a\tb" },
+      data: { flashcardId: "x", ...TAB, text: "a\tb" },
     });
     expect(res.status()).toBe(401);
     expect((await res.json()).error.code).toBe("UNAUTHENTICATED");
@@ -67,7 +69,7 @@ test.describe("POST /api/import/parse", () => {
     const flashcard = await createFlashcard(owner, base, "Private");
     for (const flashcardId of [flashcard.id, "does-not-exist"]) {
       const res = await other.request.post(`${base}/api/import/parse`, {
-        data: { flashcardId, delimiter: "tab", text: "a\tb" },
+        data: { flashcardId, ...TAB, text: "a\tb" },
       });
       expect(res.status()).toBe(404);
       expect((await res.json()).error.code).toBe("NOT_FOUND");
@@ -87,49 +89,131 @@ test.describe("POST /api/import/parse", () => {
       "\n"
     );
     const res = await s.request.post(`${base}/api/import/parse`, {
-      data: { flashcardId: flashcard.id, delimiter: "tab", text },
+      data: { flashcardId: flashcard.id, ...TAB, text },
     });
     expect(res.status()).toBe(200);
     const { rows } = (await res.json()).data;
+    const none = { duplicateOfLine: null };
     expect(rows).toEqual([
-      { line: 1, term: "Apple", definition: "quả táo", duplicate: true, duplicateOfLine: null },
+      { line: 1, card: 1, term: "Apple", definition: "quả táo", duplicate: true, ...none },
       {
         line: 3,
+        card: 2,
         term: "banana",
         definition: "",
-        error: "No delimiter found",
+        error: "No separator found",
         errorField: "definition",
         duplicate: false,
-        duplicateOfLine: null,
+        ...none,
       },
-      { line: 4, term: "cat", definition: "/kæt/", duplicate: false, duplicateOfLine: null },
+      { line: 4, card: 3, term: "cat", definition: "/kæt/", duplicate: false, ...none },
       {
         line: 5,
+        card: 4,
         term: "",
         definition: "no term",
         error: "Term is required",
         errorField: "term",
         duplicate: false,
-        duplicateOfLine: null,
+        ...none,
       },
-      { line: 6, term: "Cat", definition: "mèo", duplicate: true, duplicateOfLine: 4 },
+      {
+        line: 6,
+        card: 5,
+        term: "Cat",
+        definition: "mèo",
+        duplicate: true,
+        duplicateOfLine: 4,
+      },
     ]);
     expect(await count(flashcard.id)).toBe(1);
   });
 
-  test("more than 200 lines returns 400 VALIDATION_ERROR", async ({ playwright, baseURL }) => {
+  test("more than 200 cards returns 400 VALIDATION_ERROR", async ({ playwright, baseURL }) => {
     const base = baseURL ?? FALLBACK_BASE;
     const s = await newUser(playwright, base);
     const flashcard = await createFlashcard(s, base, "Words");
     const text = Array.from({ length: 201 }, (_, i) => `t${i}\td`).join("\n");
     const res = await s.request.post(`${base}/api/import/parse`, {
-      data: { flashcardId: flashcard.id, delimiter: "tab", text },
+      data: { flashcardId: flashcard.id, ...TAB, text },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();
     expect(body.error.code).toBe("VALIDATION_ERROR");
-    expect(body.error.message).toBe("Paste at most 200 lines per import.");
+    expect(body.error.message).toBe("Paste at most 200 cards per import.");
     expect(body.data).toBeUndefined();
+  });
+});
+
+// spec-3-1b: term and card separators.
+test.describe("POST /api/import/parse (separators)", () => {
+  test("custom - with semicolon splits a-b;c-d into two cards", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcard = await createFlashcard(s, base, "Words");
+    const res = await s.request.post(`${base}/api/import/parse`, {
+      data: {
+        flashcardId: flashcard.id,
+        termSeparator: { kind: "custom", custom: "-" },
+        cardSeparator: { kind: "semicolon" },
+        text: "a-b;c-d",
+      },
+    });
+    expect(res.status()).toBe(200);
+    const none = { duplicate: false, duplicateOfLine: null };
+    expect((await res.json()).data.rows).toEqual([
+      { line: 1, card: 1, term: "a", definition: "b", ...none },
+      { line: 1, card: 2, term: "c", definition: "d", ...none },
+    ]);
+    expect(await count(flashcard.id)).toBe(0);
+  });
+
+  test("an empty Custom or equal separators return 400 with the inline message", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcard = await createFlashcard(s, base, "Words");
+    const cases = [
+      {
+        body: { termSeparator: { kind: "custom", custom: "" }, cardSeparator: { kind: "newline" } },
+        message: "Enter a separator.",
+      },
+      {
+        body: { termSeparator: { kind: "custom", custom: ";" }, cardSeparator: { kind: "semicolon" } },
+        message: "Use different separators for terms and cards.",
+      },
+    ];
+    for (const { body, message } of cases) {
+      const res = await s.request.post(`${base}/api/import/parse`, {
+        data: { flashcardId: flashcard.id, text: "a;b", ...body },
+      });
+      expect(res.status()).toBe(400);
+      const json = await res.json();
+      expect(json.error.code).toBe("VALIDATION_ERROR");
+      expect(json.error.message).toBe(message);
+    }
+  });
+
+  test("201 cards on one line with ; returns 400", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcard = await createFlashcard(s, base, "Words");
+    const text = Array.from({ length: 201 }, (_, i) => `t${i}-d`).join(";");
+    const res = await s.request.post(`${base}/api/import/parse`, {
+      data: {
+        flashcardId: flashcard.id,
+        termSeparator: { kind: "custom", custom: "-" },
+        cardSeparator: { kind: "semicolon" },
+        text,
+      },
+    });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).error.message).toBe("Paste at most 200 cards per import.");
   });
 });
 
@@ -195,7 +279,12 @@ test.describe("POST /api/cards/batch (source: import)", () => {
     const flashcard = await createFlashcard(s, base, "Words");
 
     const preview = await s.request.post(`${base}/api/import/parse`, {
-      data: { flashcardId: flashcard.id, delimiter: "em-dash", text: "storm — bão\nrain — mưa" },
+      data: {
+        flashcardId: flashcard.id,
+        termSeparator: { kind: "custom", custom: " — " },
+        cardSeparator: { kind: "newline" },
+        text: "storm — bão\nrain — mưa",
+      },
     });
     const { rows } = (await preview.json()).data;
     expect(rows.every((r: { duplicate: boolean }) => !r.duplicate)).toBe(true);
@@ -281,7 +370,7 @@ test.describe("POST /api/cards/batch (source: import)", () => {
 
     const started = Date.now();
     const preview = await s.request.post(`${base}/api/import/parse`, {
-      data: { flashcardId: flashcard.id, delimiter: "tab", text },
+      data: { flashcardId: flashcard.id, ...TAB, text },
     });
     const { rows } = (await preview.json()).data;
     const res = await s.request.post(`${base}/api/cards/batch`, {

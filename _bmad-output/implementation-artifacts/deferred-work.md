@@ -79,3 +79,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-1-paste-import-with-review-editor.md`
   summary: Replace the off-scale `py-1.5` (6px) on the Add cards ModeSwitcher and the Paste/Upload source switcher with a DESIGN.md spacing step.
   evidence: DESIGN.md spacing has no 6px step; the value predates Story 3.1 in ModeSwitcher and was copied into the new switcher.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-1b-paste-import-term-and-card-separators.md`
+  summary: Update DESIGN.md Import mode (and the DNA error-tone note) to describe the two separator pickers, the Custom input, the live card count and the "Card N" row labels.
+  evidence: DESIGN.md still says "Paste shows a delimiter select" and only describes "L14" line labels; the shipped UI follows the 2026-11-12 Quizlet-style decision.

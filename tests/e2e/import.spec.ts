@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { prisma } from "@training-sanctum/db";
@@ -50,6 +50,12 @@ const PASTE = [
   "broken line",
 ].join("\n");
 
+/** Custom " — " between term and definition, cards on new lines. */
+async function useEmDash(dialog: Locator) {
+  await dialog.getByLabel("Between term and definition").selectOption("custom");
+  await dialog.getByLabel("Custom separator, between term and definition").fill(" — ");
+}
+
 async function openImport(page: Page, flashcardId: string) {
   await page.goto(`/flashcards/${flashcardId}`);
   await page.getByRole("button", { name: "Add cards" }).click();
@@ -70,11 +76,13 @@ test("paste → preview → fix → save → results → Cards listed", async ({
     "aria-selected",
     "true"
   );
-  await expect(dialog.getByLabel("Delimiter")).toHaveValue("tab");
+  await expect(dialog.getByLabel("Between term and definition")).toHaveValue("tab");
+  await expect(dialog.getByLabel("Between cards")).toHaveValue("newline");
   await expect(dialog.getByLabel("Paste cards")).toBeFocused();
 
-  await dialog.getByLabel("Delimiter").selectOption("em-dash");
+  await useEmDash(dialog);
   await dialog.getByLabel("Paste cards").fill(PASTE);
+  await expect(dialog.getByText("7 cards found")).toBeVisible();
   await dialog.getByRole("button", { name: "Preview" }).click();
 
   // Review editor: rows labelled by source line, problems inline. Nothing saved.
@@ -83,7 +91,7 @@ test("paste → preview → fix → save → results → Cards listed", async ({
   await expect(dialog.getByLabel("Term, line 3")).toHaveValue("on cloud nine");
   await expect(dialog.getByText("Already in Weather idioms — will be skipped")).toBeVisible();
   await expect(dialog.getByText("Duplicate of line 1 — will be skipped")).toBeVisible();
-  await expect(dialog.getByText("No delimiter found")).toHaveCount(2);
+  await expect(dialog.getByText("No separator found")).toHaveCount(2);
   expect(await prisma.card.count({ where: { flashcardId: flashcard.id } })).toBe(1);
 
   // The summary strip jumps to the first problem row.
@@ -95,7 +103,7 @@ test("paste → preview → fix → save → results → Cards listed", async ({
   // Fix line 4 in place, remove line 6, add a new row.
   await dialog.getByLabel("Term, line 4").fill("a perfect storm");
   await dialog.getByLabel("Definition, line 4").fill("a rare combination of bad events");
-  await expect(dialog.getByText("No delimiter found")).toHaveCount(1);
+  await expect(dialog.getByText("No separator found")).toHaveCount(1);
   await dialog.getByRole("button", { name: "Remove line 6" }).click();
   await expect(dialog.getByLabel("Term, line 6")).toHaveCount(0);
   await dialog.getByRole("button", { name: "+ Add row" }).click();
@@ -225,15 +233,95 @@ test("discard prompts on close; repeats follow the current rows; Done closes", a
   expect(await prisma.card.count({ where: { flashcardId: flashcard.id } })).toBe(3);
 });
 
-test("more than 200 lines is rejected at Preview", async ({ page }) => {
+test("more than 200 cards is rejected at Preview", async ({ page }) => {
   const email = await register(page);
   const flashcard = await seedFlashcard(email);
   const dialog = await openImport(page, flashcard.id);
   const text = Array.from({ length: 201 }, (_, i) => `t${i}\td`).join("\n");
   await dialog.getByLabel("Paste cards").fill(text);
   await dialog.getByRole("button", { name: "Preview" }).click();
-  await expect(dialog.getByRole("alert")).toHaveText("Paste at most 200 lines per import.");
+  await expect(dialog.getByRole("alert")).toHaveText("Paste at most 200 cards per import.");
   await expect(dialog.getByLabel(/^Term, line/)).toHaveCount(0);
+});
+
+test("custom - between terms, ; between cards: Card labels, live count, save", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const flashcard = await seedFlashcard(email);
+  const dialog = await openImport(page, flashcard.id);
+
+  await dialog.getByLabel("Between term and definition").selectOption("custom");
+  const termCustom = dialog.getByLabel("Custom separator, between term and definition");
+  await expect(termCustom).toBeFocused();
+  await dialog.getByLabel("Between cards").selectOption("semicolon");
+
+  // An empty Custom separator blocks Preview with an inline message.
+  await dialog.getByLabel("Paste cards").fill("a-b;c-d");
+  await expect(dialog.getByText("2 cards found")).toBeVisible();
+  await dialog.getByRole("button", { name: "Preview" }).click();
+  await expect(dialog.getByText("Enter a separator.")).toBeVisible();
+  await expect(termCustom).toBeFocused();
+  await expect(dialog.getByLabel(/^Term, card/)).toHaveCount(0);
+
+  // The same separator twice is refused at once.
+  await termCustom.fill(";");
+  await expect(dialog.getByText("Use different separators for terms and cards.")).toBeVisible();
+  await termCustom.fill("-");
+  await expect(dialog.getByText("Use different separators for terms and cards.")).toHaveCount(0);
+  await expect(dialog.getByText("Enter a separator.")).toHaveCount(0);
+
+  await dialog.getByLabel("Paste cards").fill("a-b;c-d;");
+  await expect(dialog.getByText("2 cards found")).toBeVisible();
+  await dialog.getByLabel("Paste cards").fill("a-b");
+  await expect(dialog.getByText("1 card found")).toBeVisible();
+  await dialog.getByLabel("Paste cards").fill("a-b;c-d");
+  await expect(dialog.getByText("2 cards found")).toBeVisible();
+  await dialog.getByRole("button", { name: "Preview" }).click();
+
+  await expect(dialog.getByLabel("Term, card 1")).toHaveValue("a");
+  await expect(dialog.getByLabel("Definition, card 1")).toHaveValue("b");
+  await expect(dialog.getByLabel("Term, card 2")).toHaveValue("c");
+  await expect(dialog.getByLabel("Definition, card 2")).toHaveValue("d");
+  await expect(dialog.getByText("Card 1", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Card 2", { exact: true })).toBeVisible();
+  await expect(dialog.getByLabel(/^Term, line/)).toHaveCount(0);
+
+  await dialog.getByRole("button", { name: "Save 2 cards" }).click();
+  await expect(
+    dialog.getByRole("group", { name: "Import results" }).getByRole("heading", {
+      name: "Created (2)",
+    })
+  ).toBeVisible();
+  const cards = await prisma.card.findMany({ where: { flashcardId: flashcard.id } });
+  expect(cards.map((c) => [c.term, c.definition]).sort()).toEqual([
+    ["a", "b"],
+    ["c", "d"],
+    ["under the weather", "feeling slightly ill"],
+  ]);
+});
+
+test("card mode labels repeats and results by card number", async ({ page }) => {
+  const email = await register(page);
+  const flashcard = await seedFlashcard(email);
+  const dialog = await openImport(page, flashcard.id);
+  await dialog.getByLabel("Between term and definition").selectOption("custom");
+  await dialog.getByLabel("Custom separator, between term and definition").fill(":");
+  await dialog.getByLabel("Between cards").selectOption("semicolon");
+  await dialog.getByLabel("Paste cards").fill("cat:mèo;dog:chó\nCat:con mèo;broken");
+  await expect(dialog.getByText("4 cards found")).toBeVisible();
+  await dialog.getByRole("button", { name: "Preview" }).click();
+
+  await expect(dialog.getByText("Duplicate of card 1 — will be skipped")).toBeVisible();
+  await expect(dialog.getByLabel("Term, card 4")).toHaveValue("broken");
+  await expect(dialog.getByText("No separator found")).toHaveCount(1);
+
+  await dialog.getByRole("button", { name: "Save 2 cards" }).click();
+  const results = dialog.getByRole("group", { name: "Import results" });
+  await expect(results.getByRole("heading", { name: "Duplicates skipped (1)" })).toBeVisible();
+  await expect(results).toContainText("Card 3");
+  await expect(results).toContainText("Card 4");
+  await expect(results).not.toContainText("L3");
 });
 
 // Visual check: screenshots land in test-results/screenshots.
@@ -256,7 +344,7 @@ for (const theme of ["dark", "light"] as const) {
     await page.getByRole("button", { name: "Add cards" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("tab", { name: "Import" }).click();
-    await dialog.getByLabel("Delimiter").selectOption("em-dash");
+    await useEmDash(dialog);
     await dialog.getByLabel("Paste cards").fill(PASTE);
     await shot("paste");
     await dialog.getByRole("button", { name: "Preview" }).click();
@@ -269,10 +357,29 @@ for (const theme of ["dark", "light"] as const) {
     await dialog.getByRole("button", { name: "Done" }).click();
     await page.getByRole("button", { name: "Add cards" }).click();
     await page.getByRole("dialog").getByRole("tab", { name: "Import" }).click();
-    await page.getByRole("dialog").getByLabel("Delimiter").selectOption("em-dash");
+    await useEmDash(page.getByRole("dialog"));
     await page.getByRole("dialog").getByLabel("Paste cards").fill(PASTE);
     await page.getByRole("dialog").getByRole("button", { name: "Preview" }).click();
     await expect(page.getByRole("dialog").getByLabel("Term, line 1")).toBeVisible();
     await shot("review-mobile");
+
+    // Card mode: custom separators and Card labels.
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.getByRole("dialog").getByRole("button", { name: "← Back to paste" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Discard edits" }).click();
+    const d = page.getByRole("dialog");
+    await d.getByLabel("Custom separator, between term and definition").fill("-");
+    await d.getByLabel("Between cards").selectOption("custom");
+    await d.getByLabel("Custom separator, between cards").fill("|");
+    await d.getByLabel("Paste cards").fill("drizzle-light rain|gale-very strong wind|squall\nhaze-thin mist");
+    await shot("paste-separators");
+    await d.getByLabel("Custom separator, between cards").fill("");
+    await d.getByRole("button", { name: "Preview" }).click();
+    await expect(d.getByText("Enter a separator.")).toBeVisible();
+    await shot("paste-separator-error");
+    await d.getByLabel("Custom separator, between cards").fill("|");
+    await d.getByRole("button", { name: "Preview" }).click();
+    await expect(d.getByLabel("Term, card 1")).toBeVisible();
+    await shot("review-cards");
   });
 }

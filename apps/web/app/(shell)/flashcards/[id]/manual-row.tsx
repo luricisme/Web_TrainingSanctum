@@ -83,9 +83,10 @@ export function ManualRow({
   onKeyDown: (event: KeyboardEvent<HTMLInputElement>, field: Field) => void;
   /**
    * Visible label and its spoken name, e.g. `{ text: "L14", name: "line 14" }`.
-   * Mono type only for numeric labels (DESIGN.md typography.mono).
+   * Mono type only for numeric labels (DESIGN.md typography.mono); `wide`
+   * fits word labels such as "Card 12".
    */
-  label?: { text: string; name: string; numeric?: boolean };
+  label?: { text: string; name: string; numeric?: boolean; wide?: boolean };
   onRemove?: () => void;
   problem?: RowProblem;
 }) {
@@ -164,7 +165,7 @@ export function ManualRow({
     >
       <span
         aria-hidden="true"
-        className={`${label ? "w-10" : "w-6"} ${
+        className={`${label?.wide ? "w-16" : label ? "w-10" : "w-6"} ${
           label?.numeric === false ? "" : "font-mono"
         } shrink-0 pt-6 text-body-sm text-foreground-tertiary`}
       >

@@ -19,8 +19,15 @@ import {
 } from "./manual-row";
 import { PanelFooter } from "./panel-footer";
 
+/** Rows are labelled by source line ("L14") or by card number ("Card 3"). */
+export type RowLabelMode = "line" | "card";
+
 interface ReviewRow extends Row {
-  /** Source line of the paste, or null for a row added in the editor. */
+  /**
+   * The row's label number: its source line in "line" mode, its card number
+   * in "card" mode; null for a row added in the editor. Sent as the commit
+   * row's `line` and echoed back in the results.
+   */
   line: number | null;
   /** Problem reported by Preview; cleared once Term or Definition is edited. */
   parseProblem: { field: Field; message: string } | null;
@@ -41,12 +48,12 @@ export interface ImportCommitRow {
   partOfSpeech: string;
 }
 
-function toReviewRows(rows: ImportPreviewRow[]): ReviewRow[] {
+function toReviewRows(rows: ImportPreviewRow[], labelMode: RowLabelMode): ReviewRow[] {
   return rows.map((row, i) => ({
     ...emptyRow(i),
     term: row.term,
     definition: row.definition,
-    line: row.line,
+    line: labelMode === "card" ? row.card : row.line,
     parseProblem: row.error
       ? { field: row.errorField ?? "definition", message: row.error }
       : null,
@@ -70,7 +77,11 @@ function problemOf(row: ReviewRow): { field: Field; message: string } | null {
  * Duplicate note per row key: the stored "Already in" flag, else a repeat of
  * an earlier counted row, recomputed from the current rows on every render.
  */
-function duplicateNotes(rows: ReviewRow[], flashcardName: string): Map<number, string> {
+function duplicateNotes(
+  rows: ReviewRow[],
+  flashcardName: string,
+  labelMode: RowLabelMode
+): Map<number, string> {
   const considered = rows.filter(counts);
   const flags = detectDuplicates(
     considered.map((r) => ({ term: r.term, error: problemOf(r)?.message })),
@@ -86,7 +97,7 @@ function duplicateNotes(rows: ReviewRow[], flashcardName: string): Map<number, s
       notes.set(
         row.key,
         earlier.line !== null
-          ? `Duplicate of line ${earlier.line} — will be skipped`
+          ? `Duplicate of ${labelMode} ${earlier.line} — will be skipped`
           : "Duplicate of a new row — will be skipped"
       );
     }
@@ -105,6 +116,7 @@ function plural(n: number, one: string, many: string): string {
  */
 export function ImportReview({
   initialRows,
+  labelMode,
   flashcardName,
   onBack,
   onCancel,
@@ -114,6 +126,7 @@ export function ImportReview({
   confirm,
 }: {
   initialRows: ImportPreviewRow[];
+  labelMode: RowLabelMode;
   flashcardName: string;
   onBack: () => void;
   onCancel: () => void;
@@ -124,7 +137,7 @@ export function ImportReview({
   confirm?: ReactNode;
 }) {
   const [rows, setRows] = useState<ReviewRow[]>(() =>
-    toReviewRows(initialRows)
+    toReviewRows(initialRows, labelMode)
   );
   const [notice, setNotice] = useState<string | null>(null);
   const nextKey = useRef(initialRows.length);
@@ -133,7 +146,7 @@ export function ImportReview({
   const focusRequest = useRef<{ key: number; field: Field } | "add-row" | null>(null);
   const [focusTick, setFocusTick] = useState(0);
 
-  const notes = duplicateNotes(rows, flashcardName);
+  const notes = duplicateNotes(rows, flashcardName, labelMode);
 
   // Land on the first problem row, else the first row.
   useEffect(() => {
@@ -292,10 +305,13 @@ export function ImportReview({
       <ol aria-label="Imported rows" className="flex flex-col gap-3">
         {rows.map((row, index) => {
           const problem = problemOf(row);
+          const wide = labelMode === "card";
           const label =
-            row.line !== null
-              ? { text: `L${row.line}`, name: `line ${row.line}` }
-              : { text: "new", name: `new row ${++newOrdinal}`, numeric: false };
+            row.line === null
+              ? { text: "new", name: `new row ${++newOrdinal}`, numeric: false, wide }
+              : wide
+                ? { text: `Card ${row.line}`, name: `card ${row.line}`, numeric: false, wide }
+                : { text: `L${row.line}`, name: `line ${row.line}` };
           const dupNote = notes.get(row.key);
           const note: RowProblem | undefined = dupNote
             ? { field: "term", message: dupNote, tone: "warning" }

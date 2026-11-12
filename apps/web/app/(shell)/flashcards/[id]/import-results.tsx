@@ -2,15 +2,21 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import type { ImportCommitResult } from "@training-sanctum/domain";
+import type { RowLabelMode } from "./import-review";
 import { SectionMarker } from "@/app/components/section-marker";
 import { buttonPrimary } from "../../classes/ui";
 import { PanelFooter } from "./panel-footer";
 
-function lineLabel(line: number | null): ReactNode {
-  return line === null ? (
-    <span className="w-12 shrink-0 text-body-sm text-foreground-tertiary">new</span>
+/** "L14" in line mode, "Card 3" in card mode, "new" for rows added in review. */
+function rowLabel(line: number | null, mode: RowLabelMode): ReactNode {
+  const width = mode === "card" ? "w-16" : "w-12";
+  if (line === null) {
+    return <span className={`${width} shrink-0 text-body-sm text-foreground-tertiary`}>new</span>;
+  }
+  return mode === "card" ? (
+    <span className={`${width} shrink-0 text-body-sm text-foreground-tertiary`}>Card {line}</span>
   ) : (
-    <span className="w-12 shrink-0 font-mono text-body-sm text-foreground-tertiary">
+    <span className={`${width} shrink-0 font-mono text-body-sm text-foreground-tertiary`}>
       L{line}
     </span>
   );
@@ -22,10 +28,12 @@ function lineLabel(line: number | null): ReactNode {
  */
 export function ImportResults({
   result,
+  labelMode,
   flashcardName,
   onDone,
 }: {
   result: ImportCommitResult;
+  labelMode: RowLabelMode;
   flashcardName: string;
   onDone: () => void;
 }) {
@@ -68,7 +76,7 @@ export function ImportResults({
             <ul className="flex flex-col gap-1">
               {duplicates.map((d, i) => (
                 <li key={i} className="flex items-baseline gap-3">
-                  {lineLabel(d.line)}
+                  {rowLabel(d.line, labelMode)}
                   <span className="min-w-0 break-words text-body text-foreground">{d.term}</span>
                 </li>
               ))}
@@ -86,7 +94,7 @@ export function ImportResults({
             <ul className="flex flex-col gap-1">
               {errors.map((e, i) => (
                 <li key={i} className="flex items-baseline gap-3">
-                  {lineLabel(e.line)}
+                  {rowLabel(e.line, labelMode)}
                   <span className="min-w-0 break-words text-body text-error">{e.reason}</span>
                 </li>
               ))}

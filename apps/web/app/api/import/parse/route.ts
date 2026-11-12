@@ -8,8 +8,9 @@ import { requireSession } from "@/lib/session";
 import { fail, ok, readJson, zodFields } from "@/lib/api-response";
 
 /**
- * Preview of a paste import (spec-3-1): parsed rows with source lines, row
- * problems and duplicate flags against the target Flashcard. Writes nothing.
+ * Preview of a paste import (spec-3-1, separators spec-3-1b): parsed rows with
+ * source lines, card numbers, row problems and duplicate flags against the
+ * target Flashcard. Writes nothing.
  */
 export async function POST(request: Request): Promise<Response> {
   const result = await requireSession(request);
@@ -22,7 +23,7 @@ export async function POST(request: Request): Promise<Response> {
   }
   const parsed = importParseSchema.safeParse(body);
   if (!parsed.success) {
-    // Lead with the first problem (e.g. "Paste at most 200 lines per import.").
+    // Lead with the first problem (e.g. "Paste at most 200 cards per import.").
     return fail(
       400,
       "VALIDATION_ERROR",
@@ -30,7 +31,7 @@ export async function POST(request: Request): Promise<Response> {
       zodFields(parsed.error)
     );
   }
-  const { flashcardId, delimiter, text } = parsed.data;
+  const { flashcardId, termSeparator, cardSeparator, text } = parsed.data;
 
   const flashcard = await prisma.flashcard.findFirst({
     where: { id: flashcardId, userId },
@@ -42,7 +43,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const rows = previewImport(
     text,
-    delimiter,
+    { termSeparator, cardSeparator },
     flashcard.cards.map((card) => card.term)
   );
   const data: ImportParseResponse = { rows };

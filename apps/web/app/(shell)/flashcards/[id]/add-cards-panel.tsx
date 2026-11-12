@@ -3,14 +3,17 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  DEFAULT_IMPORT_DELIMITER,
+  DEFAULT_IMPORT_SEPARATORS,
   MAX_CARDS_PER_BATCH,
   cardInputSchema,
   type CreateCardsBatchResponse,
   type ImportCommitResult,
-  type ImportDelimiter,
   type ImportParseResponse,
   type ImportPreviewRow,
+  type ImportSeparators,
+  IMPORT_EMPTY_MESSAGE,
+  countImportCards,
+  resolveSeparators,
 } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { formErrorClass } from "@/app/components/ui";
@@ -27,7 +30,7 @@ import {
 } from "./manual-row";
 import { ConfirmBar, PanelFooter, type PendingConfirm } from "./panel-footer";
 import { ImportPaste } from "./import-paste";
-import { ImportReview, type ImportCommitRow } from "./import-review";
+import { ImportReview, type ImportCommitRow, type RowLabelMode } from "./import-review";
 import { ImportResults } from "./import-results";
 
 export { underlineInput } from "./manual-row";
@@ -73,8 +76,11 @@ export function AddCardsPanel({
   const [mode, setMode] = useState<Mode>("manual");
   const [importStep, setImportStep] = useState<ImportStep>("paste");
   const [pasteText, setPasteText] = useState("");
-  const [delimiter, setDelimiter] = useState<ImportDelimiter>(DEFAULT_IMPORT_DELIMITER);
+  const [separators, setSeparators] = useState<ImportSeparators>(DEFAULT_IMPORT_SEPARATORS);
   const [previewRows, setPreviewRows] = useState<ImportPreviewRow[]>([]);
+  // Rows are labelled by source line in New line mode, else by card number;
+  // fixed at Preview so the labels match the paste they came from.
+  const [labelMode, setLabelMode] = useState<RowLabelMode>("line");
   const [importResult, setImportResult] = useState<ImportCommitResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const focusRequest = useRef<{ key: number; field: Field } | null>(null);
@@ -89,7 +95,7 @@ export function AddCardsPanel({
   });
 
   const preview = useMutation({
-    mutationFn: (input: { delimiter: ImportDelimiter; text: string }) =>
+    mutationFn: (input: ImportSeparators & { text: string }) =>
       apiFetch<ImportParseResponse>("/api/import/parse", {
         method: "POST",
         json: { flashcardId: flashcard.id, ...input },
@@ -299,15 +305,20 @@ export function AddCardsPanel({
 
   function handlePreview() {
     setImportError(null);
-    if (!pasteText.trim()) {
-      setImportError("Paste some lines to import.");
+    // Blank, or only card separators (e.g. ";;;" with Semicolon).
+    if (countImportCards(pasteText, separators.cardSeparator) === 0) {
+      setImportError(IMPORT_EMPTY_MESSAGE);
       return;
     }
+    // ImportPaste shows separator problems inline; the server checks again.
+    if (!resolveSeparators(separators).ok) return;
+    const mode: RowLabelMode = separators.cardSeparator.kind === "newline" ? "line" : "card";
     preview.mutate(
-      { delimiter, text: pasteText },
+      { ...separators, text: pasteText },
       {
         onSuccess: ({ rows: parsed }) => {
           setConfirm(null);
+          setLabelMode(mode);
           setPreviewRows(parsed);
           setImportStep("review");
         },
@@ -411,12 +422,15 @@ export function AddCardsPanel({
       ) : importStep === "paste" ? (
         <ImportPaste
           text={pasteText}
-          delimiter={delimiter}
+          separators={separators}
           onTextChange={(text) => {
             setPasteText(text);
             setImportError(null);
           }}
-          onDelimiterChange={setDelimiter}
+          onSeparatorsChange={(next) => {
+            setSeparators(next);
+            setImportError(null);
+          }}
           onPreview={handlePreview}
           onCancel={requestClose}
           pending={preview.isPending}
@@ -426,6 +440,7 @@ export function AddCardsPanel({
       ) : importStep === "review" ? (
         <ImportReview
           initialRows={previewRows}
+          labelMode={labelMode}
           flashcardName={flashcard.name}
           onBack={() =>
             setConfirm({
@@ -443,6 +458,7 @@ export function AddCardsPanel({
       ) : importResult ? (
         <ImportResults
           result={importResult}
+          labelMode={labelMode}
           flashcardName={flashcard.name}
           onDone={onClose}
         />
