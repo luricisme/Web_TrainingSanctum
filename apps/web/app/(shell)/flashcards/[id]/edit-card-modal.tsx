@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   cardInputSchema,
   type CardSummary,
-  type FolderCardsResponse,
+  type FlashcardCardsResponse,
 } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { formErrorClass } from "@/app/components/ui";
@@ -45,11 +45,11 @@ function toValues(card: CardSummary): Values {
 /** Edit a Card (spec-2-4): modal form over the shared `cardInputSchema`. */
 export function EditCardModal({
   card,
-  folderId,
+  flashcardId,
   onClose,
 }: {
   card: CardSummary;
-  folderId: string;
+  flashcardId: string;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -117,18 +117,18 @@ export function EditCardModal({
     save.mutate(parsed.data, {
       onSuccess: (updated) => {
         // Patch the cached row first so it shows the new text at once, then refetch.
-        queryClient.setQueryData<FolderCardsResponse>(["folder", folderId], (old) =>
+        queryClient.setQueryData<FlashcardCardsResponse>(["flashcard", flashcardId], (old) =>
           old
             ? { ...old, cards: old.cards.map((c) => (c.id === updated.id ? updated : c)) }
             : old
         );
-        void queryClient.invalidateQueries({ queryKey: ["folder", folderId] });
+        void queryClient.invalidateQueries({ queryKey: ["flashcard", flashcardId] });
         onClose();
       },
       onError: (err) => {
         if (err instanceof ApiError && err.status === 404) {
           // The Card is gone: refresh the list so it stops showing.
-          void queryClient.invalidateQueries({ queryKey: ["folder", folderId] });
+          void queryClient.invalidateQueries({ queryKey: ["flashcard", flashcardId] });
         }
         if (err instanceof ApiError && err.fields) {
           const next: Errors = {};

@@ -18,7 +18,7 @@ This document provides the complete epic and story breakdown for Training Sanctu
 
 ### Functional Requirements
 
-FR-1: User authentication — a user can create an account and log in/out with email and password. Unauthenticated requests to any card/folder/review endpoint are rejected; all persisted data is scoped to `user_id`.
+FR-1: User authentication — a user can create an account and log in/out with email and password. Unauthenticated requests to any card/flashcard/folder/review endpoint are rejected; all persisted data is scoped to `user_id`.
 
 FR-2: Session persistence — a logged-in user stays authenticated across browser sessions until explicit logout or expiry (30-day sliding window per architecture). Concurrent sessions from multiple devices are permitted, last-write-wins on Scheduling Record updates.
 
@@ -26,15 +26,15 @@ FR-3: Create and edit cards — a user can create/edit a Card with fields: Term,
 
 FR-4: Delete a card — a user can delete a Card, which removes both its Scheduling Records and review history from the due queue immediately.
 
-FR-5: Class & Folder CRUD — fixed hierarchy Class → Folder → Card. A user can create/rename/delete Classes and Folders (Folders always live in exactly one Class) and move a Card to any Folder, in any Class. Every Class has one built-in "Unsorted" Folder that cannot be renamed or deleted. Deleting a Folder: move its Cards to the Class's Unsorted (default) or delete them. Deleting a Class: move all its Folders to another Class (default; Unsorted Cards merge into the target's Unsorted, name clashes get " (2)") or delete everything after typing the Class name. Both deletes are atomic. No sub-folders, no sub-classes.
+FR-5: Class, Folder & Flashcard CRUD — fixed hierarchy Class → Folder → Flashcard → Card. A user can create/rename/delete Classes, Folders (always in exactly one Class) and Flashcards (named sets, name only, always in exactly one Folder, name unique per Folder case-insensitively), and move a Flashcard to any Folder, in any Class. Every Card is in exactly one Flashcard. Every Class has one built-in "Unsorted" Folder that cannot be renamed or deleted. Deleting a Folder: move its Flashcards to the Class's Unsorted (default) or delete them with their Cards. Deleting a Flashcard: confirmation names it and its Card count; its Cards and Scheduling Records are removed. Deleting a Class: move all its Folders to another Class (default; Unsorted Flashcards merge into the target's Unsorted, name clashes get " (2)") or delete everything after typing the Class name. All deletes are atomic. No sub-folders, no sub-classes.
 
-FR-6: Paste import — inside a Folder's Add cards → Import → Paste, a user pastes line-delimited term/definition pairs (delimiter chosen per import) and presses Preview; the lines open in the import review editor (the Manual-mode row editor, rows labelled with source line numbers, no column mapping), where malformed rows show an inline reason and duplicates of the Folder's existing Terms (case-insensitive, trimmed) are flagged as "will be skipped". The user edits or removes rows, then Save commits: valid rows are created, still-invalid rows and still-duplicate rows are reported, never silently dropped or duplicated. Under 5 seconds of system time (Preview + Save, excluding editing time). Results: Created / Duplicates skipped / Errors.
+FR-6: Paste import — inside a Flashcard's Add cards → Import → Paste, a user pastes line-delimited term/definition pairs (delimiter chosen per import) and presses Preview; the lines open in the import review editor (the Manual-mode row editor, rows labelled with source line numbers, no column mapping), where malformed rows show an inline reason and duplicates of the Flashcard's existing Terms (case-insensitive, trimmed) are flagged as "will be skipped". The user edits or removes rows, then Save commits: valid rows are created, still-invalid rows and still-duplicate rows are reported, never silently dropped or duplicated. Under 5 seconds of system time (Preview + Save, excluding editing time). Results: Created / Duplicates skipped / Errors.
 
 FR-7: CSV/Excel import — upload a CSV/Excel file, map its columns to the five Card fields, then review the mapped rows in the same import review editor before Save. Same inline errors, duplicate flagging, row removal, re-check at Save, 5-second system-time budget and three-group results as FR-6.
 
 FR-8: SM-2 scheduling per direction — the system computes the next `interval`, `repetitions`, and `ease_factor` for a Scheduling Record using the classical SM-2 algorithm, independently per Recall Direction. New Scheduling Record defaults: `ease_factor = 2.5`, `repetitions = 0`. Learning-phase intervals: Step 1 = 1 day, Step 2 = 6 days, then EF-driven. "Again" (quality 1) resets `repetitions` to 0, restarts learning steps, and does not change `ease_factor`. `ease_factor` floors at 1.3. At equal `repetitions`, Hard/Good/Easy produce an identical next interval, diverging only in resulting `ease_factor`. Grade-to-quality mapping: Again=1, Hard=3, Good=4, Easy=5. Grading one direction does not alter the other direction's Scheduling Record. Must match the worked fixtures in the PRD addendum exactly.
 
-FR-9: Due-queue review — the system presents due Scheduling Records (per-direction) one at a time: prompt, then reveal, then Grade capture. A Card due in both directions appears as two separate, independently-gradable queue entries. Default scope is all Classes; a session can also be scoped to one Class or one Folder ("Review this class/folder"). Entries ordered oldest-due-first. Fully keyboard-operable (Space reveals; 1–4 or J/K/L/; grades). Grading and advancing renders with sub-100ms perceived transition latency under rapid input.
+FR-9: Due-queue review — the system presents due Scheduling Records (per-direction) one at a time: prompt, then reveal, then Grade capture. A Card due in both directions appears as two separate, independently-gradable queue entries. Default scope is all Classes; a session can also be scoped to one Class, one Folder or one Flashcard ("Review this class/folder/flashcard"). Entries ordered oldest-due-first. Fully keyboard-operable (Space reveals; 1–4 or J/K/L/; grades). Grading and advancing renders with sub-100ms perceived transition latency under rapid input.
 
 FR-10: Daily batch cap — the due queue for a session is capped at a configurable daily limit (default 20) applying only to new-card introduction; already-due cards are never withheld. The cap counts Cards (not Scheduling Records). A Card reset to `repetitions = 0` via "Again" is not a New Card and is uncapped.
 
@@ -42,7 +42,7 @@ FR-11: Focus mode — during an active Review Session, navigation, sidebar, stre
 
 FR-12: Streak tracking — the system tracks consecutive calendar days with at least one graded Scheduling Record and displays the current streak outside active review. Grading zero cards on a calendar day breaks the streak at the local-timezone day boundary (no streak-freeze mechanic). `next_review_date` and streak-day attribution share the same local-timezone basis.
 
-FR-13: Data export/backup — a user can export their full Card + Scheduling Record + streak history to a portable JSON format on demand, sufficient to reconstruct state.
+FR-13: Data export/backup — a user can export their full Class/Folder/Flashcard/Card structure + Card + Scheduling Record + streak history to a portable JSON format on demand, sufficient to reconstruct state.
 
 FR-14: Restore from backup — a user can import a previously-exported FR-13 JSON file to fully reconstruct their data (both Scheduling Records per Card, streak history). Restoring into an account with existing data requires explicit confirmation (default: replace, never silent merge/overwrite).
 
@@ -75,13 +75,13 @@ NFR-6: Live deployment — the product ships to a live, publicly accessible depl
 - Local day-boundary source of truth (AD-8): `User.timezone` (IANA string, captured at signup, not user-editable in v1) is the single source of local-day truth for both due-queue filtering and streak-day attribution, via a shared `toLocalCalendarDay` domain helper.
 - Single shared card-creation path (AD-9): manual creation, paste import, and CSV import all call one `createCardWithSchedulingRecords` domain function; no Route Handler constructs a `SchedulingRecord` by hand.
 - Response envelope & shared export/restore schema (AD-10): every successful response is `{ data: T }` (or `{ data: T[], meta?: {...} }`); FR-13 export and FR-14 restore share one Zod schema (`backupExportSchema`) in `packages/domain`.
-- Backup cadence & destructive-operation atomicity (AD-11): Neon PITR covers infrastructure durability; FR-13 export is user-initiated/on-demand only (no scheduled export job in v1); folder-delete-cascade (FR-5) and restore (FR-14) are each wrapped in one Prisma transaction (all-or-nothing).
+- Backup cadence & destructive-operation atomicity (AD-11): Neon PITR covers infrastructure durability; FR-13 export is user-initiated/on-demand only (no scheduled export job in v1); folder-delete, flashcard-delete and class-delete cascades (FR-5) and restore (FR-14) are each wrapped in one Prisma transaction (all-or-nothing).
 - Testing architecture (AD-12): Vitest for `packages/domain` unit tests (no network/DB/browser dependency); Playwright for API/integration (seeded test DB) and E2E suites; GitHub Actions runs all three on every push.
 - Performance budgets (AD-13): sub-100ms grade→next-card transition; 200ms app-open→due-queue-paint; sub-5s paste/CSV import end-to-end.
 - Auth convention: Better Auth session cookie required on every Route Handler except `/api/auth/**`; unauthenticated requests return 401 with the standard error envelope; 30-day sliding session window.
 - Config validation: environment variables (`DATABASE_URL`, `BETTER_AUTH_SECRET`, etc.) validated against a Zod schema at process start; fail fast on missing/malformed vars.
 - Error envelope convention: `{ error: { code, message, fields?, details? } }` — `fields` for single-record field errors (FR-3), `details` for batch/line-numbered errors (FR-6/FR-7, and multi-row saves in Manual mode, FR-3); never both, never a bare string.
-- Observability: every write path that can silently lose data if it fails partway (import commit, grade write, export, restore, folder-delete cascade) logs a structured single-line summary (operation, record counts, outcome).
+- Observability: every write path that can silently lose data if it fails partway (import commit, grade write, export, restore, folder-delete, flashcard-delete and class-delete cascades) logs a structured single-line summary (operation, record counts, outcome).
 - Stack pinning: Next.js 16.x (App Router, Turbopack, Node 20+), TypeScript 5.x, Prisma 7.8.x, Postgres via Neon (free tier), Better Auth + `@better-auth/prisma-adapter`, TanStack Query v5, Zod 3.x/4.x, Tailwind CSS v4 (tokens mapped to DESIGN.md), Vitest, Playwright, Vercel hosting, GitHub Actions CI.
 - Deployment topology: Vercel production + per-branch preview deployments each paired with a Neon branch seeded from minimal fixtures (not a prod copy); CI spins up a disposable Postgres per run; local dev uses `.env.local` + `prisma migrate dev` as the only schema-change path.
 
@@ -95,15 +95,15 @@ UX-DR3: Build the Grade buttons component: Again / Hard / Good / Easy, visible o
 
 UX-DR4: Build the Sidebar nav component: fixed 240px width, four flat icon+label items (Review, Classes, Stats, Settings), active-item styling (`elevated` background + accent text), hidden entirely during review focus mode and on mobile (<640px). There is no Import item — import lives inside a Folder's "Add cards" (UX-DR9).
 
-UX-DR5: Build the List/folder row component: rows grouped under section headers preceded by the small accent-colored square section-bullet marker, hover state (`row-hover`), trailing "..." overflow menu for rename/delete.
+UX-DR5: Build the List/folder/flashcard row component: rows grouped under section headers preceded by the small accent-colored square section-bullet marker, hover state (`row-hover`), trailing "..." overflow menu for rename/delete (Flashcard rows: Rename, Move to…, Delete).
 
 UX-DR6: Build the Progress counter (mono-font "X / Y") and streak indicator (flame icon + day count), both visible outside active review only (per FR-11/FR-12).
 
-UX-DR7: Build the Modal component for: folder-delete confirmation (two explicit buttons — "Move cards to Unsorted" primary / "Delete cards too" secondary-danger, no checkbox); class-delete confirmation ("Move folders to…" with a target-Class picker as primary, "Delete class and everything in it" secondary-danger that only enables after typing the Class name; when no other Class exists only the delete option is shown); and restore-from-backup confirmation (consequence statement + Confirm/Cancel, no type-to-confirm).
+UX-DR7: Build the Modal component for: folder-delete confirmation (two explicit buttons — "Move flashcards to Unsorted" primary / "Delete flashcards too" secondary-danger, no checkbox); flashcard-delete confirmation (names the Flashcard and its Card count); move-flashcard modal (Folder picker across Classes); class-delete confirmation ("Move folders to…" with a target-Class picker as primary, "Delete class and everything in it" secondary-danger that only enables after typing the Class name; when no other Class exists only the delete option is shown); and restore-from-backup confirmation (consequence statement + Confirm/Cancel, no type-to-confirm).
 
-UX-DR8: Build the Empty due-queue state: centered, prominent streak count, calm congratulatory line, primary "+ Add card" button (opens Manual mode in the last-used Folder, with a Folder picker to change it) — never a bare "nothing to do" message.
+UX-DR8: Build the Empty due-queue state: centered, prominent streak count, calm congratulatory line, primary "+ Add card" button (opens Manual mode in the last-used Flashcard, with a Flashcard picker to change it) — never a bare "nothing to do" message.
 
-UX-DR9: Build the "Add cards" panel opened from inside a Folder, with two modes in a pill switcher: **Manual** (Quizlet-style editor — numbered term/definition rows, optional fields expandable per row, "+ Add row", Tab moves to the next field and Enter on the last field adds a row, one Save creates all valid rows) and **Import** (Paste / Upload-file sub-tabs; Paste → delimiter + "Preview", Upload → column mapping). Import always ends in the **import review editor**: the same row editor as Manual, prefilled with the parsed rows, each labelled with its source line number, with inline errors on malformed rows, a "Already in {Folder} — will be skipped" flag on duplicates (cleared when the Term is edited), and a remove (×) button per row; a summary strip above the rows reads "30 rows · 2 need fixing · 1 duplicate". Save commits, then a results view shows exactly 3 groups (Created / Duplicates skipped / Errors, each error with line number + reason). The target Folder is fixed to the Folder the panel was opened from and shown in the panel header. There is no standalone Import page or nav item.
+UX-DR9: Build the "Add cards" panel opened from inside a Flashcard, with two modes in a pill switcher: **Manual** (Quizlet-style editor — numbered term/definition rows, optional fields expandable per row, "+ Add row", Tab moves to the next field and Enter on the last field adds a row, one Save creates all valid rows) and **Import** (Paste / Upload-file sub-tabs; Paste → delimiter + "Preview", Upload → column mapping). Import always ends in the **import review editor**: the same row editor as Manual, prefilled with the parsed rows, each labelled with its source line number, with inline errors on malformed rows, a "Already in {Flashcard} — will be skipped" flag on duplicates (cleared when the Term is edited), and a remove (×) button per row; a summary strip above the rows reads "30 rows · 2 need fixing · 1 duplicate". Save commits, then a results view shows exactly 3 groups (Created / Duplicates skipped / Errors, each error with line number + reason). The target Flashcard is fixed to the Flashcard the panel was opened from and shown in the panel header. There is no standalone Import page or nav item.
 
 UX-DR10: Implement responsive breakpoints (mobile <640px, tablet 640–1024px, desktop >1024px): sidebar hidden and grade-button row wraps below 640px; review session stays single-column/centered (card capped at 640px) at all sizes.
 
@@ -125,8 +125,8 @@ FR-1: Epic 1 - User account creation and login/logout
 FR-2: Epic 1 - Session persistence across browser sessions (30-day sliding window)
 FR-3: Epic 2 - Create and edit a Card (5 fields, Unicode-safe)
 FR-4: Epic 2 - Delete a Card (cascades both Scheduling Records)
-FR-5: Epic 2 - Class & Folder CRUD (Class → Folder → Card, per-Class Unsorted), card moves, folder-delete and class-delete choices
-FR-6: Epic 3 - Paste import (Import mode of a Folder's Add cards) → import review editor → Save, with per-line error/duplicate reporting
+FR-5: Epic 2 - Class, Folder & Flashcard CRUD (Class → Folder → Flashcard → Card, per-Class Unsorted), flashcard moves, folder-delete, flashcard-delete and class-delete choices
+FR-6: Epic 3 - Paste import (Import mode of a Flashcard's Add cards) → import review editor → Save, with per-line error/duplicate reporting
 FR-7: Epic 3 - CSV/Excel import with column mapping → import review editor → Save, with per-row error/duplicate reporting
 FR-8: Epic 4 - Classical SM-2 scheduling engine, per Recall Direction
 FR-9: Epic 4 - Due-queue review session (keyboard-first, ordered, dual-direction entries)
@@ -144,15 +144,15 @@ A user can create an account, log in and out, and reach a live, publicly deploye
 **FRs covered:** FR-1, FR-2
 **Implementation notes:** Monorepo scaffold (`apps/web`, `packages/domain`, `packages/db`, `tests/`) per the Architecture Structural Seed — no starter template exists, this is built from scratch; Better Auth + Prisma + `User.timezone` capture at signup (AD-8 prerequisite); Zod env-var validation at process start; Vitest/Playwright wiring and GitHub Actions CI (AD-12, NFR-4); Vercel production + preview deployments with Neon branching (NFR-6, AD-11 infra durability); dark/light design-token scaffolding (UX-DR1, UX-DR16) and the Sidebar nav shell (UX-DR4, minus review-specific hide logic which lands in Epic 4); standard response envelope and error envelope conventions (AD-10, Consistency Conventions) established here for all later Route Handlers to follow.
 
-### Epic 2: Class, Folder & Card Management
-A user can organize study material as Class → Folder → Card: create, rename, and delete Classes and Folders (each Class with its built-in "Unsorted" Folder), add Cards inside a Folder through the Manual mode of "Add cards", and edit, delete, and move Cards — with safe, explicit choices of what happens to contents when a Folder or Class is deleted.
+### Epic 2: Class, Folder, Flashcard & Card Management
+A user can organize study material as Class → Folder → Flashcard → Card: create, rename, and delete Classes, Folders (each Class with its built-in "Unsorted" Folder) and Flashcards (named sets), add Cards inside a Flashcard through the Manual mode of "Add cards", edit and delete Cards, and move Flashcards between Folders — with safe, explicit choices of what happens to contents when a Folder, Flashcard or Class is deleted.
 **FRs covered:** FR-3, FR-4, FR-5
-**Implementation notes:** Establishes the shared `createCardWithSchedulingRecords` domain function (AD-9) that Epic 3's import also calls; field-level validation via Zod (AD-6) and the `fields` error-envelope shape; folder-delete and class-delete cascades each wrapped in one Prisma transaction (AD-11); Class created together with its Unsorted Folder in one transaction; List/folder row component (UX-DR5), folder-delete and class-delete modals (UX-DR7), and the "Add cards" panel shell with its Manual mode (UX-DR9, Import mode lands in Epic 3); Unicode-safe text fields (NFR-5).
+**Implementation notes:** Establishes the shared `createCardWithSchedulingRecords` domain function (AD-9) that Epic 3's import also calls; field-level validation via Zod (AD-6) and the `fields` error-envelope shape; folder-delete, flashcard-delete and class-delete cascades each wrapped in one Prisma transaction (AD-11); Class created together with its Unsorted Folder in one transaction; Story 2.7 (Flashcard level and schema change) is a prerequisite and Stories 2.3-2.6 are rework of already-built code; List/folder/flashcard row component (UX-DR5), folder-delete, flashcard-delete and class-delete modals (UX-DR7), and the "Add cards" panel shell with its Manual mode (UX-DR9, Import mode lands in Epic 3); Unicode-safe text fields (NFR-5).
 
 ### Epic 3: Bulk Import
 A user can paste line-delimited term/definition pairs or upload a CSV/Excel file, review and fix the parsed rows in the same editor as manual entry, and save them as Cards in one pass, with duplicates and malformed rows clearly flagged and reported without losing the valid rows in the same batch.
 **FRs covered:** FR-6, FR-7
-**Implementation notes:** `parseImportBlock` and `detectDuplicates` as shared pure domain functions used identically by both import paths (AD-5); read-only `POST /api/import/parse` feeding the import review editor, committed through Epic 2's `POST /api/cards/batch` (shared with Manual mode, duplicates re-checked at commit) and `createCardWithSchedulingRecords` (AD-9) rather than constructing Cards independently; column-mapping step for files only; Import mode of the Folder's "Add cards" panel with Paste/Upload sub-tabs, the import review editor and the 3-group results view (UX-DR9), always targeting the Folder it was opened from; `details` (line-numbered) error-envelope shape; sub-5-second import system-time budget (AD-13).
+**Implementation notes:** `parseImportBlock` and `detectDuplicates` as shared pure domain functions used identically by both import paths (AD-5); read-only `POST /api/import/parse` feeding the import review editor, committed through Epic 2's `POST /api/cards/batch` (shared with Manual mode, duplicates re-checked at commit) and `createCardWithSchedulingRecords` (AD-9) rather than constructing Cards independently; column-mapping step for files only; Import mode of the Flashcard's "Add cards" panel with Paste/Upload sub-tabs, the import review editor and the 3-group results view (UX-DR9), always targeting the Flashcard it was opened from; `details` (line-numbered) error-envelope shape; sub-5-second import system-time budget (AD-13).
 
 ### Epic 4: Spaced Repetition Review Engine
 A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with the new-card batch cap and distraction-free focus mode in place.
@@ -233,7 +233,7 @@ So that I control access to my account.
 **Given** a logged-in session
 **When** I log out
 **Then** the session cookie is invalidated and subsequent requests return `401`
-**And** an unauthenticated request to any card/folder/review/stats endpoint is rejected with `401` and the standard error envelope
+**And** an unauthenticated request to any card/flashcard/folder/review/stats endpoint is rejected with `401` and the standard error envelope
 
 ### Story 1.4: Session Persistence
 
@@ -277,9 +277,9 @@ So that the product already feels like itself before individual features exist.
 **Then** they're redirected to login
 **And** on mobile (<640px) the sidebar is hidden per the responsive breakpoint rule
 
-## Epic 2: Class, Folder & Card Management
+## Epic 2: Class, Folder, Flashcard & Card Management
 
-A user can organize study material as Class → Folder → Card: create, rename, and delete Classes and Folders (each Class with its built-in "Unsorted" Folder), add Cards inside a Folder through the Manual mode of "Add cards", and edit, delete, and move Cards — with safe, explicit choices of what happens to contents when a Folder or Class is deleted.
+A user can organize study material as Class → Folder → Flashcard → Card: create, rename, and delete Classes, Folders (each Class with its built-in "Unsorted" Folder) and Flashcards (named sets), add Cards inside a Flashcard through the Manual mode of "Add cards", edit and delete Cards, and move Flashcards between Folders — with safe, explicit choices of what happens to contents when a Folder, Flashcard or Class is deleted.
 
 ### Story 2.1: Class CRUD
 
@@ -304,15 +304,17 @@ So that I can separate my study material by course or goal.
 **Given** a Class that has Folders and another Class exists
 **When** I delete it
 **Then** I'm prompted to choose "Move folders to…" (default, with a target-Class picker) or "Delete class and everything in it"
-**And** on move, its Unsorted Cards merge into the target Class's Unsorted Folder, its other Folders move with their Cards, and a Folder name already used in the target gets a " (2)" suffix
+**And** on move, its Unsorted Flashcards merge into the target Class's Unsorted Folder (a Flashcard name already used there gets a " (2)" suffix), its other Folders move with their Flashcards and Cards, and a Folder name already used in the target gets a " (2)" suffix
 
 **Given** "Delete class and everything in it" is chosen
 **When** I confirm
-**Then** the delete button only enables after I type the Class name, and the Class, its Folders, its Cards and their Scheduling Records are removed
+**Then** the delete button only enables after I type the Class name, and the Class, its Folders, Flashcards, Cards and their Scheduling Records are removed
 **And** both options complete atomically — no partial moves or partial deletes
 **And** when no other Class exists, only the delete option is offered
 
 ### Story 2.2: Folder CRUD inside a Class
+
+> **Rework (Sprint Change 2026-11-10):** this story was already built; its delete cascade and counts change after Story 2.7 (Folders now contain Flashcards, not Cards).
 
 As a user,
 I want to create, rename, and delete Folders inside a Class,
@@ -322,7 +324,7 @@ So that I can organize a Class's cards by topic or source.
 
 **Given** I open a Class
 **When** I look at its Folders
-**Then** I see its "Unsorted" Folder plus any Folders I created, each with its card count
+**Then** I see its "Unsorted" Folder plus any Folders I created, each with its Flashcard count and Card count
 
 **Given** I create a Folder with a name inside a Class
 **When** I save
@@ -336,26 +338,28 @@ So that I can organize a Class's cards by topic or source.
 **When** I open its "..." menu
 **Then** rename and delete are not available
 
-**Given** a custom Folder containing Cards
+**Given** a custom Folder containing Flashcards
 **When** I delete it
-**Then** I'm prompted to choose "Move cards to Unsorted" (default, the same Class's Unsorted) or "Delete cards too," and the chosen action completes atomically with no orphaned or silently-deleted Cards
+**Then** I'm prompted to choose "Move flashcards to Unsorted" (default, the same Class's Unsorted) or "Delete flashcards too" (which also deletes their Cards), and the chosen action completes atomically with no orphaned or silently-deleted Flashcards or Cards
 **And** Folders cannot be created inside other Folders
 
 ### Story 2.3: Add Cards — Manual Mode
 
+> **Rework (Sprint Change 2026-11-10):** already built against Folders; re-pointed to Flashcards after Story 2.7. `POST /api/cards/batch` takes `flashcardId`.
+
 As a user,
-I want to add cards inside a Folder by typing them Quizlet-style,
-So that I can capture new words quickly without leaving the Folder I'm working in.
+I want to add cards inside a Flashcard by typing them Quizlet-style,
+So that I can capture new words quickly without leaving the Flashcard I'm working in.
 
 **Acceptance Criteria:**
 
-**Given** I'm inside a Folder
+**Given** I'm inside a Flashcard
 **When** I choose "Add cards"
-**Then** a panel opens in Manual mode with the target Folder shown in its header, and a mode switcher offering Manual and Import
+**Then** a panel opens in Manual mode with the target Flashcard shown in its header, and a mode switcher offering Manual and Import
 
 **Given** the Manual editor
 **When** I fill Term + Definition in one or more numbered rows and press Save
-**Then** one Card is created per filled row in that Folder, each with two Scheduling Records at SM-2 defaults (`ease_factor=2.5`, `repetitions=0`, `next_review_date`=start of today), via `createCardWithSchedulingRecords` (AD-9)
+**Then** one Card is created per filled row in that Flashcard, each with two Scheduling Records at SM-2 defaults (`ease_factor=2.5`, `repetitions=0`, `next_review_date`=start of today), via `createCardWithSchedulingRecords` (AD-9)
 
 **Given** a row with Term or Definition empty
 **When** I save
@@ -372,9 +376,11 @@ So that I can capture new words quickly without leaving the Folder I'm working i
 
 **Given** the Empty due-queue state's "+ Add card"
 **When** I use it
-**Then** Manual mode opens for the last-used Folder, with a Folder picker to change the target
+**Then** Manual mode opens for the last-used Flashcard, with a Flashcard picker to change the target
 
 ### Story 2.4: Edit a Card
+
+> **Rework (Sprint Change 2026-11-10):** already built on the Folder page; moves to the Flashcard page (Edit action on a Card row inside a Flashcard).
 
 As a user,
 I want to edit an existing Card's fields,
@@ -393,6 +399,8 @@ So that I can fix or refine an entry without recreating it.
 
 ### Story 2.5: Delete a Card
 
+> **Rework (Sprint Change 2026-11-10):** already built on the Folder page; moves to the Flashcard page (Delete action on a Card row inside a Flashcard).
+
 As a user,
 I want to delete a Card,
 So that stale or duplicate entries don't clutter my study set.
@@ -403,26 +411,70 @@ So that stale or duplicate entries don't clutter my study set.
 **When** I delete it
 **Then** both its Scheduling Records are removed and it disappears from any due queue immediately
 
-### Story 2.6: Move & Browse Cards
+### Story 2.6: Move & Browse Flashcards
+
+> **Rework (Sprint Change 2026-11-10):** the committed "Move Card between Folders" code is replaced by Move Flashcard; the Card row has Edit and Delete only (no Move).
 
 As a user,
-I want to browse Classes and Folders and move Cards between Folders,
+I want to browse Classes, Folders and Flashcards and move Flashcards between Folders,
 So that I can find and reorganize related vocabulary.
 
 **Acceptance Criteria:**
 
-**Given** an existing Card
-**When** I move it to another Folder (in the same or another Class)
-**Then** it leaves the old Folder's list and appears in the new one (always exactly one Folder)
+**Given** an existing Flashcard
+**When** I choose "Move to…" and pick another Folder (in the same or another Class)
+**Then** it leaves the old Folder's list and appears in the new one with all its Cards (always exactly one Folder); a name clash in the target Folder gets a number added (" (2)", " (3)"), as in the delete cascades
 
 **Given** a Folder
 **When** I open it
-**Then** I see its Cards as rows, with a breadcrumb "Classes / {Class} / {Folder}"
+**Then** I see its Flashcards as rows, with a breadcrumb "Classes / {Class} / {Folder}"
+
+**Given** a Flashcard
+**When** I open it
+**Then** I see its Cards as rows, with a breadcrumb "Classes / {Class} / {Folder} / {Flashcard}"
 
 **Given** the Classes view
 **When** I look
-**Then** I see every Class with its Folder count and Card count
-**And** the hierarchy stays fixed at Class → Folder → Card — there is no way to nest a Folder in a Folder or a Class in a Class
+**Then** I see every Class with its Folder, Flashcard and Card counts
+**And** the hierarchy stays fixed at Class → Folder → Flashcard → Card — there is no way to nest a Folder in a Folder or a Class in a Class
+
+### Story 2.7: Flashcard CRUD inside a Folder
+
+> **Prerequisite for the reworked Stories 2.3-2.6; implement first.** Added by Sprint Change 2026-11-10 (hierarchy becomes Class → Folder → Flashcard → Card). Includes the schema change (new `Flashcard` model, `Card.folderId` → `Card.flashcardId`) and a reset of existing test data (no data migration; the reset against the Neon database needs explicit confirmation before it runs).
+
+As a user,
+I want to create, rename, and delete Flashcards (named sets of Cards) inside a Folder,
+So that I can group related Cards into sets within a topic.
+
+**Acceptance Criteria:**
+
+**Given** the data model
+**When** this story is complete
+**Then** a `Flashcard` level exists between Folder and Card: every Card is in exactly one Flashcard, every Flashcard in exactly one Folder, and a Flashcard has only a name
+
+**Given** I open a Folder
+**When** I look at it
+**Then** I see its Flashcards as rows, each with its Card count, under a breadcrumb "Classes / {Class} / {Folder}"
+
+**Given** I create a Flashcard with a name inside a Folder
+**When** I save
+**Then** it appears in that Folder's list immediately
+
+**Given** a Flashcard name already used in that Folder (compared case-insensitively)
+**When** I create or rename a Flashcard to it
+**Then** I get a field-level error and nothing changes
+
+**Given** an existing Flashcard
+**When** I rename it
+**Then** the new name is reflected everywhere it's referenced
+
+**Given** an existing Flashcard
+**When** I delete it
+**Then** a confirmation names the Flashcard and its Card count, and on confirm the Flashcard, its Cards and their Scheduling Records are removed atomically
+
+**Given** the Classes view and a Class's Folder list
+**When** I look at the rows
+**Then** Class and Folder rows show their Flashcard counts (and Card counts)
 
 ## Epic 3: Bulk Import
 
@@ -436,9 +488,9 @@ So that bulk capture is fast but I still control exactly what becomes a Card.
 
 **Acceptance Criteria:**
 
-**Given** I'm inside a Folder and open "Add cards", switch to Import and choose Paste
+**Given** I'm inside a Flashcard and open "Add cards", switch to Import and choose Paste
 **When** I look at the panel
-**Then** the target Folder is fixed to that Folder and shown in the header — there is no separate Import page
+**Then** the target Flashcard is fixed to that Flashcard and shown in the header — there is no separate Import page
 
 **Given** a pasted block and my chosen delimiter
 **When** I press Preview
@@ -448,13 +500,13 @@ So that bulk capture is fast but I still control exactly what becomes a Card.
 **When** the editor opens
 **Then** that row shows the reason inline and I can fix it in place
 
-**Given** a line whose Term exactly matches (case-insensitive, trimmed) an existing Card's Term in the target Folder
+**Given** a line whose Term exactly matches (case-insensitive, trimmed) an existing Card's Term in the target Flashcard
 **When** the editor opens
-**Then** the row is flagged "Already in {Folder} — will be skipped", and editing its Term clears the flag
+**Then** the row is flagged "Already in {Flashcard} — will be skipped", and editing its Term clears the flag
 
 **Given** the editor with N valid rows and no edits
 **When** I press Save
-**Then** N Cards are created in that Folder (each with two fresh Scheduling Records) and visible in the Folder, with Preview + Save taking under 5 seconds of system time
+**Then** N Cards are created in that Flashcard (each with two fresh Scheduling Records) and visible in the Flashcard, with Preview + Save taking under 5 seconds of system time
 
 **Given** rows that are still invalid or still duplicate at Save, or rows I removed with ×
 **When** I save
@@ -469,7 +521,7 @@ So that a week's worth of notes-app vocabulary becomes cards in one pass without
 
 **Acceptance Criteria:**
 
-**Given** I'm inside a Folder, open "Add cards" → Import → Upload file, and upload a CSV/Excel file
+**Given** I'm inside a Flashcard, open "Add cards" → Import → Upload file, and upload a CSV/Excel file
 **When** the column-mapping step appears
 **Then** I can map file columns to the five Card fields regardless of their order, before anything is saved
 
@@ -481,7 +533,7 @@ So that a week's worth of notes-app vocabulary becomes cards in one pass without
 **When** I save
 **Then** those rows are reported with row number + reason while valid rows still save
 
-**Given** a row's Term exactly matches (case-insensitive, trimmed) an existing Card's Term in the target Folder at Save
+**Given** a row's Term exactly matches (case-insensitive, trimmed) an existing Card's Term in the target Flashcard at Save
 **When** I save
 **Then** it is skipped and reported as a duplicate — the same rule and underlying logic as paste import
 **And** if every row is malformed and I save without fixing any, Created shows (0), every row appears under Errors with line+reason, and nothing crashes
@@ -548,8 +600,8 @@ So that daily study stays fast and frictionless.
 **When** I open Review
 **Then** due entries from all Classes are presented one at a time, prompt side first, ordered oldest-due-first
 
-**Given** I'm viewing a Class or a Folder
-**When** I choose "Review this class" or "Review this folder"
+**Given** I'm viewing a Class, a Folder or a Flashcard
+**When** I choose "Review this class", "Review this folder" or "Review this flashcard"
 **Then** the session contains only that scope's due entries and otherwise behaves exactly like the default session, and its grades count toward the same streak
 
 **Given** a Card due in both directions
@@ -638,7 +690,7 @@ So that I never lose months of study data.
 
 **Given** I trigger export from Settings
 **When** it completes
-**Then** I receive a JSON file containing every Card, both Scheduling Records per Card, and streak history — sufficient to reconstruct state
+**Then** I receive a JSON file containing every Class, Folder, Flashcard and Card (with its Flashcard), both Scheduling Records per Card, and streak history — sufficient to reconstruct state
 **And** export is strictly user-initiated/on-demand, no scheduled export job
 **And** the payload conforms to the single shared `backupExportSchema` also used by restore
 
@@ -652,7 +704,7 @@ So that I can recover my data if something goes wrong.
 
 **Given** a valid export file
 **When** I restore it
-**Then** every Card is recreated with both Scheduling Records in exactly their exported state and streak history is restored
+**Then** the Class → Folder → Flashcard structure is recreated and every Card is recreated in its original Flashcard with both Scheduling Records in exactly their exported state and streak history is restored
 
 **Given** my account already has data
 **When** I attempt a restore

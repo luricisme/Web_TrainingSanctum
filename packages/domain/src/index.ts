@@ -13,3 +13,4 @@ export * from "./classes";
 export * from "./folders";
 export * from "./time";
 export * from "./cards";
+export * from "./flashcards";

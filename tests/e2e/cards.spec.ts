@@ -14,7 +14,7 @@ async function register(page: Page): Promise<string> {
   return email;
 }
 
-async function seedFolder(email: string, folderName = "Weather idioms") {
+async function seedFlashcard(email: string, flashcardName = "Weather idioms") {
   const user = await prisma.user.findUniqueOrThrow({ where: { email } });
   const cls = await prisma.class.create({
     data: {
@@ -23,49 +23,53 @@ async function seedFolder(email: string, folderName = "Weather idioms") {
       folders: {
         create: [
           { name: "Unsorted", isUnsorted: true, userId: user.id },
-          { name: folderName, userId: user.id },
+          { name: "Speaking", userId: user.id },
         ],
       },
     },
     include: { folders: true },
   });
-  const folder = cls.folders.find((f) => f.name === folderName)!;
-  return { user, cls, folder };
+  const folder = cls.folders.find((f) => f.name === "Speaking")!;
+  const flashcard = await prisma.flashcard.create({
+    data: { name: flashcardName, folderId: folder.id, userId: user.id },
+  });
+  return { user, cls, folder, flashcard };
 }
 
-test("class page links to the folder page and the empty state offers Add cards", async ({
+test("folder page links to the flashcard page; the empty Flashcard offers Add cards", async ({
   page,
 }) => {
   const email = await register(page);
-  const { cls, folder } = await seedFolder(email);
-  await page.goto(`/classes/${cls.id}`);
+  const { cls, folder, flashcard } = await seedFlashcard(email);
+  await page.goto(`/folders/${folder.id}`);
   await page.getByRole("link", { name: /Weather idioms/ }).click();
-  await expect(page).toHaveURL(`/folders/${folder.id}`);
+  await expect(page).toHaveURL(`/flashcards/${flashcard.id}`);
   await expect(page.getByRole("heading", { level: 1, name: "Weather idioms" })).toBeVisible();
   const crumbs = page.getByRole("navigation", { name: "Breadcrumb" });
-  await expect(crumbs).toContainText("Classes / IELTS / Weather idioms");
-  await expect(page.getByText("This folder has no cards yet.")).toBeVisible();
+  await expect(crumbs).toContainText("Classes / IELTS / Speaking / Weather idioms");
+  await expect(page.getByText("Add cards to start studying this flashcard.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Add cards" })).toHaveCount(1);
-  await crumbs.getByRole("link", { name: "IELTS" }).click();
+  await crumbs.getByRole("link", { name: "Speaking" }).click();
+  await expect(page).toHaveURL(`/folders/${folder.id}`);
+  await page
+    .getByRole("navigation", { name: "Breadcrumb" })
+    .getByRole("link", { name: "IELTS" })
+    .click();
   await expect(page).toHaveURL(`/classes/${cls.id}`);
 });
 
-test("Unsorted is reachable and an unknown folder shows not found", async ({ page }) => {
-  const email = await register(page);
-  const { cls } = await seedFolder(email);
-  await page.goto(`/classes/${cls.id}`);
-  await page.getByRole("link", { name: /Unsorted/ }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Unsorted" })).toBeVisible();
-  await page.goto("/folders/does-not-exist");
-  await expect(page.getByText("This folder does not exist.")).toBeVisible();
+test("an unknown flashcard shows a not-found state", async ({ page }) => {
+  await register(page);
+  await page.goto("/flashcards/does-not-exist");
+  await expect(page.getByText("This flashcard does not exist.")).toBeVisible();
 });
 
 test("add rows with the keyboard, save Unicode, mixed rows, discard prompt", async ({
   page,
 }) => {
   const email = await register(page);
-  const { folder } = await seedFolder(email);
-  await page.goto(`/folders/${folder.id}`);
+  const { flashcard } = await seedFlashcard(email);
+  await page.goto(`/flashcards/${flashcard.id}`);
   await page.getByRole("button", { name: "Add cards" }).click();
 
   const dialog = page.getByRole("dialog");
@@ -97,7 +101,7 @@ test("add rows with the keyboard, save Unicode, mixed rows, discard prompt", asy
   await expect(dialog.getByText("Enter a definition.")).toBeVisible();
   await expect(dialog.getByText("2 cards added.")).toBeVisible();
   await expect(dialog.getByLabel(/^Term, row/)).toHaveCount(2);
-  expect(await prisma.card.count({ where: { folderId: folder.id } })).toBe(2);
+  expect(await prisma.card.count({ where: { flashcardId: flashcard.id } })).toBe(2);
 
   // Closing with unsaved text asks first.
   await dialog.getByRole("button", { name: "Cancel" }).click();
@@ -112,7 +116,7 @@ test("add rows with the keyboard, save Unicode, mixed rows, discard prompt", asy
   await expect(page.getByText("/ˈkɒl.ə.keɪt/")).toBeVisible();
   await expect(page.getByText("café 日本語")).toBeVisible();
   const cards = await prisma.card.findMany({
-    where: { folderId: folder.id },
+    where: { flashcardId: flashcard.id },
     include: { schedulingRecords: true },
   });
   expect(cards).toHaveLength(3);
@@ -125,13 +129,13 @@ test("add rows with the keyboard, save Unicode, mixed rows, discard prompt", asy
 
 test("saving nothing shows an inline message; discard closes the panel", async ({ page }) => {
   const email = await register(page);
-  const { folder } = await seedFolder(email);
-  await page.goto(`/folders/${folder.id}`);
+  const { flashcard } = await seedFlashcard(email);
+  await page.goto(`/flashcards/${flashcard.id}`);
   await page.getByRole("button", { name: "Add cards" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog.getByText("Fill in at least one row.")).toBeVisible();
-  expect(await prisma.card.count({ where: { folderId: folder.id } })).toBe(0);
+  expect(await prisma.card.count({ where: { flashcardId: flashcard.id } })).toBe(0);
 
   await dialog.getByRole("button", { name: "More fields, row 1" }).click();
   await dialog.getByLabel("Example sentence, row 1").fill("typed");
@@ -142,24 +146,28 @@ test("saving nothing shows an inline message; discard closes the panel", async (
 
 // spec-2-4: Edit a Card.
 async function seedCard(email: string) {
-  const { user, folder } = await seedFolder(email);
+  const { user, flashcard } = await seedFlashcard(email);
   const card = await prisma.card.create({
     data: {
       term: "under the weather",
       definition: "slightly ill",
-      folderId: folder.id,
+      flashcardId: flashcard.id,
       userId: user.id,
     },
   });
-  return { user, folder, card };
+  return { user, flashcard, card };
 }
 
 test("edit a card with the keyboard, field error keeps old text, discard prompt", async ({
   page,
 }) => {
   const email = await register(page);
-  const { folder, card } = await seedCard(email);
-  await page.goto(`/folders/${folder.id}`);
+  const { flashcard, card } = await seedCard(email);
+  await page.goto(`/flashcards/${flashcard.id}`);
+
+  // Card rows offer Edit and Delete only; Cards move with their Flashcard.
+  await expect(page.getByRole("button", { name: /^Move card/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Delete card 1/ })).toBeVisible();
 
   await page.getByRole("button", { name: /^Edit card 1/ }).click();
   const dialog = page.getByRole("dialog");
@@ -220,8 +228,8 @@ for (const theme of ["dark", "light"] as const) {
     mkdirSync("test-results/screenshots", { recursive: true });
     await page.setViewportSize({ width: 1280, height: 900 });
     const email = await register(page);
-    const { folder } = await seedCard(email);
-    await page.goto(`/folders/${folder.id}`);
+    const { flashcard } = await seedCard(email);
+    await page.goto(`/flashcards/${flashcard.id}`);
     await page.evaluate((t) => {
       if (t === "light") document.documentElement.dataset.theme = "light";
       else delete document.documentElement.dataset.theme;
@@ -248,11 +256,11 @@ for (const theme of ["dark", "light"] as const) {
 
 // Visual check: screenshots land in test-results/screenshots.
 for (const theme of ["dark", "light"] as const) {
-  test(`folder page and panel screenshots (${theme})`, async ({ page }) => {
+  test(`flashcard page and panel screenshots (${theme})`, async ({ page }) => {
     mkdirSync("test-results/screenshots", { recursive: true });
     await page.setViewportSize({ width: 1280, height: 900 });
     const email = await register(page);
-    const { user, folder } = await seedFolder(email);
+    const { user, flashcard } = await seedFlashcard(email);
     const setTheme = () =>
       page.evaluate((t) => {
         if (t === "light") document.documentElement.dataset.theme = "light";
@@ -267,7 +275,7 @@ for (const theme of ["dark", "light"] as const) {
       });
     };
 
-    await page.goto(`/folders/${folder.id}`);
+    await page.goto(`/flashcards/${flashcard.id}`);
     await shot("empty");
 
     for (const [term, definition] of [
@@ -276,7 +284,7 @@ for (const theme of ["dark", "light"] as const) {
       ["a storm in a teacup", "a lot of fuss about something minor"],
     ]) {
       await prisma.card.create({
-        data: { term, definition, folderId: folder.id, userId: user.id },
+        data: { term, definition, flashcardId: flashcard.id, userId: user.id },
       });
     }
     await page.reload();
@@ -300,11 +308,11 @@ test("delete a card: Cancel and Escape keep it, confirm removes it and shows emp
   page,
 }) => {
   const email = await register(page);
-  const { user, folder, card } = await seedCard(email);
+  const { user, flashcard, card } = await seedCard(email);
   await prisma.card.create({
-    data: { term: "second card", definition: "other", folderId: folder.id, userId: user.id },
+    data: { term: "second card", definition: "other", flashcardId: flashcard.id, userId: user.id },
   });
-  await page.goto(`/folders/${folder.id}`);
+  await page.goto(`/flashcards/${flashcard.id}`);
   await expect(page.getByText("2 cards")).toBeVisible();
 
   const dialog = page.getByRole("dialog");
@@ -322,7 +330,7 @@ test("delete a card: Cancel and Escape keep it, confirm removes it and shows emp
   await del.click();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
-  expect(await prisma.card.count({ where: { folderId: folder.id } })).toBe(2);
+  expect(await prisma.card.count({ where: { flashcardId: flashcard.id } })).toBe(2);
 
   // Confirm: row and count go, focus moves to the next row's Delete.
   await del.click();
@@ -336,7 +344,7 @@ test("delete a card: Cancel and Escape keep it, confirm removes it and shows emp
   // Last card: empty state with Add cards, focus on it.
   await page.getByRole("button", { name: /^Delete card 1/ }).click();
   await dialog.getByRole("button", { name: "Delete card" }).click();
-  await expect(page.getByText("This folder has no cards yet.")).toBeVisible();
+  await expect(page.getByText("Add cards to start studying this flashcard.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Add cards" })).toBeFocused();
 });
 
@@ -344,8 +352,8 @@ test("delete: a server failure keeps the card and modal; a 404 counts as already
   page,
 }) => {
   const email = await register(page);
-  const { folder } = await seedCard(email);
-  await page.goto(`/folders/${folder.id}`);
+  const { flashcard } = await seedCard(email);
+  await page.goto(`/flashcards/${flashcard.id}`);
   const dialog = page.getByRole("dialog");
   const open = page.getByRole("button", { name: /^Delete card 1: under the weather/ });
 
@@ -364,7 +372,7 @@ test("delete: a server failure keeps the card and modal; a 404 counts as already
   await expect(dialog.getByRole("alert")).toContainText("Could not delete the card.");
   await expect(dialog.getByRole("button", { name: "Delete card" })).toBeEnabled();
   await expect(page.getByText("under the weather").first()).toBeVisible();
-  expect(await prisma.card.count({ where: { folderId: folder.id } })).toBe(1);
+  expect(await prisma.card.count({ where: { flashcardId: flashcard.id } })).toBe(1);
   await dialog.getByRole("button", { name: "Cancel" }).click();
   await page.unroute("**/api/cards/*");
 
@@ -380,10 +388,10 @@ test("delete: a server failure keeps the card and modal; a 404 counts as already
   );
   await open.click();
   // Another tab deletes the card while the modal is open.
-  await prisma.card.deleteMany({ where: { folderId: folder.id } });
+  await prisma.card.deleteMany({ where: { flashcardId: flashcard.id } });
   await dialog.getByRole("button", { name: "Delete card" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText("This folder has no cards yet.")).toBeVisible();
+  await expect(page.getByText("Add cards to start studying this flashcard.")).toBeVisible();
 });
 
 for (const theme of ["dark", "light"] as const) {
@@ -391,8 +399,8 @@ for (const theme of ["dark", "light"] as const) {
     mkdirSync("test-results/screenshots", { recursive: true });
     await page.setViewportSize({ width: 1280, height: 900 });
     const email = await register(page);
-    const { folder } = await seedCard(email);
-    await page.goto(`/folders/${folder.id}`);
+    const { flashcard } = await seedCard(email);
+    await page.goto(`/flashcards/${flashcard.id}`);
     await page.evaluate((t) => {
       if (t === "light") document.documentElement.dataset.theme = "light";
       else delete document.documentElement.dataset.theme;

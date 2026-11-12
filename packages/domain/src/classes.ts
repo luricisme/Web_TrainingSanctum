@@ -58,5 +58,6 @@ export interface ClassSummary {
   id: string;
   name: string;
   folderCount: number;
+  flashcardCount: number;
   cardCount: number;
 }

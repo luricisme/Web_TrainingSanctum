@@ -47,7 +47,9 @@ export type CardInput = z.infer<typeof cardInputSchema>;
  * handler can report every bad row by line (`validateCardRows`).
  */
 export const createCardsBatchSchema = z.object({
-  folderId: z.string({ error: "Choose a folder." }).min(1, "Choose a folder."),
+  flashcardId: z
+    .string({ error: "Choose a flashcard." })
+    .min(1, "Choose a flashcard."),
   cards: z
     .array(z.unknown(), { error: "Send the cards as a list." })
     .min(1, "Add at least one card.")
@@ -128,7 +130,7 @@ export function createCardWithSchedulingRecords(
   };
 }
 
-/** One Card as listed on the Folder page. */
+/** One Card as listed on the Flashcard page. */
 export interface CardSummary {
   id: string;
   term: string;
@@ -136,13 +138,6 @@ export interface CardSummary {
   example: string | null;
   context: string | null;
   partOfSpeech: string | null;
-}
-
-/** Shape returned by `GET /api/folders/:id`. */
-export interface FolderCardsResponse {
-  folder: { id: string; name: string; isUnsorted: boolean };
-  class: { id: string; name: string };
-  cards: CardSummary[];
 }
 
 /** Shape returned by `POST /api/cards/batch`. */

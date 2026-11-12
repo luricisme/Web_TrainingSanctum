@@ -40,15 +40,20 @@ async function createFolder(s: Session, base: string, classId: string, name: str
     id: string;
     name: string;
     isUnsorted: boolean;
+    flashcardCount: number;
     cardCount: number;
   };
 }
 
-async function seedCards(s: Session, folderId: string, count: number) {
+/** One Flashcard named `name` holding `count` Cards, each with two Scheduling Records. */
+async function seedFlashcard(s: Session, folderId: string, name: string, count: number) {
+  const flashcard = await prisma.flashcard.create({
+    data: { name, folderId, userId: s.userId },
+  });
   const cardIds: string[] = [];
   for (let i = 0; i < count; i += 1) {
     const card = await prisma.card.create({
-      data: { term: `t${i}`, definition: `d${i}`, folderId, userId: s.userId },
+      data: { term: `t${i}`, definition: `d${i}`, flashcardId: flashcard.id, userId: s.userId },
     });
     cardIds.push(card.id);
     await prisma.schedulingRecord.createMany({
@@ -59,7 +64,12 @@ async function seedCards(s: Session, folderId: string, count: number) {
       })),
     });
   }
-  return cardIds;
+  return { flashcard, cardIds };
+}
+
+/** A uniquely named Flashcard in the Folder holding `count` Cards. */
+async function seedCards(s: Session, folderId: string, count: number) {
+  return (await seedFlashcard(s, folderId, `seed-${randomUUID()}`, count)).cardIds;
 }
 
 async function unsortedOf(classId: string) {
@@ -82,7 +92,7 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
     }
   });
 
-  test("list returns the class, Unsorted first then by name, with card counts", async ({
+  test("list returns the class, Unsorted first then by name, with flashcard and card counts", async ({
     playwright,
     baseURL,
   }) => {
@@ -104,10 +114,13 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
       "Zeta",
     ]);
     expect(data.folders.map((f: { cardCount: number }) => f.cardCount)).toEqual([1, 0, 2]);
+    expect(data.folders.map((f: { flashcardCount: number }) => f.flashcardCount)).toEqual([
+      1, 0, 1,
+    ]);
     expect(data.folders[0].isUnsorted).toBe(true);
   });
 
-  test("create returns 201 with cardCount 0 and trims the name", async ({
+  test("create returns 201 with zero counts and trims the name", async ({
     playwright,
     baseURL,
   }) => {
@@ -115,7 +128,12 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
     const s = await newUser(playwright, base);
     const cls = await createClass(s, base, "C");
     const folder = await createFolder(s, base, cls.id, "  Weather  ");
-    expect(folder).toMatchObject({ name: "Weather", isUnsorted: false, cardCount: 0 });
+    expect(folder).toMatchObject({
+      name: "Weather",
+      isUnsorted: false,
+      flashcardCount: 0,
+      cardCount: 0,
+    });
     const row = await prisma.folder.findUniqueOrThrow({ where: { id: folder.id } });
     expect(row).toMatchObject({ classId: cls.id, userId: s.userId, isUnsorted: false });
   });
@@ -165,7 +183,7 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
       expect((await res.json()).error.code).toBe("NOT_FOUND");
     }
     expect(await prisma.folder.count({ where: { id: folder.id } })).toBe(1);
-    expect(await prisma.card.count({ where: { folderId: folder.id } })).toBe(1);
+    expect(await prisma.card.count({ where: { flashcard: { folderId: folder.id } } })).toBe(1);
   });
 
   test("rename changes a custom folder; clashes and Unsorted are 400", async ({
@@ -183,7 +201,12 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
       data: { name: " Gamma " },
     });
     expect(ok.status()).toBe(200);
-    expect((await ok.json()).data).toMatchObject({ id: a.id, name: "Gamma", cardCount: 2 });
+    expect((await ok.json()).data).toMatchObject({
+      id: a.id,
+      name: "Gamma",
+      flashcardCount: 1,
+      cardCount: 2,
+    });
 
     // Case-only change of its own name is allowed.
     const same = await s.request.patch(`${base}/api/folders/${a.id}`, {
@@ -207,7 +230,7 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
     );
   });
 
-  test("delete with move puts the cards in the class's Unsorted", async ({
+  test("delete with move puts the flashcards in the class's Unsorted", async ({
     playwright,
     baseURL,
   }) => {
@@ -227,15 +250,18 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
 
     const unsorted = await unsortedOf(cls.id);
     expect(await prisma.folder.count({ where: { id: folder.id } })).toBe(0);
-    const cards = await prisma.card.findMany({ where: { id: { in: cardIds } } });
+    const cards = await prisma.card.findMany({
+      where: { id: { in: cardIds } },
+      include: { flashcard: true },
+    });
     expect(cards).toHaveLength(3);
-    expect(cards.every((c) => c.folderId === unsorted.id)).toBe(true);
+    expect(cards.every((c) => c.flashcard.folderId === unsorted.id)).toBe(true);
     expect(await prisma.schedulingRecord.count({ where: { cardId: { in: cardIds } } })).toBe(6);
     // The other class is untouched.
-    expect(await prisma.card.count({ where: { folderId: otherFolder.id } })).toBe(1);
+    expect(await prisma.card.count({ where: { flashcard: { folderId: otherFolder.id } } })).toBe(1);
   });
 
-  test("delete with cards removes the folder, cards and scheduling records", async ({
+  test("delete with flashcards removes the folder, flashcards, cards and scheduling records", async ({
     playwright,
     baseURL,
   }) => {
@@ -256,7 +282,8 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
     expect(await prisma.schedulingRecord.count({ where: { cardId: { in: doomed } } })).toBe(0);
     expect(await prisma.card.count({ where: { id: { in: kept } } })).toBe(1);
     expect(await prisma.schedulingRecord.count({ where: { cardId: { in: kept } } })).toBe(2);
-    expect(await prisma.card.count({ where: { folderId: (await unsortedOf(cls.id)).id } })).toBe(0);
+    expect(await prisma.flashcard.count({ where: { folderId: folder.id } })).toBe(0);
+    expect(await prisma.flashcard.count({ where: { folderId: (await unsortedOf(cls.id)).id } })).toBe(0);
   });
 
   test("a failure mid-delete rolls everything back", async ({ playwright, baseURL }) => {
@@ -274,7 +301,9 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
     expect(res.status()).toBe(500);
     expect((await res.json()).error.code).toBe("INTERNAL_ERROR");
     expect(await prisma.folder.count({ where: { id: folder.id } })).toBe(1);
-    expect(await prisma.card.count({ where: { id: { in: cards }, folderId: folder.id } })).toBe(2);
+    expect(
+      await prisma.card.count({ where: { id: { in: cards }, flashcard: { folderId: folder.id } } })
+    ).toBe(2);
     expect(await prisma.schedulingRecord.count({ where: { cardId: { in: cards } } })).toBe(4);
   });
 
@@ -296,7 +325,7 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
       expect(res.status()).toBe(400);
     }
     expect(await prisma.folder.count({ where: { id: unsorted.id } })).toBe(1);
-    expect(await prisma.card.count({ where: { folderId: unsorted.id } })).toBe(2);
+    expect(await prisma.card.count({ where: { flashcard: { folderId: unsorted.id } } })).toBe(2);
 
     const bad = await s.request.delete(`${base}/api/folders/${folder.id}`, {
       data: { mode: "nope" },
@@ -305,7 +334,7 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
     expect(await prisma.folder.count({ where: { id: folder.id } })).toBe(1);
   });
 
-  test("class counts follow folder create, move-delete and card-delete", async ({
+  test("class counts follow folder create, move-delete and delete-all", async ({
     playwright,
     baseURL,
   }) => {
@@ -316,20 +345,82 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
       ((await (await s.request.get(`${base}/api/classes`)).json()).data as {
         id: string;
         folderCount: number;
+        flashcardCount: number;
         cardCount: number;
       }[]).find((c) => c.id === cls.id);
 
-    expect(await classRow()).toMatchObject({ folderCount: 1, cardCount: 0 });
+    expect(await classRow()).toMatchObject({ folderCount: 1, flashcardCount: 0, cardCount: 0 });
     const a = await createFolder(s, base, cls.id, "A");
     const b = await createFolder(s, base, cls.id, "B");
     await seedCards(s, a.id, 2);
     await seedCards(s, b.id, 3);
-    expect(await classRow()).toMatchObject({ folderCount: 3, cardCount: 5 });
+    expect(await classRow()).toMatchObject({ folderCount: 3, flashcardCount: 2, cardCount: 5 });
 
     await s.request.delete(`${base}/api/folders/${a.id}`, { data: { mode: "move" } });
-    expect(await classRow()).toMatchObject({ folderCount: 2, cardCount: 5 });
+    expect(await classRow()).toMatchObject({ folderCount: 2, flashcardCount: 2, cardCount: 5 });
 
     await s.request.delete(`${base}/api/folders/${b.id}`, { data: { mode: "delete" } });
-    expect(await classRow()).toMatchObject({ folderCount: 1, cardCount: 2 });
+    expect(await classRow()).toMatchObject({ folderCount: 1, flashcardCount: 1, cardCount: 2 });
+  });
+
+  test("delete with move renames a clashing flashcard name (2), (3)", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const cls = await createClass(s, base, "C");
+    const unsorted = await unsortedOf(cls.id);
+    await seedFlashcard(s, unsorted.id, "Idioms", 1);
+    await seedFlashcard(s, unsorted.id, "Idioms (2)", 0);
+    const folder = await createFolder(s, base, cls.id, "Doomed");
+    const clashing = await seedFlashcard(s, folder.id, "idioms", 2);
+    const free = await seedFlashcard(s, folder.id, "Unique", 1);
+
+    const res = await s.request.delete(`${base}/api/folders/${folder.id}`, {
+      data: { mode: "move" },
+    });
+    expect(res.status()).toBe(200);
+    expect((await res.json()).data).toMatchObject({ flashcards: 2, cards: 3 });
+
+    const names = (
+      await prisma.flashcard.findMany({ where: { folderId: unsorted.id } })
+    ).map((f) => f.name);
+    expect(names.sort()).toEqual(["Idioms", "Idioms (2)", "Unique", "idioms (3)"].sort());
+    expect(
+      (await prisma.flashcard.findUniqueOrThrow({ where: { id: clashing.flashcard.id } })).name
+    ).toBe("idioms (3)");
+    expect(
+      (await prisma.flashcard.findUniqueOrThrow({ where: { id: free.flashcard.id } })).folderId
+    ).toBe(unsorted.id);
+  });
+
+  test("GET /api/folders/:id lists Flashcards with Card counts; 404 for foreign", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const other = await newUser(playwright, base);
+    const cls = await createClass(s, base, "IELTS");
+    const folder = await createFolder(s, base, cls.id, "Speaking");
+    await seedFlashcard(s, folder.id, "Zebra", 2);
+    await seedFlashcard(s, folder.id, "Apple", 0);
+
+    const res = await s.request.get(`${base}/api/folders/${folder.id}`);
+    expect(res.status()).toBe(200);
+    const data = (await res.json()).data;
+    expect(data.folder).toEqual({ id: folder.id, name: "Speaking", isUnsorted: false });
+    expect(data.class).toEqual({ id: cls.id, name: "IELTS" });
+    expect(
+      data.flashcards.map((f: { name: string; cardCount: number }) => [f.name, f.cardCount])
+    ).toEqual([
+      ["Apple", 0],
+      ["Zebra", 2],
+    ]);
+    expect(data.cards).toBeUndefined();
+
+    expect((await other.request.get(`${base}/api/folders/${folder.id}`)).status()).toBe(404);
+    expect((await s.request.get(`${base}/api/folders/nope`)).status()).toBe(404);
   });
 });

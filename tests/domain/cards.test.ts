@@ -87,12 +87,12 @@ describe("cardInputSchema", () => {
 
 describe("createCardsBatchSchema and validateCardRows", () => {
   it("bounds the row count to 1..200", () => {
-    expect(createCardsBatchSchema.safeParse({ folderId: "f", cards: [] }).success).toBe(false);
+    expect(createCardsBatchSchema.safeParse({ flashcardId: "f", cards: [] }).success).toBe(false);
     expect(
-      createCardsBatchSchema.safeParse({ folderId: "f", cards: Array(201).fill({}) }).success
+      createCardsBatchSchema.safeParse({ flashcardId: "f", cards: Array(201).fill({}) }).success
     ).toBe(false);
     expect(
-      createCardsBatchSchema.safeParse({ folderId: "f", cards: Array(200).fill({}) }).success
+      createCardsBatchSchema.safeParse({ flashcardId: "f", cards: Array(200).fill({}) }).success
     ).toBe(true);
   });
 

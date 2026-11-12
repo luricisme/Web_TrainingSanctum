@@ -34,6 +34,9 @@ export function ClassesView() {
   const subtitle =
     classes.length > 0
       ? `${classes.length === 1 ? "1 class" : `${classes.length} classes`} · ${pluralize(
+          classes.reduce((sum, c) => sum + c.flashcardCount, 0),
+          "flashcard"
+        )} · ${pluralize(
           classes.reduce((sum, c) => sum + c.cardCount, 0),
           "card"
         )}`

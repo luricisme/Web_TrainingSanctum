@@ -59,3 +59,15 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-5-delete-a-card.md`
   summary: Add an e2e check that Class and Folder card counts drop after a client-side navigation following a Card delete.
   evidence: The delete modal invalidates `["classes"]` and `["class-folders"]`, but the e2e test only asserts the Folder page count.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-7-flashcard-crud-inside-a-folder.md`
+  summary: Add a forced-failure rollback test for `DELETE /api/flashcards/[id]` (trigger-based, like the Folder delete rollback test).
+  evidence: The delete runs in one transaction with a 500 "Nothing was changed" path, but only success and 404 cases are tested.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-add-cards-manual-mode.md`
+  summary: Build the Class -> Folder -> Flashcard picker for the Empty due-queue "+ Add card" entry (Story 2.3 last AC, UX-DR8), in Epic 4 with the empty state itself.
+  evidence: Story 2.7 removed the old Folder picker and last-used storage from the Add cards panel because no screen opens the panel without a target Flashcard until the Epic 4 empty state exists.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-6-move-flashcards.md`
+  summary: Add an in-app navigation e2e step after a Flashcard move that checks the destination Folder page and Classes counts without a reload.
+  evidence: The move e2e checks the source list through the cache update and the destination only after `page.goto`, which hides missing `["folder", toFolderId]` or `["classes"]` invalidations.

@@ -68,7 +68,7 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
 
 - **Binds:** FR-6, FR-7
 - **Prevents:** paste-import and CSV-import Route Handlers independently reimplementing (and silently diverging on) parsing or duplicate-detection rules.
-- **Rule:** `parseImportBlock` and `detectDuplicates` are pure functions in `packages/domain`, called identically by the paste and CSV/Excel import Route Handlers. Import is two steps: `POST /api/import/parse` (paste text + delimiter, or file + column mapping, + `folderId`) returns parsed rows with source line numbers, per-row errors and duplicate flags and **writes nothing**; the user edits them in the import review editor; `POST /api/cards/batch` (the same endpoint Manual mode uses, with `source: "import"`) commits them, re-running row validation and `detectDuplicates` against the Folder's current Cards inside the commit transaction, and returns the Created / Duplicates skipped / Errors groups. A Route Handler may adapt input shape (e.g. `xlsx` sheet → row array) but may not re-implement parsing or duplicate rules itself.
+- **Rule:** `parseImportBlock` and `detectDuplicates` are pure functions in `packages/domain`, called identically by the paste and CSV/Excel import Route Handlers. Import is two steps: `POST /api/import/parse` (paste text + delimiter, or file + column mapping, + `flashcardId`) returns parsed rows with source line numbers, per-row errors and duplicate flags and **writes nothing**; the user edits them in the import review editor; `POST /api/cards/batch` (the same endpoint Manual mode uses, with `source: "import"`) commits them, re-running row validation and `detectDuplicates` against the target Flashcard's current Cards inside the commit transaction, and returns the Created / Duplicates skipped / Errors groups. A Route Handler may adapt input shape (e.g. `xlsx` sheet → row array) but may not re-implement parsing or duplicate rules itself.
 
 ### AD-6 — Request validation boundary
 
@@ -102,9 +102,9 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
 
 ### AD-11 — Backup cadence, on-demand export, and destructive-operation atomicity (resolves PRD §10 Q1)
 
-- **Binds:** §6 Data durability NFR, FR-5 (folder-delete and class-delete cascades), FR-13, FR-14
-- **Prevents:** a folder-delete, class-delete (move-folders or delete-all) or a restore left half-applied by a mid-operation failure (e.g. some Cards moved to Unsorted/some not; some Scheduling Records restored/some not), which would itself be a silent-data-loss event.
-- **Rule:** Two distinct, non-conflicting durability mechanisms: (1) Neon's built-in point-in-time-recovery / backup retention (its platform default for the plan tier in use) covers infrastructure-level durability, requiring no application code; (2) FR-13's export is strictly user-initiated and on-demand — v1 does not add a scheduled/automatic export job (additive later, not a replacement for this AD). Separately: folder-delete, class-delete (both of its options, including the Unsorted merge and name-clash renames) (FR-5) and restore (FR-14) are each wrapped in one Prisma `$transaction` — every row changes or none do; a mid-operation failure leaves prior state fully intact, never partially applied.
+- **Binds:** §6 Data durability NFR, FR-5 (folder-delete, flashcard-delete and class-delete cascades), FR-13, FR-14
+- **Prevents:** a folder-delete, flashcard-delete, class-delete (move-folders or delete-all) or a restore left half-applied by a mid-operation failure (e.g. some Flashcards moved to Unsorted/some not; some Scheduling Records restored/some not), which would itself be a silent-data-loss event.
+- **Rule:** Two distinct, non-conflicting durability mechanisms: (1) Neon's built-in point-in-time-recovery / backup retention (its platform default for the plan tier in use) covers infrastructure-level durability, requiring no application code; (2) FR-13's export is strictly user-initiated and on-demand — v1 does not add a scheduled/automatic export job (additive later, not a replacement for this AD). Separately: folder-delete (both options), flashcard-delete, class-delete (both of its options, including the Unsorted merge and name-clash renames for Folders and Flashcards) (FR-5) and restore (FR-14) are each wrapped in one Prisma `$transaction` — every row changes or none do; a mid-operation failure leaves prior state fully intact, never partially applied.
 
 ### AD-12 — Testing architecture
 
@@ -122,12 +122,12 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
 
 | Concern | Convention |
 | --- | --- |
-| Naming (entities, files) | Domain vocabulary is binding: `Class`, `Folder`, `Card`, `SchedulingRecord`, `User` — Prisma model names match these exactly, no translation layer between schema and PRD glossary. Only exception: if Prisma rejects `Class` as a reserved model name, use `StudyClass` with `@@map("class")` and keep "Class" everywhere in UI and API paths. |
+| Naming (entities, files) | Domain vocabulary is binding: `Class`, `Folder`, `Flashcard`, `Card`, `SchedulingRecord`, `User` — Prisma model names match these exactly, no translation layer between schema and PRD glossary. Only exception: if Prisma rejects `Class` as a reserved model name, use `StudyClass` with `@@map("class")` and keep "Class" everywhere in UI and API paths. |
 | IDs | All primary keys are Prisma-generated `cuid()` strings. |
 | Dates & timezone | All timestamps stored in UTC. Local-day computations go through `User.timezone` per AD-8 — never a raw client `Date` or server-local timezone. |
 | Error envelope | Every Route Handler error response is `{ error: { code: string, message: string, fields?: Record<string, string>, details?: { line: number, reason: string }[] } }`, HTTP status matching `code`. `fields` is for single-record field-level errors (FR-3: one bad field per request); `details` is for batch/line-numbered errors (FR-6/FR-7: one entry per failed row). A response uses at most one of the two, never both, and never a bare string or toast-only message. |
 | State & mutation | Only Route Handlers mutate persisted state (AD-1, AD-2, AD-4). Client state (TanStack Query cache) is a projection, never a source of truth. |
-| Observability | Every write path that can silently lose data if it fails partway (import commit, grade write, export, restore, folder-delete and class-delete cascades) logs a structured, single-line summary (operation, record counts, outcome) on completion or failure — enough to audit "did this actually happen" against the §6 durability NFR. Full APM/tracing is out of scope for v1 (see Deferred). |
+| Observability | Every write path that can silently lose data if it fails partway (import commit, grade write, export, restore, folder-delete, flashcard-delete and class-delete cascades) logs a structured, single-line summary (operation, record counts including flashcard counts, outcome) on completion or failure — enough to audit "did this actually happen" against the §6 durability NFR. Full APM/tracing is out of scope for v1 (see Deferred). |
 | Auth | Better Auth session cookie required on every Route Handler except `/api/auth/**`; unauthenticated requests return `401` with the standard error envelope. Session lifetime is a fixed 30-day sliding window (refreshed on activity) — resolves PRD §10 Open Question 2. |
 | Config | Environment variables validated against a Zod schema at process start (`DATABASE_URL`, `BETTER_AUTH_SECRET`, etc.); the app fails fast on a missing/malformed var rather than failing deep inside a request. |
 | Text encoding (Unicode) | All five Card text fields are Postgres `TEXT` columns with the database's default UTF-8 encoding; no ASCII/Latin-1 collation, no server-side normalization or stripping of non-Latin scripts, combining diacritics, or IPA symbols. Resolves PRD §6 "Accessibility of input" NFR. |
@@ -156,15 +156,16 @@ training-sanctum/
   apps/
     web/
       app/
-        (routes)/              # pages: review, classes (→ class → folder, incl. Add cards: manual + import), stats, settings
+        (routes)/              # pages: review, classes (→ class → folder → flashcard, incl. Add cards: manual + import on the flashcard page), stats, settings
         api/
           auth/[...all]/       # Better Auth handler
           classes/              # Class CRUD + class-delete (move folders / delete all)
-          folders/              # Folder CRUD (always under a class)
-          cards/                # Card CRUD; cards/batch = the single multi-row create used by Manual mode and import commit
-          import/parse/         # paste + CSV/Excel parse for a folderId — read-only, returns rows for the review editor
+          folders/              # Folder CRUD (always under a class); GET returns the folder's Flashcards with card counts
+          flashcards/           # Flashcard CRUD (always under a folder); POST flashcards/[id]/move moves a Flashcard to any Folder
+          cards/                # Card CRUD; cards/batch (takes `flashcardId`) = the single multi-row create used by Manual mode and import commit
+          import/parse/         # paste + CSV/Excel parse for a flashcardId — read-only, returns rows for the review editor
           review/
-            queue/              # GET due queue; optional ?classId= or ?folderId= scope (FR-9)
+            queue/              # GET due queue; optional ?classId=, ?folderId= or ?flashcardId= scope (FR-9)
             grade/               # POST grade (AD-4)
           stats/
           export/                # FR-13
@@ -178,7 +179,7 @@ training-sanctum/
       streak.ts                 # FR-12, uses toLocalCalendarDay (AD-8)
       time.ts                   # toLocalCalendarDay helper
     db/
-      schema.prisma             # Class, Folder, Card, SchedulingRecord, User
+      schema.prisma             # Class, Folder, Flashcard, Card, SchedulingRecord, User
       client.ts                 # exported Prisma client singleton
   tests/
     domain/                     # Vitest
@@ -193,13 +194,14 @@ erDiagram
   USER ||--o{ CLASS : owns
   CLASS ||--|{ FOLDER : "contains (incl. 1 Unsorted)"
   USER ||--o{ CARD : owns
-  FOLDER ||--o{ CARD : contains
+  FOLDER ||--o{ FLASHCARD : contains
+  FLASHCARD ||--o{ CARD : contains
   CARD ||--|| SCHEDULING_RECORD : "term->definition"
   CARD ||--|| SCHEDULING_RECORD : "definition->term"
   USER ||--o{ STREAK_LOG : logs
 ```
 
-A `Card` always has exactly two `SchedulingRecord`s (one per Recall Direction, AD enforced by the Card-creation Route Handler, not a DB constraint beyond a unique `(cardId, direction)` index). Every `Class` has exactly one `Folder` with `isUnsorted = true`, created in the same transaction as the Class and enforced by a partial unique index on `(classId) WHERE isUnsorted`. `Folder.classId` and `Card.folderId` are required (non-null) — there is no Card without a Folder and no Folder without a Class.
+A `Card` always has exactly two `SchedulingRecord`s (one per Recall Direction, AD enforced by the Card-creation Route Handler, not a DB constraint beyond a unique `(cardId, direction)` index). Every `Class` has exactly one `Folder` with `isUnsorted = true`, created in the same transaction as the Class and enforced by a partial unique index on `(classId) WHERE isUnsorted`. `Folder.classId`, `Flashcard.folderId` and `Card.flashcardId` are required (non-null) — there is no Card without a Flashcard, no Flashcard without a Folder and no Folder without a Class. `Flashcard` carries only a `name`, unique per Folder case-insensitively, and `Card` also carries `userId`.
 
 ### Deployment & environments
 
@@ -214,8 +216,8 @@ A `Card` always has exactly two `SchedulingRecord`s (one per Recall Direction, A
 | --- | --- | --- |
 | FR-1, FR-2 Auth & session | `app/api/auth/**`, Better Auth config | Stack (Better Auth), Consistency Conventions (Auth) |
 | FR-3, FR-4 Card CRUD | `app/api/cards/**` | AD-2, AD-6, AD-9 |
-| FR-5 Class & Folder CRUD | `app/api/classes/**`, `app/api/folders/**` | AD-2, AD-6, AD-11 |
-| FR-6, FR-7 Import (mode of a Folder's Add cards) | `app/api/import/**`, `packages/domain/import.ts` | AD-5, AD-6, AD-9, AD-13 |
+| FR-5 Class, Folder & Flashcard CRUD (incl. Flashcard move) | `app/api/classes/**`, `app/api/folders/**`, `app/api/flashcards/**` | AD-2, AD-6, AD-11 |
+| FR-6, FR-7 Import (mode of a Flashcard's Add cards) | `app/api/import/**`, `packages/domain/import.ts` | AD-5, AD-6, AD-9, AD-13 |
 | FR-8 SM-2 engine | `packages/domain/sm2.ts`, `app/api/review/grade` | AD-1, AD-4 |
 | FR-9, FR-10, FR-11 Review session | `app/(routes)/review`, `app/api/review/**` | AD-4, AD-7, AD-13 |
 | FR-12 Streak | `packages/domain/streak.ts`, `app/api/review/grade` | AD-8 |

@@ -19,7 +19,7 @@ export const createFolderSchema = z.object({ name: folderNameSchema });
 export const renameFolderSchema = z.object({ name: folderNameSchema });
 export const deleteFolderSchema = z.object({
   mode: z.enum(["move", "delete"], {
-    error: "Choose what happens to the cards.",
+    error: "Choose what happens to the flashcards.",
   }),
 });
 
@@ -47,6 +47,7 @@ export interface FolderSummary {
   id: string;
   name: string;
   isUnsorted: boolean;
+  flashcardCount: number;
   cardCount: number;
 }
 

@@ -1,16 +1,27 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CardSummary, FolderCardsResponse } from "@training-sanctum/domain";
+import { useQuery } from "@tanstack/react-query";
+import type {
+  FlashcardSummary,
+  FolderFlashcardsResponse,
+} from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { SectionMarker } from "@/app/components/section-marker";
 import { PageHeader } from "../../page-header";
+import { RowMenu } from "../../classes/row-menu";
 import { buttonPrimary, buttonSecondary, pluralize } from "../../classes/ui";
-import { AddCardsPanel } from "./add-cards-panel";
-import { DeleteCardModal } from "./delete-card-modal";
-import { EditCardModal } from "./edit-card-modal";
+import { DeleteFlashcardModal } from "./delete-flashcard-modal";
+import { FlashcardFormModal } from "./flashcard-form-modal";
+import { MoveFlashcardModal } from "./move-flashcard-modal";
+
+type Dialog =
+  | { kind: "create" }
+  | { kind: "rename"; id: string }
+  | { kind: "move"; id: string }
+  | { kind: "delete"; id: string }
+  | null;
 
 const crumbLink =
   "rounded-sm underline-offset-2 hover:text-foreground hover:underline focus-ring";
@@ -47,24 +58,27 @@ function Breadcrumb({
   );
 }
 
+/** Folder page: the Folder's Flashcards as rows (spec-2-7). */
 export function FolderDetailView({ folderId }: { folderId: string }) {
-  const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<CardSummary | null>(null);
-  const [deleting, setDeleting] = useState<CardSummary | null>(null);
-  const queryClient = useQueryClient();
-  const listRef = useRef<HTMLUListElement>(null);
-  const addRef = useRef<HTMLButtonElement>(null);
+  const [dialog, setDialog] = useState<Dialog>(null);
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ["folder", folderId],
-    queryFn: () => apiFetch<FolderCardsResponse>(`/api/folders/${folderId}`),
+    queryFn: () => apiFetch<FolderFlashcardsResponse>(`/api/folders/${folderId}`),
     retry: (count, err) => !(err instanceof ApiError && err.status === 404) && count < 2,
   });
+
+  const flashcards = data?.flashcards ?? [];
+  const selected =
+    dialog && dialog.kind !== "create"
+      ? flashcards.find((f) => f.id === dialog.id)
+      : undefined;
+  const close = () => setDialog(null);
 
   if (isPending) {
     return (
       <>
         <Breadcrumb />
-        <ul aria-label="Loading cards" className="flex flex-col gap-1">
+        <ul aria-label="Loading flashcards" className="flex flex-col gap-1">
           {[0, 1, 2].map((i) => (
             <li
               key={i}
@@ -99,160 +113,145 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
     );
   }
 
-  const { folder, cards } = data;
-  const empty = cards.length === 0;
+  const totalCards = flashcards.reduce((sum, f) => sum + f.cardCount, 0);
+  const empty = flashcards.length === 0;
 
   return (
     <>
-      <Breadcrumb cls={data.class} folder={folder.name} />
-      <PageHeader title={folder.name}>{pluralize(cards.length, "card")}</PageHeader>
+      <Breadcrumb cls={data.class} folder={data.folder.name} />
+      <PageHeader title={data.folder.name}>
+        {pluralize(flashcards.length, "flashcard")} · {pluralize(totalCards, "card")}
+      </PageHeader>
 
-      <section aria-labelledby="folder-cards" className="mt-8">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <SectionMarker as="h2" id="folder-cards">
-            Cards
+      <section aria-labelledby="all-flashcards" className="mt-8">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <SectionMarker as="h2" id="all-flashcards">
+            All flashcards
           </SectionMarker>
           {empty ? null : (
             <button
-              ref={addRef}
               type="button"
-              onClick={() => setAdding(true)}
+              onClick={() => setDialog({ kind: "create" })}
               className={buttonPrimary}
             >
-              Add cards
+              Create flashcard
             </button>
           )}
         </div>
         {empty ? (
           <div className="flex flex-col items-start gap-4 pt-3">
             <p className="max-w-sm text-body text-foreground-secondary">
-              This folder has no cards yet.
+              Create a flashcard to start adding cards.
             </p>
             <button
-              ref={addRef}
               type="button"
-              onClick={() => setAdding(true)}
+              onClick={() => setDialog({ kind: "create" })}
               className={buttonPrimary}
             >
-              Add cards
+              Create flashcard
             </button>
           </div>
         ) : (
-          <ul ref={listRef} className="flex flex-col gap-3">
-            {cards.map((card, index) => (
-              <CardRow
-                key={card.id}
-                card={card}
-                index={index + 1}
-                total={cards.length}
-                onEdit={() => setEditing(card)}
-                onDelete={() => setDeleting(card)}
+          <ul>
+            {flashcards.map((flashcard) => (
+              <FlashcardRow
+                key={flashcard.id}
+                flashcard={flashcard}
+                onRename={() => setDialog({ kind: "rename", id: flashcard.id })}
+                onMove={() => setDialog({ kind: "move", id: flashcard.id })}
+                onDelete={() => setDialog({ kind: "delete", id: flashcard.id })}
               />
             ))}
           </ul>
         )}
       </section>
 
-      {editing ? (
-        <EditCardModal
-          key={editing.id}
-          card={editing}
-          folderId={folder.id}
-          onClose={() => setEditing(null)}
+      {dialog?.kind === "create" ? (
+        <FlashcardFormModal folderId={folderId} siblings={flashcards} onClose={close} />
+      ) : null}
+      {dialog?.kind === "rename" && selected ? (
+        <FlashcardFormModal
+          key={selected.id}
+          folderId={folderId}
+          siblings={flashcards}
+          existing={selected}
+          onClose={close}
         />
       ) : null}
-
-      {deleting ? (
-        <DeleteCardModal
-          key={deleting.id}
-          card={deleting}
-          onClose={() => setDeleting(null)}
-          onDeleted={(id) => {
-            const index = Math.max(0, cards.findIndex((c) => c.id === id));
-            setDeleting(null);
-            queryClient.setQueryData<FolderCardsResponse>(["folder", folderId], (old) =>
-              old ? { ...old, cards: old.cards.filter((c) => c.id !== id) } : old
-            );
-            void queryClient.invalidateQueries({ queryKey: ["folder", folderId] });
-            // The modal refocuses the removed button, so move focus on the next frame:
-            // the next row's Delete control, else the last row's, else Add cards.
-            requestAnimationFrame(() => {
-              const deletes = listRef.current?.querySelectorAll<HTMLButtonElement>(
-                "button[data-card-delete]"
-              );
-              const count = deletes?.length ?? 0;
-              if (count > 0) deletes?.[Math.min(index, count - 1)]?.focus();
-              else addRef.current?.focus();
-            });
-          }}
+      {dialog?.kind === "move" && selected ? (
+        <MoveFlashcardModal
+          key={selected.id}
+          folderId={folderId}
+          classId={data.class.id}
+          target={selected}
+          onClose={close}
         />
       ) : null}
-
-      {adding ? (
-        <AddCardsPanel
-          folder={{ id: folder.id, name: folder.name, classId: data.class.id }}
-          onClose={() => setAdding(false)}
+      {dialog?.kind === "delete" && selected ? (
+        <DeleteFlashcardModal
+          key={selected.id}
+          folderId={folderId}
+          target={selected}
+          onClose={close}
         />
       ) : null}
     </>
   );
 }
 
-/** Card row: Term and Definition plus quiet Edit and Delete controls (move is 2.6). */
-function CardRow({
-  card,
-  index,
-  total,
-  onEdit,
+/** One Flashcard row, linking to the Flashcard page, with a Rename / Delete menu. */
+function FlashcardRow({
+  flashcard,
+  onRename,
+  onMove,
   onDelete,
 }: {
-  card: CardSummary;
-  index: number;
-  total: number;
-  onEdit: () => void;
+  flashcard: FlashcardSummary;
+  onRename: () => void;
+  onMove: () => void;
   onDelete: () => void;
 }) {
   return (
-    <li className="overflow-hidden rounded-md border border-border bg-card shadow-low transition-state hover:bg-row-hover">
-      <div className="flex items-center justify-between border-b border-divider px-5 py-2 text-caption text-foreground-tertiary">
-        <span>
-          {index} / {total}
+    <li className="flex min-h-16 items-center gap-3 rounded-sm border-b border-divider p-3 transition-state last:border-b-0 hover:bg-row-hover">
+      <Link
+        href={`/flashcards/${flashcard.id}`}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-sm focus-ring"
+      >
+        <span
+          aria-hidden="true"
+          className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-card text-foreground-secondary"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="6" width="14" height="14" rx="2" />
+            <path d="M7 3h12a2 2 0 0 1 2 2v12" />
+          </svg>
         </span>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onEdit}
-            aria-label={`Edit card ${index}: ${card.term}`}
-            className="-my-1 rounded-full px-3 py-1 text-body-sm text-foreground-secondary underline-offset-2 transition-state hover:text-foreground hover:underline focus-ring"
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            data-card-delete
-            onClick={onDelete}
-            aria-label={`Delete card ${index}: ${card.term}`}
-            className="-my-1 rounded-full px-3 py-1 text-body-sm text-foreground-secondary underline-offset-2 transition-state hover:text-foreground hover:underline focus-ring"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-      <div className="grid sm:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]">
-        <div className="flex flex-col gap-1 px-5 py-4">
-          <span className="text-overline uppercase text-foreground-tertiary">Term</span>
-          <p className="whitespace-pre-wrap break-words text-body font-semibold text-foreground">
-            {card.term}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-body font-semibold text-foreground">
+            {flashcard.name}
+          </p>
+          <p className="text-caption text-foreground-tertiary">
+            {pluralize(flashcard.cardCount, "card")}
           </p>
         </div>
-        <div aria-hidden="true" className="hidden bg-divider sm:block" />
-        <div className="flex flex-col gap-1 border-t border-divider px-5 py-4 sm:border-t-0">
-          <span className="text-overline uppercase text-foreground-tertiary">Definition</span>
-          <p className="whitespace-pre-wrap break-words text-body text-foreground-secondary">
-            {card.definition}
-          </p>
-        </div>
-      </div>
+      </Link>
+      <RowMenu
+        name={flashcard.name}
+        items={[
+          { label: "Rename", onSelect: onRename },
+          { label: "Move to…", onSelect: onMove },
+          { label: "Delete", onSelect: onDelete, danger: true },
+        ]}
+      />
     </li>
   );
 }

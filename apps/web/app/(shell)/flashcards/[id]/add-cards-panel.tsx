@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   MAX_CARDS_PER_BATCH,
   cardInputSchema,
-  type ClassFoldersResponse,
-  type ClassSummary,
   type CreateCardsBatchResponse,
 } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
@@ -16,19 +14,15 @@ import {
   buttonPrimary,
   buttonSecondary,
   fieldErrorClass,
-  inputClass,
-  labelClass,
   overlineClass,
 } from "../../classes/ui";
 
-/** The Folder an Add cards panel writes into. */
-export interface TargetFolder {
+/** The Flashcard an Add cards panel writes into. */
+export interface TargetFlashcard {
   id: string;
   name: string;
-  classId: string;
 }
 
-const LAST_FOLDER_KEY = "training-sanctum:last-folder";
 const INITIAL_ROWS = 3;
 
 type Field = "term" | "definition" | "example" | "context" | "partOfSpeech";
@@ -79,37 +73,12 @@ function isBlank(row: Row): boolean {
   );
 }
 
-function readLastFolder(): { classId: string; folderId: string } | null {
-  try {
-    const raw = localStorage.getItem(LAST_FOLDER_KEY);
-    if (!raw) return null;
-    const value = JSON.parse(raw) as { classId?: unknown; folderId?: unknown };
-    return typeof value.classId === "string" && typeof value.folderId === "string"
-      ? { classId: value.classId, folderId: value.folderId }
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeLastFolder(classId: string, folderId: string): void {
-  try {
-    localStorage.setItem(LAST_FOLDER_KEY, JSON.stringify({ classId, folderId }));
-  } catch {
-    // Storage can be blocked; remembering the Folder is only a convenience.
-  }
-}
-
-/**
- * Add cards panel, Manual mode (spec-2-3). With `folder` it targets that
- * Folder; without it, it shows a Class then Folder picker that preselects the
- * last-used Folder.
- */
+/** Add cards panel, Manual mode (spec-2-3). The target is always one Flashcard. */
 export function AddCardsPanel({
-  folder,
+  flashcard,
   onClose,
 }: {
-  folder?: TargetFolder;
+  flashcard: TargetFlashcard;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -121,28 +90,22 @@ export function AddCardsPanel({
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
-  const [picked, setPicked] = useState<{ classId: string; folderId: string } | null>(
-    null
-  );
   const focusRequest = useRef<{ key: number; field: Field } | null>(null);
   const inputs = useRef(new Map<string, HTMLInputElement>());
 
-  const target = folder ?? null;
-  const targetFolderId = target?.id ?? picked?.folderId ?? null;
 
   const save = useMutation({
     mutationFn: (cards: unknown[]) =>
       apiFetch<CreateCardsBatchResponse>("/api/cards/batch", {
         method: "POST",
-        json: { folderId: targetFolderId, cards },
+        json: { flashcardId: flashcard.id, cards },
       }),
   });
 
   // Modal opens the native dialog in its own mount effect (which runs before
   // this one), and the dialog only accepts focus once open: land in row 1 Term.
   useEffect(() => {
-    if (target) inputs.current.get("0:term")?.focus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    inputs.current.get("0:term")?.focus();
   }, []);
 
   // Focus a field requested by Enter, "+ Add row" or a validation error once
@@ -216,11 +179,6 @@ export function AddCardsPanel({
   function handleSave() {
     setFormError(null);
     setNotice(null);
-    if (!targetFolderId) {
-      setFormError("Choose a folder to add the cards to.");
-      return;
-    }
-
     const filled = rows.filter((row) => !isBlank(row));
     if (filled.length === 0) {
       setErrors({});
@@ -261,9 +219,8 @@ export function AddCardsPanel({
       valid.map((v) => v.card),
       {
         onSuccess: ({ created }) => {
-          if (target) writeLastFolder(target.classId, target.id);
-          else if (picked) writeLastFolder(picked.classId, picked.folderId);
-          void queryClient.invalidateQueries({ queryKey: ["folder", targetFolderId] });
+          void queryClient.invalidateQueries({ queryKey: ["flashcard", flashcard.id] });
+          void queryClient.invalidateQueries({ queryKey: ["folder"] });
           void queryClient.invalidateQueries({ queryKey: ["class-folders"] });
           void queryClient.invalidateQueries({ queryKey: ["classes"] });
 
@@ -284,7 +241,7 @@ export function AddCardsPanel({
         onError: (err) => {
           setFormError(
             err instanceof ApiError && err.status === 404
-              ? "This folder no longer exists."
+              ? "This flashcard no longer exists."
               : err instanceof ApiError
                 ? err.message
                 : "Something went wrong. Nothing was saved. Try again."
@@ -296,7 +253,7 @@ export function AddCardsPanel({
 
   return (
     <Modal
-      title={target ? `Add cards to ${target.name}` : "Add cards"}
+      title={`Add cards to ${flashcard.name}`}
       size="wide"
       onClose={requestClose}
       headerAction={<ModeSwitcher />}
@@ -309,8 +266,6 @@ export function AddCardsPanel({
         }}
         className="flex flex-col gap-6"
       >
-        {target ? null : <FolderPicker value={picked} onChange={setPicked} />}
-
         <ol className="flex flex-col gap-3">
           {rows.map((row, index) => (
             <li key={row.key}>
@@ -504,100 +459,6 @@ function ManualRow({
         >
           {row.more || hiddenError ? "Fewer fields" : "More fields"}
         </button>
-      </div>
-    </div>
-  );
-}
-
-/** Class then Folder picker; preselects the last-used Folder from localStorage. */
-function FolderPicker({
-  value,
-  onChange,
-}: {
-  value: { classId: string; folderId: string } | null;
-  onChange: (value: { classId: string; folderId: string } | null) => void;
-}) {
-  const classes = useQuery({
-    queryKey: ["classes"],
-    queryFn: () => apiFetch<ClassSummary[]>("/api/classes"),
-  });
-  const [classId, setClassId] = useState("");
-  const folders = useQuery({
-    queryKey: ["class-folders", classId],
-    queryFn: () => apiFetch<ClassFoldersResponse>(`/api/classes/${classId}/folders`),
-    enabled: classId !== "",
-  });
-  const restored = useRef(false);
-  const last = useRef<{ classId: string; folderId: string } | null>(null);
-
-  // Restore the last-used Folder once the Classes are known.
-  useEffect(() => {
-    if (restored.current || !classes.data) return;
-    restored.current = true;
-    last.current = readLastFolder();
-    const known = classes.data.find((c) => c.id === last.current?.classId);
-    if (known) setClassId(known.id);
-  }, [classes.data]);
-
-  useEffect(() => {
-    if (!folders.data || !classId) return;
-    const remembered =
-      last.current?.classId === classId
-        ? folders.data.folders.find((f) => f.id === last.current?.folderId)
-        : undefined;
-    const keep = value && folders.data.folders.some((f) => f.id === value.folderId);
-    if (!keep && remembered) onChange({ classId, folderId: remembered.id });
-    // Only react to a freshly loaded Folder list.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [folders.data, classId]);
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className="flex flex-col gap-2">
-        <label htmlFor="picker-class" className={labelClass}>
-          Class
-        </label>
-        <select
-          id="picker-class"
-          value={classId}
-          onChange={(event) => {
-            setClassId(event.target.value);
-            onChange(null);
-          }}
-          className={inputClass}
-        >
-          <option value="" disabled>
-            Choose a class
-          </option>
-          {(classes.data ?? []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex flex-col gap-2">
-        <label htmlFor="picker-folder" className={labelClass}>
-          Folder
-        </label>
-        <select
-          id="picker-folder"
-          value={value?.folderId ?? ""}
-          disabled={!classId || !folders.data}
-          onChange={(event) =>
-            onChange(event.target.value ? { classId, folderId: event.target.value } : null)
-          }
-          className={inputClass}
-        >
-          <option value="" disabled>
-            Choose a folder
-          </option>
-          {(folders.data?.folders ?? []).map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.name}
-            </option>
-          ))}
-        </select>
       </div>
     </div>
   );
