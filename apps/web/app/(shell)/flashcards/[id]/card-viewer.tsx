@@ -24,15 +24,19 @@ const arrowProps = {
 
 /**
  * spec-4-7: the non-graded card viewer at the top of Flashcard detail
- * (FR-16). One Card at a time in list order, Term side first; Space or a
+ * (FR-16). One Card at a time in list order, Term side first, or Definition
+ * side first when only Definition → Term is studied (spec-4-9); Space or a
  * click flips, ← / → (keys, buttons or a horizontal swipe) move with no
  * wrap. It only reads the loaded Cards and never touches scheduling.
  */
 export function CardViewer({
   cards,
+  definitionFirst = false,
   inactive,
 }: {
   cards: CardSummary[];
+  /** Only Definition → Term is studied: the Definition is the front. */
+  definitionFirst?: boolean;
   /** A panel or modal is open: page keys belong to it. */
   inactive: boolean;
 }) {
@@ -123,6 +127,27 @@ export function CardViewer({
     (value): value is string => Boolean(value)
   );
 
+  const detailLines =
+    details.length > 0 ? (
+      <span className="flex max-w-prose flex-col gap-1 text-body-sm break-words text-foreground-tertiary">
+        {details.map((line, i) => (
+          <span key={i}>{line}</span>
+        ))}
+      </span>
+    ) : null;
+  // The front is the prompt in display type; the back is the answer and the details.
+  const face = (label: string, text: string, size: string) => (
+    <>
+      <span className={overlineClass}>{label}</span>
+      <span className={`max-w-full ${size} text-balance break-words text-foreground`}>
+        {text}
+      </span>
+    </>
+  );
+  const [frontLabel, frontText, backLabel, backText] = definitionFirst
+    ? ["Definition", card.definition, "Term", card.term]
+    : ["Term", card.term, "Definition", card.definition];
+
   return (
     <section ref={sectionRef} aria-label="Card viewer" className="mt-8 flex flex-col items-center gap-6">
       <FlipCard
@@ -134,30 +159,20 @@ export function CardViewer({
           if (Math.abs(dx) < Math.abs(dy)) return false;
           return move(dx < 0 ? 1 : -1);
         }}
-        ariaLabel={flipped ? undefined : `Show the definition of: ${card.term}`}
+        ariaLabel={
+          flipped
+            ? undefined
+            : definitionFirst
+              ? `Show the term for: ${card.definition}`
+              : `Show the definition of: ${card.term}`
+        }
         // Horizontal swipes belong to the viewer; vertical ones still scroll.
         className="touch-pan-y"
-        front={
-          <>
-            <span className={overlineClass}>Term</span>
-            <span className="max-w-full text-display text-balance break-words text-foreground">
-              {card.term}
-            </span>
-          </>
-        }
+        front={face(frontLabel, frontText, "text-display")}
         back={
           <>
-            <span className={overlineClass}>Definition</span>
-            <span className="max-w-full text-heading-1 text-balance break-words text-foreground">
-              {card.definition}
-            </span>
-            {details.length > 0 ? (
-              <span className="flex max-w-prose flex-col gap-1 text-body-sm break-words text-foreground-tertiary">
-                {details.map((line, i) => (
-                  <span key={i}>{line}</span>
-                ))}
-              </span>
-            ) : null}
+            {face(backLabel, backText, "text-heading-1")}
+            {detailLines}
           </>
         }
       />

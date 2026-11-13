@@ -8,6 +8,7 @@
 import { z } from "zod";
 import type { CardSummary } from "./cards";
 import type { LearnCounts } from "./review";
+import type { StudyDirections } from "./settings";
 
 export const FLASHCARD_NAME_MAX_LENGTH = 80;
 
@@ -100,4 +101,6 @@ export interface FlashcardCardsResponse {
   cards: CardSummary[];
   /** spec-4-8: what the Flashcard's Learn session holds right now. */
   learn: LearnCounts;
+  /** spec-4-9: the account's study directions, for the viewer and the practice run. */
+  studyDirections: StudyDirections;
 }

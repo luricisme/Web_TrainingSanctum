@@ -32,7 +32,11 @@ function apply(theme: Theme) {
   }
 }
 
-/** Dark/Light mode switcher (DESIGN.md components.mode-switcher). */
+/**
+ * Dark/Light mode switcher: a neutral pill (like Import's sub-tabs), the
+ * selected option a card-surface chip, so the Study directions control keeps
+ * the only accent element on Settings (spec-4-9).
+ */
 export function ThemeToggle() {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
@@ -51,9 +55,9 @@ export function ThemeToggle() {
             role="radio"
             aria-checked={active}
             onClick={() => apply(value)}
-            className={`rounded-full px-4 py-1 text-body-sm font-semibold transition-state focus-ring ${
+            className={`rounded-full px-4 py-1.5 text-body-sm font-semibold transition-state focus-ring ${
               active
-                ? "bg-accent text-on-accent"
+                ? "bg-card text-foreground shadow-low"
                 : "text-foreground-secondary hover:text-foreground"
             }`}
           >

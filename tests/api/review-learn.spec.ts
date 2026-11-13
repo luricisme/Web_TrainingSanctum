@@ -97,6 +97,17 @@ async function learnData(s: Session, base: string, flashcardId: string) {
 
 const ids = (entries: { schedulingRecordId: string }[]) => entries.map((e) => e.schedulingRecordId);
 
+async function setStudyDirections(s: Session, base: string, studyDirections: string) {
+  const res = await s.request.patch(`${base}/api/settings`, { data: { studyDirections } });
+  expect(res.status()).toBe(200);
+}
+
+async function reviewIds(s: Session, base: string) {
+  const res = await s.request.get(`${base}/api/review/queue`);
+  expect(res.status()).toBe(200);
+  return ids((await res.json()).data.entries);
+}
+
 function grade(s: Session, base: string, schedulingRecordId: string, value: string) {
   return s.request.post(`${base}/api/review/grade`, { data: { schedulingRecordId, grade: value } });
 }
@@ -211,6 +222,25 @@ test.describe("GET /api/review/learn", () => {
     expect(ids(data.entries)).toEqual([card.backward.id]);
   });
 
+  test("half-learned, Both: the graded, due direction is in Review and Learn's due part (spec-4-9)", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcardId = await createFlashcard(s, base);
+    const card = await addCard(s, base, flashcardId, "drizzle");
+    await setRecord([card.forward.id], {
+      firstGradedAt: new Date(),
+      nextReviewDate: new Date(Date.now() - DAY_MS),
+    });
+
+    expect(await reviewIds(s, base)).toEqual([card.forward.id]);
+    const data = await learnData(s, base, flashcardId);
+    expect(data.counts).toEqual({ newCards: 1, due: 1 });
+    expect(ids(data.entries)).toEqual([card.backward.id, card.forward.id]);
+  });
+
   test("a learned Card due tomorrow is absent", async ({ playwright, baseURL }) => {
     const base = baseURL ?? FALLBACK_BASE;
     const s = await newUser(playwright, base);
@@ -235,7 +265,7 @@ test.describe("GET /api/review/learn", () => {
     expect(data.entries).toEqual([]);
   });
 
-  test("a first Again saves once; the Card stays unlearned until the other direction is graded", async ({
+  test("a first Again saves once; the Card counts as new until the other direction is graded", async ({
     playwright,
     baseURL,
   }) => {
@@ -315,7 +345,85 @@ test.describe("GET /api/flashcards/[id] Learn counts", () => {
     const res = await s.request.get(`${base}/api/flashcards/${flashcardId}`);
     expect(res.status()).toBe(200);
     const { learn: counts } = (await res.json()).data;
-    expect(counts).toEqual({ newCards: 2, due: 2 });
+    // spec-4-9: drizzle's graded, due Term -> Definition is in the due part too.
+    expect(counts).toEqual({ newCards: 2, due: 3 });
     expect((await learnData(s, base, flashcardId)).counts).toEqual(counts);
+  });
+});
+
+// spec-4-9: Learn, its counts and Review follow the study directions setting (FR-18).
+test.describe("Study directions in Learn", () => {
+  test("Term -> Definition only: new Card A, then learned Card B, one direction each", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcardId = await createFlashcard(s, base);
+    const a = await addCard(s, base, flashcardId, "breeze", { createdAt: new Date("2026-01-02") });
+    const b = await addCard(s, base, flashcardId, "squall", {
+      learned: true,
+      createdAt: new Date("2026-01-01"),
+    });
+    await setRecord([b.forward.id, b.backward.id], { nextReviewDate: new Date(Date.now() - DAY_MS) });
+    await setStudyDirections(s, base, "TERM_TO_DEFINITION");
+
+    const data = await learnData(s, base, flashcardId);
+    expect(ids(data.entries)).toEqual([a.forward.id, b.forward.id]);
+    expect(data.entries.every((e) => e.direction === "TERM_TO_DEFINITION")).toBe(true);
+    expect(data.counts).toEqual({ newCards: 1, due: 1 });
+    expect(await reviewIds(s, base)).toEqual([b.forward.id]);
+
+    const detail = await s.request.get(`${base}/api/flashcards/${flashcardId}`);
+    const body = (await detail.json()).data;
+    expect(body.learn).toEqual({ newCards: 1, due: 1 });
+    expect(body.studyDirections).toBe("TERM_TO_DEFINITION");
+  });
+
+  test("Definition -> Term only: a Card learned Term -> Definition is offered Definition -> Term", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcardId = await createFlashcard(s, base);
+    const card = await addCard(s, base, flashcardId, "drizzle");
+    await setRecord([card.forward.id], {
+      firstGradedAt: new Date(),
+      nextReviewDate: new Date(Date.now() - DAY_MS),
+    });
+    await setStudyDirections(s, base, "DEFINITION_TO_TERM");
+
+    const data = await learnData(s, base, flashcardId);
+    expect(ids(data.entries)).toEqual([card.backward.id]);
+    expect(data.counts).toEqual({ newCards: 1, due: 0 });
+    const detail = await s.request.get(`${base}/api/flashcards/${flashcardId}`);
+    expect(detail.status()).toBe(200);
+    expect((await detail.json()).data.learn).toEqual(data.counts);
+    expect(await reviewIds(s, base)).toEqual([]);
+  });
+
+  test("a Card graded in its studied direction no longer counts as new", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcardId = await createFlashcard(s, base);
+    const card = await addCard(s, base, flashcardId, "drizzle");
+    await setStudyDirections(s, base, "TERM_TO_DEFINITION");
+
+    expect((await grade(s, base, card.forward.id, "good")).status()).toBe(200);
+    const data = await learnData(s, base, flashcardId);
+    expect(data.counts).toEqual({ newCards: 0, due: 0 });
+    const detail = await s.request.get(`${base}/api/flashcards/${flashcardId}`);
+    expect(detail.status()).toBe(200);
+    expect((await detail.json()).data.learn).toEqual(data.counts);
+    expect(data.entries).toEqual([]);
+    // The unstudied direction was never written.
+    const backward = await prisma.schedulingRecord.findUniqueOrThrow({
+      where: { id: card.backward.id },
+    });
+    expect(backward).toEqual(card.backward);
   });
 });

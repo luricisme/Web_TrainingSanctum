@@ -32,18 +32,20 @@ datasource db {
 // `User.hashedPassword` placeholder field was dropped instead of kept as an
 // unused/hand-synced column.
 model User {
-  id            String   @id @default(cuid())
-  name          String
-  email         String   @unique
-  emailVerified Boolean  @default(false)
-  image         String?
-  timezone      String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String          @id @default(cuid())
+  name            String
+  email           String          @unique
+  emailVerified   Boolean         @default(false)
+  image           String?
+  timezone        String
+  /// FR-18 (spec-4-9): which Recall Directions Learn and Review ask.
+  studyDirections StudyDirections @default(BOTH)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  sessions Session[]
-  accounts Account[]
-  classes  Class[]
+  sessions   Session[]
+  accounts   Account[]
+  classes    Class[]
   folders    Folder[]
   flashcards Flashcard[]
   cards      Card[]
@@ -177,6 +179,13 @@ model Card {
 }
 
 enum RecallDirection {
+  TERM_TO_DEFINITION
+  DEFINITION_TO_TERM
+}
+
+// FR-18 (spec-4-9): the account's study directions setting.
+enum StudyDirections {
+  BOTH
   TERM_TO_DEFINITION
   DEFINITION_TO_TERM
 }

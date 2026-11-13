@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type {
-  CardSummary,
-  FlashcardCardsResponse,
-  LearnCounts,
+import {
+  type CardSummary,
+  type FlashcardCardsResponse,
+  type LearnCounts,
+  isDefinitionFirst,
+  studiedDirections,
 } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { SectionMarker } from "@/app/components/section-marker";
@@ -146,7 +148,11 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
 
       {empty ? null : (
         <>
-          <CardViewer cards={cards} inactive={adding || !!editing || !!deleting} />
+          <CardViewer
+            cards={cards}
+            definitionFirst={isDefinitionFirst(studiedDirections(data.studyDirections))}
+            inactive={adding || !!editing || !!deleting}
+          />
           {/* EXPERIENCE.md Learn button: directly under the viewer, the page's one accent action. */}
           <div className="mt-6 flex justify-center">
             <Link href={`/flashcards/${flashcard.id}/learn`} className={buttonPrimary}>

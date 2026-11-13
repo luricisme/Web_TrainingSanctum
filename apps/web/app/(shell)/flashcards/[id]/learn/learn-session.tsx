@@ -3,11 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type {
-  CardSummary,
-  FlashcardCardsResponse,
-  LearnQueueResponse,
-  ReviewQueueEntry,
+import {
+  type CardSummary,
+  type FlashcardCardsResponse,
+  type LearnQueueResponse,
+  type RecallDirection,
+  type ReviewQueueEntry,
+  studiedDirections,
 } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { buttonSecondary, linkClass } from "@/app/components/ui";
@@ -33,13 +35,17 @@ function Loading() {
 
 /**
  * spec-4-8b: every Card of the Flashcard as practice entries, oldest-created
- * first (the Cards list is newest first), each Card's two directions
- * together, Term → Definition first. The ids only key the slots: practice
- * never reaches the grade route.
+ * first (the Cards list is newest first), each Card's studied directions
+ * together, Term → Definition first (spec-4-9: only studied directions). The
+ * ids only key the slots: practice never reaches the grade route.
  */
-function practiceEntries(cards: CardSummary[], flashcardName: string): ReviewQueueEntry[] {
+function practiceEntries(
+  cards: CardSummary[],
+  flashcardName: string,
+  dirs: RecallDirection[]
+): ReviewQueueEntry[] {
   return [...cards].reverse().flatMap((card) =>
-    (["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"] as const).map((direction) => ({
+    dirs.map((direction) => ({
       schedulingRecordId: `practice:${card.id}:${direction}`,
       cardId: card.id,
       direction,
@@ -163,7 +169,11 @@ export function LearnSession({ flashcardId }: { flashcardId: string }) {
       <GradingSession
         // A fresh run each time, starting from the first Card.
         key={`practice-${round}`}
-        entries={practiceEntries(cardsQuery.data.cards, flashcard.name)}
+        entries={practiceEntries(
+          cardsQuery.data.cards,
+          flashcard.name,
+          studiedDirections(cardsQuery.data.studyDirections)
+        )}
         repeatAgain
         practice
         header={
