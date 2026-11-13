@@ -128,6 +128,8 @@ describe("createCardWithSchedulingRecords (AD-9)", () => {
     ]);
     for (const record of schedulingRecords) {
       expect(record).toMatchObject({ easeFactor: 2.5, repetitions: 0, interval: 0 });
+      // spec-4-6: every new Card starts unlearned (AD-14).
+      expect(record.firstGradedAt).toBeNull();
       expect(record.nextReviewDate.toISOString()).toBe("2026-11-08T17:00:00.000Z");
     }
   });

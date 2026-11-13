@@ -1,8 +1,10 @@
 import { prisma } from "@training-sanctum/db";
 import {
+  FLASHCARD_REVIEW_MOVED_MESSAGE,
   type ReviewQueueEntry,
   type ReviewQueueResponse,
   type ReviewScope,
+  learnedCardWhere,
   reviewQueueQuerySchema,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
@@ -11,7 +13,7 @@ import { fail, ok, validationFailure } from "@/lib/api-response";
 /** Resolves the requested scope to an owned, named entity, or null if absent. */
 async function resolveScope(
   userId: string,
-  query: { classId?: string; folderId?: string; flashcardId?: string }
+  query: { classId?: string; folderId?: string }
 ): Promise<ReviewScope | null | undefined> {
   const select = { id: true, name: true } as const;
   if (query.classId) {
@@ -22,13 +24,6 @@ async function resolveScope(
     const row = await prisma.folder.findFirst({ where: { id: query.folderId, userId }, select });
     return row ? { kind: "folder", ...row } : null;
   }
-  if (query.flashcardId) {
-    const row = await prisma.flashcard.findFirst({
-      where: { id: query.flashcardId, userId },
-      select,
-    });
-    return row ? { kind: "flashcard", ...row } : null;
-  }
   return undefined;
 }
 
@@ -36,6 +31,8 @@ async function resolveScope(
  * spec-4-3: the user's due Scheduling Records, oldest-due-first, one entry
  * per record. "Due" is `nextReviewDate <= now`, the same check the grade
  * route makes, so the queue never offers a record that route would refuse.
+ * spec-4-6: only records of learned Cards (AD-14 `learnedCardWhere`); new
+ * Cards are met in Learn first. Flashcard scope moved to Learn and is a 400.
  */
 export async function GET(request: Request): Promise<Response> {
   const result = await requireSession(request);
@@ -48,7 +45,14 @@ export async function GET(request: Request): Promise<Response> {
     folderId: params.get("folderId") ?? undefined,
     flashcardId: params.get("flashcardId") ?? undefined,
   });
-  if (!parsed.success) return validationFailure(parsed.error);
+  if (!parsed.success) {
+    if (parsed.error.issues.some((issue) => issue.path[0] === "flashcardId")) {
+      return fail(400, "VALIDATION_ERROR", FLASHCARD_REVIEW_MOVED_MESSAGE, {
+        flashcardId: FLASHCARD_REVIEW_MOVED_MESSAGE,
+      });
+    }
+    return validationFailure(parsed.error);
+  }
 
   const resolved = await resolveScope(userId, parsed.data);
   if (resolved === null) {
@@ -61,14 +65,12 @@ export async function GET(request: Request): Promise<Response> {
       ? { folder: { classId: scope.id } }
       : scope?.kind === "folder"
         ? { folderId: scope.id }
-        : scope?.kind === "flashcard"
-          ? { id: scope.id }
-          : undefined;
+        : undefined;
 
   const rows = await prisma.schedulingRecord.findMany({
     where: {
       nextReviewDate: { lte: new Date() },
-      card: { userId, ...(flashcard ? { flashcard } : {}) },
+      card: { userId, ...learnedCardWhere(), ...(flashcard ? { flashcard } : {}) },
     },
     // Postgres orders enums by declaration: TERM_TO_DEFINITION sorts first.
     orderBy: [{ nextReviewDate: "asc" }, { cardId: "asc" }, { direction: "asc" }],

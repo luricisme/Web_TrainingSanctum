@@ -225,4 +225,46 @@ test.describe("POST /api/review/grade", () => {
     const stored = await prisma.schedulingRecord.findUniqueOrThrow({ where: { id: forward.id } });
     expect(stored).toMatchObject({ interval: 1, repetitions: 1 });
   });
+
+  // spec-4-6: firstGradedAt (AD-14) is set once, on the first grade.
+  test("the first grade sets firstGradedAt to the grade time", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const { forward, backward } = await createCard(s, base);
+    expect(forward.firstGradedAt).toBeNull();
+
+    const before = Date.now();
+    expect((await grade(s, base, forward.id, "good")).status()).toBe(200);
+    const after = Date.now();
+
+    const stored = await prisma.schedulingRecord.findUniqueOrThrow({ where: { id: forward.id } });
+    expect(stored.firstGradedAt).not.toBeNull();
+    const at = stored.firstGradedAt!.getTime();
+    expect(at).toBeGreaterThanOrEqual(before - 1000);
+    expect(at).toBeLessThanOrEqual(after + 1000);
+
+    const other = await prisma.schedulingRecord.findUniqueOrThrow({ where: { id: backward.id } });
+    expect(other.firstGradedAt).toBeNull();
+  });
+
+  test("a later grade never changes firstGradedAt", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const { forward } = await createCard(s, base);
+    const t1 = new Date("2026-01-02T03:04:05.678Z");
+    await prisma.schedulingRecord.update({
+      where: { id: forward.id },
+      data: { firstGradedAt: t1, interval: 6, repetitions: 2 },
+    });
+
+    for (const g of ["again", "good"]) {
+      await prisma.schedulingRecord.update({
+        where: { id: forward.id },
+        data: { nextReviewDate: new Date(Date.now() - DAY_MS) },
+      });
+      expect((await grade(s, base, forward.id, g)).status(), g).toBe(200);
+      const stored = await prisma.schedulingRecord.findUniqueOrThrow({ where: { id: forward.id } });
+      expect(stored.firstGradedAt?.toISOString(), g).toBe(t1.toISOString());
+    }
+  });
 });

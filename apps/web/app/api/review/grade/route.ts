@@ -19,9 +19,11 @@ function logGrade(entry: Record<string, unknown>): void {
 
 /**
  * spec-4-2: applies one Grade to one Scheduling Record. This is the only
- * route that writes `interval`, `repetitions`, `easeFactor` and
- * `nextReviewDate` (AD-4); the values come from `applyGrade` alone. Only the
- * graded record is written, so the Card's other direction is untouched.
+ * route that writes `interval`, `repetitions`, `easeFactor`,
+ * `nextReviewDate` and `firstGradedAt` (AD-4); the SM-2 values come from
+ * `applyGrade` alone. `firstGradedAt` (AD-14, spec-4-6) is set to the grade
+ * time only while it is null and never changed afterwards. Only the graded
+ * record is written, so the Card's other direction is untouched.
  */
 export async function POST(request: Request): Promise<Response> {
   const result = await requireSession(request);
@@ -49,6 +51,7 @@ export async function POST(request: Request): Promise<Response> {
           repetitions: true,
           easeFactor: true,
           nextReviewDate: true,
+          firstGradedAt: true,
           card: { select: { user: { select: { timezone: true } } } },
         },
       });
@@ -76,6 +79,7 @@ export async function POST(request: Request): Promise<Response> {
           repetitions: next.repetitions,
           easeFactor: next.easeFactor,
           nextReviewDate: next.nextReviewDate,
+          ...(record.firstGradedAt === null ? { firstGradedAt: now } : {}),
         },
         select: {
           id: true,

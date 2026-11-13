@@ -102,6 +102,8 @@ export interface NewSchedulingRecord {
   repetitions: number;
   interval: number;
   nextReviewDate: Date;
+  /** AD-14: null until the grade route first grades this record. */
+  firstGradedAt: Date | null;
 }
 
 export interface NewCardWithSchedulingRecords {
@@ -112,6 +114,8 @@ export interface NewCardWithSchedulingRecords {
 /**
  * AD-9: the only place a new Card's Scheduling Records are decided. Both start
  * at SM-2 defaults and are due at the start of today in the user's timezone.
+ * Both start unlearned (`firstGradedAt: null`, AD-14), so a new Card stays out
+ * of Review until it has been learned.
  */
 export function createCardWithSchedulingRecords(
   input: CardInput,
@@ -125,6 +129,7 @@ export function createCardWithSchedulingRecords(
     repetitions: 0,
     interval: 0,
     nextReviewDate: new Date(nextReviewDate),
+    firstGradedAt: null,
   });
   return {
     card,

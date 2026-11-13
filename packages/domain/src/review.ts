@@ -39,28 +39,46 @@ export interface GradeResult {
 }
 
 /**
- * Review queue contract (spec-4-3): `GET /api/review/queue` takes at most one
- * optional scope. With none, the queue spans every Class.
+ * Review queue contract (spec-4-3, spec-4-6): `GET /api/review/queue` takes at
+ * most one optional Class or Folder scope. With none, the queue spans every
+ * Class. Flashcard scope moved to Learn (4.8): `flashcardId` is rejected.
  */
 const scopeId = z
   .string()
-  .min(1, "Choose a class, folder or flashcard to review.")
+  .min(1, "Choose a class or folder to review.")
   .optional();
 
+export const FLASHCARD_REVIEW_MOVED_MESSAGE = "Flashcard review moved to Learn.";
+
 export const reviewQueueQuerySchema = z
-  .object({ classId: scopeId, folderId: scopeId, flashcardId: scopeId })
-  .refine(
-    (q) =>
-      [q.classId, q.folderId, q.flashcardId].filter((v) => v !== undefined)
-        .length <= 1,
-    { message: "Choose one scope to review.", path: ["scope"] }
-  );
+  .object({
+    classId: scopeId,
+    folderId: scopeId,
+    flashcardId: z.unknown().optional(),
+  })
+  .superRefine((q, ctx) => {
+    if (q.flashcardId !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        message: FLASHCARD_REVIEW_MOVED_MESSAGE,
+        path: ["flashcardId"],
+      });
+    }
+    if (q.classId !== undefined && q.folderId !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Choose one scope to review.",
+        path: ["scope"],
+      });
+    }
+  })
+  .transform(({ classId, folderId }) => ({ classId, folderId }));
 
 export type ReviewQueueQuery = z.infer<typeof reviewQueueQuerySchema>;
 
-export type ReviewScopeKind = "class" | "folder" | "flashcard";
+export type ReviewScopeKind = "class" | "folder";
 
-/** The Class, Folder or Flashcard a scoped session is limited to. */
+/** The Class or Folder a scoped session is limited to. */
 export interface ReviewScope {
   kind: ReviewScopeKind;
   id: string;

@@ -44,7 +44,6 @@ const GRADE_LABELS: Record<ReviewGrade, string> = {
 const SCOPE_HREF: Record<ReviewScope["kind"], string> = {
   class: "/classes",
   folder: "/folders",
-  flashcard: "/flashcards",
 };
 
 const gradeBase =
@@ -123,7 +122,7 @@ export function ReviewSession({ queryString }: { queryString: string }) {
         <div role="alert" className="flex w-full max-w-review-card flex-col items-start gap-4">
           <p className="text-body text-foreground-secondary">
             {notFound
-              ? "This class, folder or flashcard does not exist."
+              ? "This class or folder does not exist."
               : invalid
                 ? "This review link isn't valid."
                 : "Could not load your review queue."}
