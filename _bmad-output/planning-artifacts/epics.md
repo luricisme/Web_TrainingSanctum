@@ -50,7 +50,9 @@ FR-15: Progress & stats view — a user can view a stats screen (outside active 
 
 FR-16: Flashcard card viewer — the Flashcard page shows a card viewer above its Cards list: every Card one at a time in list order, Term side first; Space or click/tap flips either way; ← / → (buttons and arrow keys) move between Cards with a mono "X / N" counter, no wrap-around, shuffle or autoplay; keys ignored in fields and open panels/modals; viewing never changes scheduling; hidden on an empty Flashcard.
 
-FR-17: Learn session — a "Learn" button below the viewer starts a graded session for that Flashcard (same session screen, keys, grade write path and focus mode as Review): its Unlearned Cards first (both directions, graded independently), then its due records of learned Cards. A Card is learned once both directions are graded. Learn grades count toward the streak. An entry graded Again is re-shown at the end of the session until graded Hard/Good/Easy; only its first grade is persisted. Completion shows a calm line and a way back. The button label shows what is waiting ("Learn · 12 new · 3 due").
+FR-17: Learn session — a "Learn" button below the viewer starts a graded session for that Flashcard (same session screen, keys, grade write path and focus mode as Review): its unlearned records first (studied directions, graded independently), then its learned, due records in studied directions. A record is learned once graded; it then joins Review on its due date (per direction, FR-18). Learn grades count toward the streak. An entry graded Again is re-shown at the end of the session until graded Hard/Good/Easy; only its first grade is persisted. Completion shows a calm line and a way back. The button label shows what is waiting ("Learn · 12 new · 3 due").
+
+FR-18: Study directions setting — per account: Both (default), Term → Definition only, or Definition → Term only. Applies to Learn, Review, the Learn practice run and the card viewer; turning a direction off changes no Scheduling Record. "Learned" is per direction (AD-14). (Sprint Change 2026-11-13b)
 
 ### NonFunctional Requirements
 
@@ -109,6 +111,8 @@ UX-DR8: Build the Empty due-queue state: centered, prominent streak count, calm 
 
 UX-DR17: Build the Card viewer on Flashcard detail (Sprint Change 2026-11-13, FR-16): one review card over all of the Flashcard's Cards, Term side first; outline circular ← / → buttons around a mono "X / N" counter (neutral, never the accent; disabled arrow at 0.4 opacity); the primary "Learn" button directly below, labelled with what is waiting ("Learn · 12 new · 3 due", FR-17); "Add cards" secondary while the viewer is shown.
 
+UX-DR18: Build the Study directions control on Settings (Sprint Change 2026-11-13b, FR-18): the reused `components.mode-switcher` pill with three options, saved on change with a quiet "Saved" status and inline error rollback; stacks vertically below 640px; a radio group operable with arrow keys.
+
 UX-DR9: Build the "Add cards" panel opened from inside a Flashcard, with two modes in a pill switcher: **Manual** (Quizlet-style editor — numbered term/definition rows, optional fields expandable per row, "+ Add row", Tab moves to the next field and Enter on the last field adds a row, one Save creates all valid rows) and **Import** (Paste / Upload-file sub-tabs; Paste → delimiter + "Preview", Upload → column mapping). Import always ends in the **import review editor**: the same row editor as Manual, prefilled with the parsed rows, each labelled with its source line number, with inline errors on malformed rows, a "Already in {Flashcard} — will be skipped" flag on duplicates (cleared when the Term is edited), and a remove (×) button per row; a summary strip above the rows reads "30 rows · 2 need fixing · 1 duplicate". Save commits, then a results view shows exactly 3 groups (Created / Duplicates skipped / Errors, each error with line number + reason). The target Flashcard is fixed to the Flashcard the panel was opened from and shown in the panel header. There is no standalone Import page or nav item.
 
 UX-DR10: Implement responsive breakpoints (mobile <640px, tablet 640–1024px, desktop >1024px): sidebar hidden and grade-button row wraps below 640px; review session stays single-column/centered (card capped at 640px) at all sizes.
@@ -144,6 +148,7 @@ FR-14: Epic 5 - Restore from backup JSON
 FR-15: Epic 5 - Progress & stats view (streaks, totals, retention curve)
 FR-16: Epic 4 - Flashcard card viewer (flip, ← →, non-graded)
 FR-17: Epic 4 - Learn session (graded introduction of Unlearned Cards per Flashcard)
+FR-18: Epic 4 - Study directions setting (per-direction learned model)
 
 ## Epic List
 
@@ -163,7 +168,7 @@ A user can paste line-delimited term/definition pairs or upload a CSV/Excel file
 **Implementation notes:** `parseImportBlock` and `detectDuplicates` as shared pure domain functions used identically by both import paths (AD-5); read-only `POST /api/import/parse` feeding the import review editor, committed through Epic 2's `POST /api/cards/batch` (shared with Manual mode, duplicates re-checked at commit) and `createCardWithSchedulingRecords` (AD-9) rather than constructing Cards independently; column-mapping step for files only; Import mode of the Flashcard's "Add cards" panel with Paste/Upload sub-tabs, the import review editor and the 3-group results view (UX-DR9), always targeting the Flashcard it was opened from; `details` (line-numbered) error-envelope shape; sub-5-second import system-time budget (AD-13).
 
 ### Epic 4: Spaced Repetition Review Engine
-A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with distraction-free focus mode in place. New Cards are introduced deliberately through a Flashcard's card viewer and Learn session; Review only brings back Cards already learned.
+A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with distraction-free focus mode in place. New Cards are introduced deliberately through a Flashcard's card viewer and Learn session; Review only brings back Cards already learned. The user chooses which Recall Directions they study (both by default); "learned" is tracked per direction, so a graded direction joins Review without waiting for the other.
 **FRs covered:** FR-8, FR-9, FR-11, FR-16, FR-17
 **Implementation notes:** `packages/domain/sm2.ts` as a pure, framework-free engine unit-tested against the PRD addendum's worked fixtures (NFR-4, SM-3); the grade write path is the single `POST /api/review/grade` route calling `applyGrade` inside one Prisma transaction (AD-4); TanStack Query optimistic updates for sub-100ms perceived transitions (AD-7, NFR-2); `toLocalCalendarDay` domain helper introduced here for due-queue filtering (AD-8) and reused by Epic 5's streak attribution; 200ms app-open-to-due-queue budget (AD-13, NFR-3); Review card flip, Grade buttons, review-mode sidebar hiding, full keyboard interaction, mobile tap/swipe, and the Empty due-queue state (UX-DR2, UX-DR3, UX-DR4, UX-DR6 progress counter, UX-DR8, UX-DR11, UX-DR12); Card viewer and Learn entry on Flashcard detail (UX-DR17); `first_graded_at` marker and the shared learned/unlearned predicate (AD-14).
 
@@ -548,7 +553,7 @@ So that a week's worth of notes-app vocabulary becomes cards in one pass without
 
 ## Epic 4: Spaced Repetition Review Engine
 
-A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with distraction-free focus mode in place. New Cards are introduced deliberately through a Flashcard's card viewer and Learn session; Review only brings back Cards already learned.
+A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with distraction-free focus mode in place. New Cards are introduced deliberately through a Flashcard's card viewer and Learn session; Review only brings back Cards already learned. The user chooses which Recall Directions they study (both by default); "learned" is tracked per direction, so a graded direction joins Review without waiting for the other.
 
 ### Story 4.1: SM-2 Scheduling Engine
 
@@ -647,7 +652,7 @@ So that I can concentrate without distraction.
 **Then** normal navigation and chrome are restored
 **And** when nothing is due, the Empty due-queue state shows streak count, a calm line, and either up to 3 Flashcards with Unlearned Cards (each linking to its page) or, when none exist, a "+ Add card" button — instead of the sidebar-less review card
 
-*Build order (Sprint Change 2026-11-13): 4.6 → 4.7 → 4.8 → 4.5.*
+*Build order (Sprint Change 2026-11-13, 2026-11-13b): 4.6 → 4.7 → 4.8 → 4.9 → 4.5.*
 
 ### Story 4.6: Learned Marker & Learned-Only Review Queue
 
@@ -751,6 +756,42 @@ So that I grade new Cards deliberately and they then join my daily Review.
 **Given** nothing is left to learn or review in the Flashcard
 **Then** a calm line "Nothing left to learn in {Flashcard} right now." with a link back to the Flashcard shows
 **And** Learn grades count toward the streak through the same grade route
+*Amended by Sprint Change 2026-11-13b: the queue now filters to studied directions and "learned" is per direction (Story 4.9). Story 4.8b added "Study all cards again" (unsaved practice).*
+
+### Story 4.9: Study Directions Setting & Per-Direction Learned Model
+
+As a user,
+I want to choose whether I'm asked Term → Definition, Definition → Term, or both,
+So that I study the recall skill I actually need.
+
+**Acceptance Criteria:**
+
+**Given** the migration runs
+**Then** `User.studyDirections` exists (BOTH | TERM_TO_DEFINITION | DEFINITION_TO_TERM), every account is BOTH, and no Scheduling Record changes
+
+**Given** Settings
+**When** I pick one of the three options
+**Then** it saves on change via `PATCH /api/settings` (Zod-validated; 401 without a session), a "Saved" status shows, and a failed save rolls the choice back with an inline error
+
+**Given** I study only Term → Definition
+**When** I open Review or Learn
+**Then** no Definition → Term record appears, and the Learn counts count only Term → Definition
+
+**Given** a Card whose Term → Definition is graded and Definition → Term is not (setting Both)
+**When** its Term → Definition comes due
+**Then** it appears in Review, and its Definition → Term still waits in Learn
+
+**Given** I switch from one direction to Both
+**Then** the newly studied direction's ungraded records appear in Learn, its graded due records in Review, and no Card leaves Review
+
+**Given** I study only Definition → Term
+**Then** the card viewer and the Learn practice run show the Definition side first
+
+**Given** the predicates
+**Then** `studiedDirections`, `learnedRecordWhere`, `unlearnedRecordWhere`, `learnedCardWhere` and `unlearnedCardWhere` live once in `packages/domain` (AD-14), are unit-tested for all three settings, and the queue, Learn and Flashcard-count routes use only them
+**And** UI conforms to DESIGN.md (Study directions control) in both themes
+
+*Build order (Sprint Change 2026-11-13b): 4.8 → 4.9 → 4.5. 4.5's Empty due-queue list of Flashcards with Unlearned Cards uses the 4.9 predicates.*
 
 ## Epic 5: Progress, Streaks & Data Safety
 
@@ -793,6 +834,7 @@ So that I never lose months of study data.
 **Then** I receive a JSON file containing every Class, Folder, Flashcard and Card (with its Flashcard), both Scheduling Records per Card, and streak history — sufficient to reconstruct state
 **And** export is strictly user-initiated/on-demand, no scheduled export job
 **And** the payload conforms to the single shared `backupExportSchema` also used by restore
+**And** the export includes `user.studyDirections`
 **And** each Scheduling Record's `firstGradedAt` is exported verbatim
 
 ### Story 5.3: Restore from Backup
@@ -812,6 +854,7 @@ So that I can recover my data if something goes wrong.
 **Then** I must explicitly confirm before it proceeds — restore replaces existing data, never a silent merge/overwrite
 **And** the restore runs inside one transaction: every row changes or none do, even on a partial failure
 **And** each Scheduling Record's `firstGradedAt` is restored verbatim
+**And** `user.studyDirections` is restored
 
 ### Story 5.4: Progress & Stats View
 
@@ -823,7 +866,7 @@ So that I can observe my progress and trust the scheduling is working correctly.
 
 **Given** I navigate to Stats (outside active review)
 **When** it loads
-**Then** I see current/longest streak, total Cards (learned / unlearned), and a visualization of Scheduling Records' distribution by interval (or review-outcome history) per Recall Direction
+**Then** I see current/longest streak, total Cards (learned / unlearned, counted over my studied directions), and a visualization of Scheduling Records' distribution by interval (or review-outcome history) per Recall Direction
 
 **Given** I've just graded cards
 **When** I view Stats afterward

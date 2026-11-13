@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CardSummary, FlashcardCardsResponse } from "@training-sanctum/domain";
+import type {
+  CardSummary,
+  FlashcardCardsResponse,
+  LearnCounts,
+} from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { SectionMarker } from "@/app/components/section-marker";
 import { PageHeader } from "../../page-header";
@@ -56,6 +60,14 @@ function Breadcrumb({
       ) : null}
     </nav>
   );
+}
+
+/** "Learn · 12 new · 3 due"; zero parts are left out, so an idle Flashcard reads "Learn". */
+function learnLabel({ newCards, due }: LearnCounts): string {
+  const parts = ["Learn"];
+  if (newCards > 0) parts.push(`${newCards} new`);
+  if (due > 0) parts.push(`${due} due`);
+  return parts.join(" · ");
 }
 
 export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
@@ -133,7 +145,15 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
       <PageHeader title={flashcard.name}>{pluralize(cards.length, "card")}</PageHeader>
 
       {empty ? null : (
-        <CardViewer cards={cards} inactive={adding || !!editing || !!deleting} />
+        <>
+          <CardViewer cards={cards} inactive={adding || !!editing || !!deleting} />
+          {/* EXPERIENCE.md Learn button: directly under the viewer, the page's one accent action. */}
+          <div className="mt-6 flex justify-center">
+            <Link href={`/flashcards/${flashcard.id}/learn`} className={buttonPrimary}>
+              {learnLabel(data.learn)}
+            </Link>
+          </div>
+        </>
       )}
 
       <section aria-labelledby="flashcard-cards" className={empty ? "mt-8" : "mt-12"}>
@@ -146,7 +166,7 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
               ref={addRef}
               type="button"
               onClick={() => setAdding(true)}
-              className={buttonPrimary}
+              className={buttonSecondary}
             >
               Add cards
             </button>

@@ -7,6 +7,7 @@
  */
 import { z } from "zod";
 import type { CardSummary } from "./cards";
+import type { LearnCounts } from "./review";
 
 export const FLASHCARD_NAME_MAX_LENGTH = 80;
 
@@ -97,4 +98,6 @@ export interface FlashcardCardsResponse {
   folder: { id: string; name: string; isUnsorted: boolean };
   class: { id: string; name: string };
   cards: CardSummary[];
+  /** spec-4-8: what the Flashcard's Learn session holds right now. */
+  learn: LearnCounts;
 }

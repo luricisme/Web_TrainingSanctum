@@ -15,6 +15,7 @@ import {
   validationFailure,
 } from "@/lib/api-response";
 import { isUniqueViolation } from "@/lib/prisma-errors";
+import { countLearn } from "@/lib/learn-queue";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -22,7 +23,10 @@ function logDelete(entry: Record<string, unknown>): void {
   console.info(JSON.stringify({ operation: "flashcard.delete", ...entry }));
 }
 
-/** The Flashcard with its Cards, newest first, plus breadcrumb ancestors. */
+/**
+ * The Flashcard with its Cards, newest first, plus breadcrumb ancestors and
+ * what its Learn session holds (spec-4-8).
+ */
 export async function GET(
   request: Request,
   { params }: Context
@@ -66,6 +70,7 @@ export async function GET(
     folder: { id: folder.id, name: folder.name, isUnsorted: folder.isUnsorted },
     class: folder.class,
     cards: flashcard.cards,
+    learn: await countLearn(userId, flashcard.id, new Date()),
   };
   return ok(data);
 }
