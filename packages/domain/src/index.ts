@@ -4,8 +4,8 @@
 // ../eslint.config.mjs), and the shared HTTP envelope types (AD-10). Story
 // 1.2 adds the registration request validation schema. Story 3.1 adds paste
 // import parsing and duplicate detection (./import); Story 3.2 adds file
-// import (./import-table). SM-2 scheduling and the
-// streak helpers land in later stories per the architecture spine.
+// import (./import-table). Story 4.1 adds the SM-2 scheduling engine
+// (./sm2); the streak helpers land in Epic 5 per the architecture spine.
 
 export * from "./http";
 export * from "./auth/registration";
@@ -17,3 +17,4 @@ export * from "./cards";
 export * from "./flashcards";
 export * from "./import";
 export * from "./import-table";
+export * from "./sm2";
