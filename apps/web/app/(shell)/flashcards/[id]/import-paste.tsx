@@ -18,7 +18,8 @@ import { fieldErrorClass, formErrorClass, inputClass } from "@/app/components/ui
 import { buttonPrimary, buttonSecondary, labelClass } from "../../classes/ui";
 import { PanelFooter } from "./panel-footer";
 
-const selectClass =
+/** Native select on the token layer; shared with the Upload mapping step. */
+export const selectClass =
   "rounded-sm border border-border bg-background px-3 py-2 text-body-sm text-foreground transition-state focus:border-accent focus:outline-2 focus:outline-offset-2 focus:outline-accent aria-[invalid=true]:border-error aria-[invalid=true]:focus:border-error";
 
 const SEPARATOR_IDS: Record<SeparatorField, string> = {
@@ -44,6 +45,7 @@ export function ImportPaste({
   pending,
   error,
   confirm,
+  switcher,
 }: {
   text: string;
   separators: ImportSeparators;
@@ -55,6 +57,8 @@ export function ImportPaste({
   error: string | null;
   /** A discard confirmation shown in place of the footer actions. */
   confirm?: ReactNode;
+  /** The Paste / Upload file sub-tabs. */
+  switcher: ReactNode;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // An empty Custom value is reported once Preview is pressed; clashing
@@ -113,7 +117,7 @@ export function ImportPaste({
       }}
       className="flex flex-col gap-6"
     >
-      <SourceSwitcher />
+      {switcher}
 
       <div className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2 sm:gap-6">
@@ -278,38 +282,6 @@ function SeparatorPicker<K extends string>({
           {error}
         </p>
       ) : null}
-    </div>
-  );
-}
-
-/**
- * Paste / Upload file sub-tabs: a smaller neutral pill so the mode switcher
- * keeps the only accent pill (DESIGN.md Import mode). Upload lands in 3.2.
- */
-function SourceSwitcher() {
-  return (
-    <div
-      role="tablist"
-      aria-label="Import source"
-      className="flex gap-1 self-start rounded-full bg-elevated p-1"
-    >
-      <button
-        type="button"
-        role="tab"
-        aria-selected="true"
-        className="rounded-full bg-card px-4 py-1.5 text-body-sm font-medium text-foreground shadow-low focus-ring"
-      >
-        Paste
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected="false"
-        disabled
-        className="cursor-not-allowed rounded-full px-4 py-1.5 text-body-sm text-foreground-tertiary opacity-60"
-      >
-        Upload file
-      </button>
     </div>
   );
 }

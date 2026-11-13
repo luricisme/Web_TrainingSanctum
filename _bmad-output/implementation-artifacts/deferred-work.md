@@ -83,3 +83,10 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-1b-paste-import-term-and-card-separators.md`
   summary: Update DESIGN.md Import mode (and the DNA error-tone note) to describe the two separator pickers, the Custom input, the live card count and the "Card N" row labels.
   evidence: DESIGN.md still says "Paste shows a delimiter select" and only describes "L14" line labels; the shipped UI follows the 2026-11-12 Quizlet-style decision.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-2-csv-excel-import-with-column-mapping-and-review-editor.md`
+  summary: Add an E2E assertion for the combined close confirm "Discard the pasted text and the uploaded file?" in the Add cards panel.
+  evidence: The `hasPaste && spreadsheet` branch of `requestClose` in add-cards-panel.tsx has no test; dropping it would show a misleading confirm without failing anything.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-2-csv-excel-import-with-column-mapping-and-review-editor.md`
+  summary: Cap request body size in `readJson` (apps/web/lib/api-response.ts) before JSON parsing, for all API routes.
+  evidence: `readJson` calls `request.json()` with no byte limit (pre-existing; paste parse and the new file parse both rely on it). In production Vercel's 4.5 MB body limit bounds it, but self-hosted or local runs buffer bodies of any size.
