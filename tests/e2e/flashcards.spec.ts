@@ -184,7 +184,7 @@ test("open a Flashcard and add, edit and delete Cards in it", async ({ page }) =
   await dialog.getByLabel("Definition, row 1").fill("slightly ill");
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText("under the weather")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Cards", exact: true }).getByText("under the weather")).toBeVisible();
   expect(await prisma.card.count({ where: { flashcardId: flashcard.id } })).toBe(1);
 
   // Back to the Folder page through the breadcrumb (no reload): the count is fresh.
@@ -197,7 +197,7 @@ test("open a Flashcard and add, edit and delete Cards in it", async ({ page }) =
   await dialog.getByLabel("Term", { exact: true }).fill("break the ice");
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText("break the ice")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Cards", exact: true }).getByText("break the ice")).toBeVisible();
 
   await page.getByRole("button", { name: /^Delete card 1/ }).click();
   await dialog.getByRole("button", { name: "Delete card" }).click();

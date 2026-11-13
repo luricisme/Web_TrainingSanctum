@@ -180,7 +180,7 @@ test("edit a card with the keyboard, field error keeps old text, discard prompt"
   await term.fill("");
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog.getByText("Enter a term.")).toBeVisible();
-  await expect(page.getByText("under the weather")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Cards", exact: true }).getByText("under the weather")).toBeVisible();
   expect((await prisma.card.findUniqueOrThrow({ where: { id: card.id } })).term).toBe(
     "under the weather"
   );
@@ -195,8 +195,8 @@ test("edit a card with the keyboard, field error keeps old text, discard prompt"
   await dialog.getByLabel("Part of speech").fill("noun");
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText("café 日本語")).toBeVisible();
-  await expect(page.getByText("/ˈkɒl.ə.keɪt/")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Cards", exact: true }).getByText("café 日本語")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Cards", exact: true }).getByText("/ˈkɒl.ə.keɪt/")).toBeVisible();
   await expect(page.getByRole("button", { name: /^Edit card 1/ })).toBeFocused();
   const row = await prisma.card.findUniqueOrThrow({
     where: { id: card.id },
@@ -214,7 +214,7 @@ test("edit a card with the keyboard, field error keeps old text, discard prompt"
   await dialog.getByRole("button", { name: "Cancel" }).click();
   await dialog.getByRole("button", { name: "Discard" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText("café 日本語")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Cards", exact: true }).getByText("café 日本語")).toBeVisible();
 
   // Escape with unsaved changes also asks before discarding.
   await page.getByRole("button", { name: /^Edit card 1/ }).click();
