@@ -128,18 +128,34 @@
   --radius-bullet: 1px;
 
   --ease-state: ease-in-out;
+
+  /* Review card flip stage (mockups/key-screens.html): `perspective-review`. */
+  --perspective-review: 1600px;
 }
 
 /* Motion (DESIGN.md motion): state changes use `motion.normal` (150ms) with
    ease-in-out; motion exists only to clarify a state change. */
 :root {
   --motion-normal: 150ms;
+  /* Review card 3D Y-axis flip (DESIGN.md motion.flip-duration,
+     motion.easing-entrance). The reduced-motion rule below shortens it. */
+  --motion-flip: 520ms;
+  --ease-entrance: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @utility transition-state {
   transition-property: color, background-color, border-color, opacity;
   transition-duration: var(--motion-normal);
   transition-timing-function: var(--ease-state);
+}
+
+/* Review card flipper: the element that rotates on Y between its two faces.
+   Pair with `rotate-y-180` when revealed and `backface-hidden` faces. */
+@utility review-flip {
+  transform-style: preserve-3d;
+  transition-property: transform;
+  transition-duration: var(--motion-flip);
+  transition-timing-function: var(--ease-entrance);
 }
 
 /* Shared keyboard focus ring: 2px accent outline, 2px offset. */

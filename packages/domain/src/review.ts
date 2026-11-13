@@ -37,3 +37,53 @@ export interface GradeResult {
   /** ISO 8601 UTC instant: the start of the user's local day it is next due. */
   nextReviewDate: string;
 }
+
+/**
+ * Review queue contract (spec-4-3): `GET /api/review/queue` takes at most one
+ * optional scope. With none, the queue spans every Class.
+ */
+const scopeId = z
+  .string()
+  .min(1, "Choose a class, folder or flashcard to review.")
+  .optional();
+
+export const reviewQueueQuerySchema = z
+  .object({ classId: scopeId, folderId: scopeId, flashcardId: scopeId })
+  .refine(
+    (q) =>
+      [q.classId, q.folderId, q.flashcardId].filter((v) => v !== undefined)
+        .length <= 1,
+    { message: "Choose one scope to review.", path: ["scope"] }
+  );
+
+export type ReviewQueueQuery = z.infer<typeof reviewQueueQuerySchema>;
+
+export type ReviewScopeKind = "class" | "folder" | "flashcard";
+
+/** The Class, Folder or Flashcard a scoped session is limited to. */
+export interface ReviewScope {
+  kind: ReviewScopeKind;
+  id: string;
+  name: string;
+}
+
+/** One due Scheduling Record, with the Card text needed to render it. */
+export interface ReviewQueueEntry {
+  schedulingRecordId: string;
+  cardId: string;
+  direction: RecallDirection;
+  /** ISO 8601 UTC instant. */
+  nextReviewDate: string;
+  flashcardName: string;
+  term: string;
+  definition: string;
+  example: string | null;
+  context: string | null;
+  partOfSpeech: string | null;
+}
+
+export interface ReviewQueueResponse {
+  scope: ReviewScope | null;
+  /** Due records, oldest-due-first. */
+  entries: ReviewQueueEntry[];
+}
