@@ -136,21 +136,16 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
           <SectionMarker as="h2" id="flashcard-cards">
             Cards
           </SectionMarker>
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <Link href={`/review?flashcardId=${flashcard.id}`} className={buttonSecondary}>
-              Review this flashcard
-            </Link>
-            {empty ? null : (
-              <button
-                ref={addRef}
-                type="button"
-                onClick={() => setAdding(true)}
-                className={buttonPrimary}
-              >
-                Add cards
-              </button>
-            )}
-          </div>
+          {empty ? null : (
+            <button
+              ref={addRef}
+              type="button"
+              onClick={() => setAdding(true)}
+              className={buttonPrimary}
+            >
+              Add cards
+            </button>
+          )}
         </div>
         {empty ? (
           <div className="flex flex-col items-start gap-4 pt-3">

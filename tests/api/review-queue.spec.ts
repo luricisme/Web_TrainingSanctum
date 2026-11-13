@@ -46,12 +46,28 @@ async function createFlashcard(s: Session, base: string, folderId: string, name:
   return (await res.json()).data.id as string;
 }
 
-/** Adds one Card to a Flashcard and returns its two Scheduling Records. */
-async function addCard(s: Session, base: string, flashcardId: string, term: string) {
+/**
+ * Adds one Card to a Flashcard and returns its two Scheduling Records. API-created
+ * Cards start unlearned (spec-4-6); by default both records are marked learned so
+ * the Card is eligible for Review. Pass `learned: false` to keep it new.
+ */
+async function addCard(
+  s: Session,
+  base: string,
+  flashcardId: string,
+  term: string,
+  { learned = true }: { learned?: boolean } = {}
+) {
   const res = await s.request.post(`${base}/api/cards/batch`, {
     data: { flashcardId, cards: [{ term, definition: `${term} meaning` }] },
   });
   expect(res.status()).toBe(201);
+  if (learned) {
+    await prisma.schedulingRecord.updateMany({
+      where: { card: { flashcardId, term } },
+      data: { firstGradedAt: new Date() },
+    });
+  }
   const card = await prisma.card.findFirstOrThrow({
     where: { flashcardId, term },
     include: { schedulingRecords: true },
@@ -72,7 +88,7 @@ function queue(s: Session, base: string, query = "") {
   return s.request.get(`${base}/api/review/queue${query}`);
 }
 
-// spec-4-3: GET /api/review/queue.
+// spec-4-3, spec-4-6: GET /api/review/queue (learned Cards only).
 test.describe("GET /api/review/queue", () => {
   test("unauthenticated requests return 401", async ({ playwright, baseURL }) => {
     const base = baseURL ?? FALLBACK_BASE;
@@ -132,7 +148,7 @@ test.describe("GET /api/review/queue", () => {
     expect(data.entries[2].flashcardName).toBe("Weather idioms");
   });
 
-  test("a new Card is due in both directions as two entries", async ({ playwright, baseURL }) => {
+  test("a learned Card is due in both directions as two entries", async ({ playwright, baseURL }) => {
     const base = baseURL ?? FALLBACK_BASE;
     const s = await newUser(playwright, base);
     const fc = await createFlashcard(
@@ -152,7 +168,7 @@ test.describe("GET /api/review/queue", () => {
     ]);
   });
 
-  test("scopes to a Class, Folder or Flashcard and names the scope", async ({
+  test("scopes to a Class or Folder and names the scope", async ({
     playwright,
     baseURL,
   }) => {
@@ -187,14 +203,6 @@ test.describe("GET /api/review/queue", () => {
       [inFlashcard.cardId, inFolder.cardId, inClass.cardId].sort()
     );
 
-    const byFlashcard = (await (await queue(s, base, `?flashcardId=${flashcardId}`)).json()).data;
-    expect(byFlashcard.scope).toEqual({
-      kind: "flashcard",
-      id: flashcardId,
-      name: "Weather idioms",
-    });
-    expect(cardsOf(byFlashcard.entries)).toEqual([inFlashcard.cardId]);
-    expect(byFlashcard.entries).toHaveLength(2);
   });
 
   test("a foreign or missing scope returns 404", async ({ playwright, baseURL }) => {
@@ -203,12 +211,10 @@ test.describe("GET /api/review/queue", () => {
     const other = await newUser(playwright, base);
     const classId = await createClass(owner, base, "Private");
     const folderId = await createFolder(owner, base, classId, "F");
-    const flashcardId = await createFlashcard(owner, base, folderId, "W");
 
     for (const query of [
       `?classId=${classId}`,
       `?folderId=${folderId}`,
-      `?flashcardId=${flashcardId}`,
       "?classId=does-not-exist",
     ]) {
       const res = await queue(other, base, query);
@@ -220,7 +226,7 @@ test.describe("GET /api/review/queue", () => {
   test("two scopes or an empty scope return 400", async ({ playwright, baseURL }) => {
     const base = baseURL ?? FALLBACK_BASE;
     const s = await newUser(playwright, base);
-    for (const query of ["?classId=a&folderId=b", "?folderId=b&flashcardId=c", "?classId="]) {
+    for (const query of ["?classId=a&folderId=b", "?classId="]) {
       const res = await queue(s, base, query);
       expect(res.status(), query).toBe(400);
       expect((await res.json()).error.code, query).toBe("VALIDATION_ERROR");
@@ -241,6 +247,117 @@ test.describe("GET /api/review/queue", () => {
 
     const { data } = await (await queue(other, base)).json();
     expect(data).toEqual({ scope: null, entries: [] });
+  });
+
+  test("flashcard scope returns 400: review moved to Learn", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcardId = await createFlashcard(
+      s,
+      base,
+      await createFolder(s, base, await createClass(s, base, "C"), "F"),
+      "W"
+    );
+    await addCard(s, base, flashcardId, "collate");
+    for (const query of [`?flashcardId=${flashcardId}`, "?folderId=b&flashcardId=c", "?flashcardId="]) {
+      const res = await queue(s, base, query);
+      expect(res.status(), query).toBe(400);
+      const { error } = await res.json();
+      expect(error.code, query).toBe("VALIDATION_ERROR");
+      expect(error.message, query).toBe("Flashcard review moved to Learn.");
+    }
+  });
+
+  test("unlearned and half-learned Cards never appear, in any scope (AD-14)", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const classId = await createClass(s, base, "C");
+    const folderId = await createFolder(s, base, classId, "F");
+    const fc = await createFlashcard(s, base, folderId, "W");
+    const unlearned = await addCard(s, base, fc, "brand-new", { learned: false });
+    const half = await addCard(s, base, fc, "half", { learned: false });
+    await prisma.schedulingRecord.update({
+      where: { id: half.forward.id },
+      data: { firstGradedAt: new Date(), interval: 1, repetitions: 1 },
+    });
+    const learned = await addCard(s, base, fc, "learned");
+
+    // Every record above is due today.
+    const recordsOf = (entries: { schedulingRecordId: string }[]) =>
+      entries.map((e) => e.schedulingRecordId);
+    for (const query of ["", `?classId=${classId}`, `?folderId=${folderId}`]) {
+      const { data } = await (await queue(s, base, query)).json();
+      const ids = recordsOf(data.entries);
+      expect(ids, query).toEqual([learned.forward.id, learned.backward.id]);
+      for (const absent of [unlearned, half]) {
+        expect(ids, query).not.toContain(absent.forward.id);
+        expect(ids, query).not.toContain(absent.backward.id);
+      }
+    }
+  });
+
+  test("a Card becomes learned only after both directions are graded", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const fc = await createFlashcard(
+      s,
+      base,
+      await createFolder(s, base, await createClass(s, base, "C"), "F"),
+      "W"
+    );
+    const { forward, backward } = await addCard(s, base, fc, "collate", { learned: false });
+    const gradeRecord = (id: string) =>
+      s.request.post(`${base}/api/review/grade`, { data: { schedulingRecordId: id, grade: "good" } });
+    const queuedIds = async () =>
+      (await (await queue(s, base)).json()).data.entries.map(
+        (e: { schedulingRecordId: string }) => e.schedulingRecordId
+      );
+
+    expect((await gradeRecord(forward.id)).status()).toBe(200);
+    // Half-learned: the still-due backward record stays out of Review.
+    expect(await queuedIds()).toEqual([]);
+
+    expect((await gradeRecord(backward.id)).status()).toBe(200);
+    await setDue([forward.id, backward.id], new Date(Date.now() - DAY_MS));
+    expect(await queuedIds()).toEqual([forward.id, backward.id]);
+  });
+
+  test("a learned record graded Again stays learned and returns when due", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const fc = await createFlashcard(
+      s,
+      base,
+      await createFolder(s, base, await createClass(s, base, "C"), "F"),
+      "W"
+    );
+    const { forward, backward } = await addCard(s, base, fc, "collate");
+    const graded = await s.request.post(`${base}/api/review/grade`, {
+      data: { schedulingRecordId: forward.id, grade: "again" },
+    });
+    expect(graded.status()).toBe(200);
+    expect((await graded.json()).data.repetitions).toBe(0);
+
+    // Not due until tomorrow; then it is back.
+    let { data } = await (await queue(s, base)).json();
+    expect(data.entries.map((e: { schedulingRecordId: string }) => e.schedulingRecordId)).toEqual([
+      backward.id,
+    ]);
+    await setDue([forward.id], new Date(Date.now() - DAY_MS));
+    ({ data } = await (await queue(s, base)).json());
+    expect(data.entries.map((e: { schedulingRecordId: string }) => e.schedulingRecordId)).toEqual([
+      forward.id,
+      backward.id,
+    ]);
   });
 
   test("a graded record leaves the queue while its other direction stays", async ({

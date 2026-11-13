@@ -30,30 +30,24 @@ describe("gradeRequestSchema (spec-4-2)", () => {
   });
 });
 
-describe("reviewQueueQuerySchema (spec-4-3)", () => {
-  it("accepts no scope or exactly one scope", () => {
+describe("reviewQueueQuerySchema (spec-4-3, spec-4-6)", () => {
+  it("accepts no scope or exactly one Class or Folder scope", () => {
     expect(reviewQueueQuerySchema.safeParse({}).success).toBe(true);
-    for (const key of ["classId", "folderId", "flashcardId"]) {
+    for (const key of ["classId", "folderId"]) {
       const parsed = reviewQueueQuerySchema.safeParse({ [key]: "abc" });
       expect(parsed.success, key).toBe(true);
       expect(parsed.data, key).toEqual({ [key]: "abc" });
     }
   });
 
-  it("rejects two or three scopes with one message", () => {
-    for (const query of [
-      { classId: "a", folderId: "b" },
-      { folderId: "b", flashcardId: "c" },
-      { classId: "a", folderId: "b", flashcardId: "c" },
-    ]) {
-      const parsed = reviewQueueQuerySchema.safeParse(query);
-      expect(parsed.success).toBe(false);
-      expect(parsed.error?.issues[0]?.message).toBe("Choose one scope to review.");
-    }
+  it("rejects two scopes with one message", () => {
+    const parsed = reviewQueueQuerySchema.safeParse({ classId: "a", folderId: "b" });
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues.map((i) => i.message)).toEqual(["Choose one scope to review."]);
   });
 
   it("rejects an empty scope id", () => {
-    for (const key of ["classId", "folderId", "flashcardId"]) {
+    for (const key of ["classId", "folderId"]) {
       expect(reviewQueueQuerySchema.safeParse({ [key]: "" }).success, key).toBe(false);
     }
   });

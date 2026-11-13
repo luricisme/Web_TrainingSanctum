@@ -14,8 +14,9 @@ async function register(page: Page): Promise<string> {
 }
 
 /**
- * Seeds one Card (both directions due now) in IELTS / Speaking / Weather
- * idioms, plus `extra` more Cards in the same Flashcard.
+ * Seeds one learned Card (both directions due now and already graded once,
+ * spec-4-6) in IELTS / Speaking / Weather idioms, plus `extra` more learned
+ * Cards in the same Flashcard.
  */
 async function seedCard(email: string, extra = 0) {
   const user = await prisma.user.findUniqueOrThrow({ where: { email } });
@@ -37,6 +38,7 @@ async function seedCard(email: string, extra = 0) {
     data: { name: "Weather idioms", folderId: folder.id, userId: user.id },
   });
   const due = new Date(Date.now() - 60_000);
+  const firstGradedAt = new Date(Date.now() - 7 * 86_400_000);
   const card = await prisma.card.create({
     data: {
       term: "drizzle",
@@ -46,8 +48,8 @@ async function seedCard(email: string, extra = 0) {
       userId: user.id,
       schedulingRecords: {
         create: [
-          { direction: "TERM_TO_DEFINITION", nextReviewDate: due },
-          { direction: "DEFINITION_TO_TERM", nextReviewDate: due },
+          { direction: "TERM_TO_DEFINITION", nextReviewDate: due, firstGradedAt },
+          { direction: "DEFINITION_TO_TERM", nextReviewDate: due, firstGradedAt },
         ],
       },
     },
@@ -61,8 +63,8 @@ async function seedCard(email: string, extra = 0) {
         userId: user.id,
         schedulingRecords: {
           create: [
-            { direction: "TERM_TO_DEFINITION", nextReviewDate: due },
-            { direction: "DEFINITION_TO_TERM", nextReviewDate: due },
+            { direction: "TERM_TO_DEFINITION", nextReviewDate: due, firstGradedAt },
+            { direction: "DEFINITION_TO_TERM", nextReviewDate: due, firstGradedAt },
           ],
         },
       },
@@ -210,20 +212,46 @@ test("a 409 NOT_DUE grade counts as already applied: no rollback, no alert", asy
   await expect(page.getByText("Your grade wasn't saved. Grade this card again.")).toHaveCount(0);
 });
 
-test("Review this flashcard opens a scoped session that names the scope", async ({ page }) => {
+test("the Flashcard page has no Review link; a stale flashcard review link is invalid", async ({
+  page,
+}) => {
   const email = await register(page);
   const { flashcard } = await seedCard(email);
   await page.goto(`/flashcards/${flashcard.id}`);
-  await page.getByRole("link", { name: "Review this flashcard" }).click();
-  await expect(page).toHaveURL(`/review?flashcardId=${flashcard.id}`);
+  await expect(page.getByRole("heading", { level: 1, name: "Weather idioms" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add cards" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Review this flashcard" })).toHaveCount(0);
 
-  const header = page.getByRole("heading", { level: 1 });
-  await expect(header).toContainText("Reviewing flashcard Weather idioms");
-  await expect(header.getByRole("link", { name: "Weather idioms" })).toHaveAttribute(
+  await page.goto(`/review?flashcardId=${flashcard.id}`);
+  await expect(page.getByText("This review link isn't valid.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Review all cards" })).toHaveAttribute(
     "href",
-    `/flashcards/${flashcard.id}`
+    "/review"
   );
+});
+
+test("a Card added through the UI does not appear on /review until learned", async ({ page }) => {
+  const email = await register(page);
+  const { flashcard } = await seedCard(email);
+  await page.goto(`/flashcards/${flashcard.id}`);
+  await page.getByRole("button", { name: "Add cards" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Term, row 1").fill("squall");
+  await dialog.getByLabel("Definition, row 1").fill("sudden gust");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("squall")).toBeVisible();
+  const added = await prisma.card.findFirstOrThrow({
+    where: { flashcardId: flashcard.id, term: "squall" },
+    include: { schedulingRecords: true },
+  });
+  expect(added.schedulingRecords.map((r) => r.firstGradedAt)).toEqual([null, null]);
+
+  // Only the seeded learned Card's two directions are queued.
+  await page.goto("/review");
   await expect(page.getByText("1 / 2")).toBeVisible();
+  for (const key of ["Space", "3", "Space", "3"]) await page.keyboard.press(key);
+  await expect(page.getByText(doneLine)).toBeVisible();
 });
 
 test("rapid key presses grade every entry with no waits in between", async ({ page }) => {
@@ -327,8 +355,8 @@ test("touch swipes grade a revealed card; short touches and mouse drags do not",
 test("unknown and invalid scopes offer Review all cards instead of a retry", async ({ page }) => {
   await register(page);
 
-  await page.goto("/review?flashcardId=does-not-exist");
-  await expect(page.getByText("This class, folder or flashcard does not exist.")).toBeVisible();
+  await page.goto("/review?classId=does-not-exist");
+  await expect(page.getByText("This class or folder does not exist.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Review all cards" })).toHaveAttribute(
     "href",
     "/review"

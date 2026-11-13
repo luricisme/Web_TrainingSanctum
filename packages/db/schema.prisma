@@ -191,6 +191,10 @@ model SchedulingRecord {
   repetitions    Int             @default(0)
   easeFactor     Float           @default(2.5)
   nextReviewDate DateTime
+  /// AD-14: set once, by the grade route, on this record's first grade.
+  /// Records graded before the 20261113 migration were backfilled with
+  /// `updatedAt` (their last write), so for them it is only an approximation.
+  firstGradedAt  DateTime?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
