@@ -9,6 +9,7 @@ import { SectionMarker } from "@/app/components/section-marker";
 import { PageHeader } from "../../page-header";
 import { buttonPrimary, buttonSecondary, pluralize } from "../../classes/ui";
 import { AddCardsPanel } from "./add-cards-panel";
+import { CardViewer } from "./card-viewer";
 import { DeleteCardModal } from "./delete-card-modal";
 import { EditCardModal } from "./edit-card-modal";
 
@@ -131,7 +132,11 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
       <Breadcrumb cls={data.class} folder={data.folder} flashcard={flashcard.name} />
       <PageHeader title={flashcard.name}>{pluralize(cards.length, "card")}</PageHeader>
 
-      <section aria-labelledby="flashcard-cards" className="mt-8">
+      {empty ? null : (
+        <CardViewer cards={cards} inactive={adding || !!editing || !!deleting} />
+      )}
+
+      <section aria-labelledby="flashcard-cards" className={empty ? "mt-8" : "mt-12"}>
         <div className="mb-6 flex items-center justify-between gap-4">
           <SectionMarker as="h2" id="flashcard-cards">
             Cards

@@ -326,6 +326,12 @@ test("touch swipes grade a revealed card; short touches and mouse drags do not",
     await card.dispatchEvent("pointerup", { ...base, clientX: 200 + dx, clientY: 200 + dy });
   }
 
+  // Before the answer has been seen, a full swipe does not grade.
+  await swipe("touch", 60, 0);
+  await expect(page.getByText("1 / 4")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Good/ })).toHaveCount(0);
+  expect(grades).toEqual([]);
+
   await page.keyboard.press("Space");
   await expect(page.getByRole("button", { name: /^Good/ })).toBeVisible();
 

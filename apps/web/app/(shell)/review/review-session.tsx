@@ -12,6 +12,7 @@ import {
   type ReviewScope,
 } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
+import { isTextField } from "@/lib/keyboard";
 import { buttonSecondary, formErrorClass, linkClass } from "@/app/components/ui";
 import { ReviewCard } from "./review-card";
 
@@ -54,16 +55,6 @@ const gradeAgain = `${gradeBase} border-error text-error`;
 const gradeNeutral = `${gradeBase} border-border text-foreground-secondary hover:text-foreground`;
 
 const stageClass = "flex w-full flex-col items-center gap-8";
-
-function isTextField(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return (
-    target.isContentEditable ||
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement
-  );
-}
 
 function ScopeHeader({ scope }: { scope: ReviewScope | null }) {
   if (!scope) return <h1 className="sr-only">Review</h1>;
