@@ -118,3 +118,6 @@
 - source_spec: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-13.md`
   summary: RESOLVED (supersedes the spec-4-1 entry asking Story 4.4 for one shared "never graded" predicate). Story 4.4 is removed. "Never graded" is now an explicit `SchedulingRecord.firstGradedAt` column with one shared predicate (Architecture AD-14), built in Story 4.6.
   evidence: The Sprint Change 2026-11-13 proposal was approved, and the PRD, the Architecture Spine and epics.md were updated.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-8-learn-session.md`
+  summary: Review and Learn get stuck when the grade route returns 404 NOT_FOUND (for example, the Card was deleted in another tab). The rollback restores the slot every time, and it can never be saved.
+  evidence: GradingSession.onError rolls back on any error except NOT_DUE. Review has done the same since spec-4-3. The fix is to drop the slot (and its practice copies) on a 404 instead of restoring it.

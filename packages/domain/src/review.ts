@@ -105,3 +105,35 @@ export interface ReviewQueueResponse {
   /** Due records, oldest-due-first. */
   entries: ReviewQueueEntry[];
 }
+
+/**
+ * Learn queue contract (spec-4-8): `GET /api/review/learn?flashcardId=` runs a
+ * graded session for one Flashcard. `flashcardId` is required.
+ */
+export const learnQueueQuerySchema = z.object({
+  flashcardId: z
+    .string({ error: "Choose a flashcard to learn." })
+    .trim()
+    .min(1, "Choose a flashcard to learn."),
+});
+
+export type LearnQueueQuery = z.infer<typeof learnQueueQuerySchema>;
+
+/** What is waiting in a Flashcard's Learn session. */
+export interface LearnCounts {
+  /** Unlearned Cards (not records). */
+  newCards: number;
+  /** Due records of learned Cards. */
+  due: number;
+}
+
+export interface LearnQueueResponse {
+  flashcard: { id: string; name: string };
+  counts: LearnCounts;
+  /**
+   * The unlearned Cards' ungraded records first (Cards oldest-created first,
+   * Term → Definition before Definition → Term), then the due records of
+   * learned Cards, oldest-due-first.
+   */
+  entries: ReviewQueueEntry[];
+}

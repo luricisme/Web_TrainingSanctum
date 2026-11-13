@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   REVIEW_GRADES,
   gradeRequestSchema,
+  learnQueueQuerySchema,
   reviewQueueQuerySchema,
 } from "@training-sanctum/domain";
 
@@ -50,5 +51,23 @@ describe("reviewQueueQuerySchema (spec-4-3, spec-4-6)", () => {
     for (const key of ["classId", "folderId"]) {
       expect(reviewQueueQuerySchema.safeParse({ [key]: "" }).success, key).toBe(false);
     }
+  });
+});
+
+describe("learnQueueQuerySchema (spec-4-8)", () => {
+  it("requires a flashcardId", () => {
+    expect(learnQueueQuerySchema.safeParse({}).success).toBe(false);
+  });
+
+  it("rejects a blank flashcardId", () => {
+    for (const flashcardId of ["", "   "]) {
+      expect(learnQueueQuerySchema.safeParse({ flashcardId }).success, flashcardId).toBe(false);
+    }
+  });
+
+  it("accepts a flashcardId", () => {
+    const parsed = learnQueueQuerySchema.safeParse({ flashcardId: "abc" });
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toEqual({ flashcardId: "abc" });
   });
 });

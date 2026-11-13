@@ -6,7 +6,8 @@
 // import parsing and duplicate detection (./import); Story 3.2 adds file
 // import (./import-table). Story 4.1 adds the SM-2 scheduling engine
 // (./sm2); Story 4.2 adds the grade request contract (./review); Story 4.6
-// adds the AD-14 learned predicate (./learned). The streak
+// adds the AD-14 learned predicate (./learned); Story 4.8 adds the Learn
+// queue contract (./review). The streak
 // helpers land in Epic 5 per the architecture spine.
 
 export * from "./http";
