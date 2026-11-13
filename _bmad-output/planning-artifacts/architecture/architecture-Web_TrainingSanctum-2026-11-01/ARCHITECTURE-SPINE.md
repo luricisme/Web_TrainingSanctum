@@ -84,9 +84,9 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
 
 ### AD-8 — Local day-boundary source of truth
 
-- **Binds:** FR-8 (due-date computation), FR-12 (streak-day attribution)
-- **Prevents:** due-queue inclusion and streak-day attribution being computed against two different clocks (e.g. server UTC day vs. client wall-clock day), which would silently desync the two features the PRD requires to share one clock basis.
-- **Rule:** `User.timezone` (IANA string, captured from the browser at signup, not user-editable in v1) is the single source of local-day truth. The API converts UTC "now" to `User.timezone` before both (a) filtering the due queue against `next_review_date` and (b) attributing a graded Scheduling Record to a calendar day for streak counting. Both conversions call the same domain helper (`toLocalCalendarDay`).
+- **Binds:** FR-8 (due-date computation), FR-12 and FR-19 (quest-day attribution and settlement)
+- **Prevents:** due-queue inclusion and quest-day attribution being computed against two different clocks (e.g. server UTC day vs. client wall-clock day), which would silently desync the features the PRD requires to share one clock basis.
+- **Rule:** `User.timezone` (IANA string, captured from the browser at signup, not user-editable in v1) is the single source of local-day truth. The API converts UTC "now" to `User.timezone` before (a) filtering the due queue against `next_review_date`, (b) attributing a first grade (`first_graded_at`) or a review grade to a calendar day for Daily Quest conditions, and (c) choosing which days cultivation settlement covers (AD-15). All of these call the same domain helper (`toLocalCalendarDay`).
 
 ### AD-9 — Card creation is a single shared path
 
@@ -98,7 +98,7 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
 
 - **Binds:** all Route Handlers; FR-13, FR-14
 - **Prevents:** each GET endpoint independently choosing a response shape (bare array vs. `{data:[...]}` vs. `{items,total}`), and the export (FR-13) and restore (FR-14) routes drifting apart on field names/nesting since nothing currently forces them to agree.
-- **Rule:** Every successful Route Handler response is `{ data: T }` (or `{ data: T[], meta?: {...} }` for paginated/listy endpoints) — defined as a shared generic type in `packages/domain/http.ts`, imported by both the Route Handler and the UI's fetch wrapper. FR-13's export payload shape and FR-14's restore input are the **same single Zod schema** (`backupExportSchema`, in `packages/domain`): the export route serializes to it, the restore route parses and validates against it — one schema, not two independently written shapes that happen to agree today. `backupExportSchema` includes `firstGradedAt` per Scheduling Record (Sprint Change 2026-11-13). It also carries `user.studyDirections`, and restore writes it back (Sprint Change 2026-11-13b).
+- **Rule:** Every successful Route Handler response is `{ data: T }` (or `{ data: T[], meta?: {...} }` for paginated/listy endpoints) — defined as a shared generic type in `packages/domain/http.ts`, imported by both the Route Handler and the UI's fetch wrapper. FR-13's export payload shape and FR-14's restore input are the **same single Zod schema** (`backupExportSchema`, in `packages/domain`): the export route serializes to it, the restore route parses and validates against it — one schema, not two independently written shapes that happen to agree today. `backupExportSchema` includes `firstGradedAt` per Scheduling Record (Sprint Change 2026-11-13). It also carries `user.studyDirections`, and restore writes it back (Sprint Change 2026-11-13b). It carries a `cultivation` section — `{ xp, settledThrough, days[], xpEvents[] }` — restored verbatim, except that restore sets `settledThrough` to yesterday so no penalty is charged for the export-to-restore gap (Sprint Change 2026-11-14, AD-15).
 
 ### AD-11 — Backup cadence, on-demand export, and destructive-operation atomicity (resolves PRD §10 Q1)
 
@@ -123,6 +123,21 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
 - **Binds:** FR-9, FR-15, FR-16, FR-17, FR-18
 - **Prevents:** the Review queue, the Learn queue, the Learn button counts and Stats each deriving "learned" differently (e.g. `interval === 0`, `repetitions === 0`, or "has any grade"), or each applying the study-directions setting differently, which would let a record show up in both queues or in neither.
 - **Rule:** A Scheduling Record is **learned** when `first_graded_at IS NOT NULL`. Every queue and count is filtered to the user's **studied directions**, derived once from `User.studyDirections` by a pure domain helper `studiedDirections(setting) → RecallDirection[]`. The predicates live once in `packages/domain` as Prisma-`where`-shaped builders taking those directions (plain objects, no DB import): `learnedRecordWhere(dirs)`, `unlearnedRecordWhere(dirs)`, and the Card-level `unlearnedCardWhere(dirs)` (some unlearned record in a studied direction) / `learnedCardWhere(dirs)` (none), used only for counts and Stats. They are used by `GET /api/review/queue`, `GET /api/review/learn`, the Learn counts on `GET /api/flashcards/[id]` and `GET /api/stats`. Review queue = learned, due records in studied directions. Learn queue = the Flashcard's unlearned records in studied directions (Cards in creation order, each Card's directions together, TERM_TO_DEFINITION first), followed by its learned, due records in studied directions, oldest-due-first. Records of unstudied directions are never read into a queue and never written: turning a direction off or on changes no row. The card viewer and the Learn practice run (both client-side, no grade POST) take the prompt side from the same helper. In-session "repeat until correct" (an Again entry re-shown at the end of a Learn session) is client-side practice only: the session POSTs each entry's first Grade once and never POSTs the repeats, so AD-4's single write path and the grade route's not-due 409 stay intact.
+
+### AD-15 — Cultivation ledger and lazy settlement (Sprint Change 2026-11-14)
+
+- **Binds:** FR-12, FR-19, FR-13/FR-14 (cultivation section), FR-15 (XP history)
+- **Prevents:** XP drifting from its history; a quest claimed twice; a missed day penalized twice (two tabs, a claim racing a page load); quest rules duplicated between UI and API; a scheduled job that v1's hosting (Vercel + Neon free tier) doesn't need.
+- **Rule:**
+  - The ladder (90 levels, PRD addendum), the quest table, the two quest-condition evaluators (`LEARN_FLASHCARDS`, `CLEAR_REVIEW`), `levelForXp(xp)`, `questsForLevel(level)` and `settleDays(...)` are pure functions and constants in `packages/domain/cultivation.ts` (AD-1). Route Handlers fetch the facts (counts, timestamps) and pass them in; the domain decides.
+  - Only two paths write XP: (1) `POST /api/cultivation/quests/[kind]/claim`, which re-checks the quest's condition server-side and then writes one `XpEvent(+xp)` and marks the quest claimed in the day's `CultivationDay` row; (2) settlement.
+  - Settlement runs at the start of `GET /api/cultivation` and of the claim route, inside one Prisma `$transaction`. It covers every local day from `User.cultivationSettledThrough + 1` to yesterday, in order. For each day it writes one `XpEvent(−2·xp)` per quest that was neither claimed nor skipped (a done-but-unclaimed quest is penalized), then advances `cultivationSettledThrough`. A day's realm (and so its Bộ, targets and XP) is the one in effect after the previous day settled.
+  - The quests for a day come from its `CultivationDay` row: a snapshot of the quest kinds, targets, XP, skip flags and claim status, created on the first cultivation read of that day. A day with no row (the app wasn't opened) is rebuilt during settlement; its skip flags come from the data (Flashcards with unlearned records whose `createdAt ≤ day`; learned records with `next_review_date ≤ day`).
+  - `User.cultivationXp` caches the `XpEvent` deltas applied in order with a running floor at 0. It is updated in the same transaction as each `XpEvent`. The realm is never stored; it is always `levelForXp(cultivationXp)`.
+  - First run: when `cultivationSettledThrough` is null, it is set to yesterday and nothing earlier is settled. Restore sets it to yesterday too (AD-10).
+  - Idempotency: unique `(userId, localDay)` on `CultivationDay`, a conditional update on `cultivationSettledThrough` (only advance from the value read), and a claim that only flips an unclaimed quest. A concurrent loser retries or returns the current state.
+  - The grade route (AD-4) is not changed: quest conditions read `first_graded_at`, `updated_at` and `next_review_date`, which it already writes.
+  - No cron or scheduled job.
 
 ## Consistency Conventions
 
@@ -162,7 +177,7 @@ training-sanctum/
   apps/
     web/
       app/
-        (routes)/              # pages: review, classes (→ class → folder → flashcard, incl. Add cards: manual + import on the flashcard page), stats, settings
+        (routes)/              # pages: review, classes (→ class → folder → flashcard, incl. Add cards: manual + import on the flashcard page), cultivation (replaces stats), settings
         api/
           auth/[...all]/       # Better Auth handler
           classes/              # Class CRUD + class-delete (move folders / delete all)
@@ -176,6 +191,8 @@ training-sanctum/
             grade/               # POST grade (AD-4)
           settings/              # GET/PATCH the user's study-directions setting (FR-18, AD-6)
           stats/
+          cultivation/           # GET: settle past days, then realm, XP and today's quests (FR-12, FR-19, AD-15)
+            quests/[kind]/claim/ # POST: claim one of today's quests (AD-15)
           export/                # FR-13
           restore/               # FR-14
         components/
@@ -184,10 +201,10 @@ training-sanctum/
     domain/
       sm2.ts                    # FR-8 engine
       import.ts                 # FR-6/FR-7 parsing + duplicate detection
-      streak.ts                 # FR-12, uses toLocalCalendarDay (AD-8)
+      cultivation.ts            # FR-12, FR-19: ladder, quests, settlement (AD-15), uses toLocalCalendarDay (AD-8)
       time.ts                   # toLocalCalendarDay helper
     db/
-      schema.prisma             # Class, Folder, Flashcard, Card, SchedulingRecord, User
+      schema.prisma             # Class, Folder, Flashcard, Card, SchedulingRecord, User, CultivationDay, XpEvent
       client.ts                 # exported Prisma client singleton
   tests/
     domain/                     # Vitest
@@ -206,10 +223,11 @@ erDiagram
   FLASHCARD ||--o{ CARD : contains
   CARD ||--|| SCHEDULING_RECORD : "term->definition"
   CARD ||--|| SCHEDULING_RECORD : "definition->term"
-  USER ||--o{ STREAK_LOG : logs
+  USER ||--o{ CULTIVATION_DAY : "quest days"
+  USER ||--o{ XP_EVENT : "XP ledger"
 ```
 
-A `Card` always has exactly two `SchedulingRecord`s (one per Recall Direction, AD enforced by the Card-creation Route Handler, not a DB constraint beyond a unique `(cardId, direction)` index). Every `Class` has exactly one `Folder` with `isUnsorted = true`, created in the same transaction as the Class and enforced by a partial unique index on `(classId) WHERE isUnsorted`. `Folder.classId`, `Flashcard.folderId` and `Card.flashcardId` are required (non-null) — there is no Card without a Flashcard, no Flashcard without a Folder and no Folder without a Class. `Flashcard` carries only a `name`, unique per Folder case-insensitively, and `Card` also carries `userId`. `SchedulingRecord` carries `first_graded_at` (nullable UTC timestamp, AD-14). Its migration adds the column and backfills `first_graded_at = updated_at` where `interval > 0` — the only rows ever graded, since `applyGrade` never returns interval 0. `User` carries `studyDirections` (enum `BOTH | TERM_TO_DEFINITION | DEFINITION_TO_TERM`, non-null, default `BOTH`, FR-18). Its migration adds the column with the default, so every existing account keeps studying both directions. A Card still always has both Scheduling Records whatever the setting (AD-9 unchanged).
+A `Card` always has exactly two `SchedulingRecord`s (one per Recall Direction, AD enforced by the Card-creation Route Handler, not a DB constraint beyond a unique `(cardId, direction)` index). Every `Class` has exactly one `Folder` with `isUnsorted = true`, created in the same transaction as the Class and enforced by a partial unique index on `(classId) WHERE isUnsorted`. `Folder.classId`, `Flashcard.folderId` and `Card.flashcardId` are required (non-null) — there is no Card without a Flashcard, no Flashcard without a Folder and no Folder without a Class. `Flashcard` carries only a `name`, unique per Folder case-insensitively, and `Card` also carries `userId`. `SchedulingRecord` carries `first_graded_at` (nullable UTC timestamp, AD-14). Its migration adds the column and backfills `first_graded_at = updated_at` where `interval > 0` — the only rows ever graded, since `applyGrade` never returns interval 0. `User` carries `studyDirections` (enum `BOTH | TERM_TO_DEFINITION | DEFINITION_TO_TERM`, non-null, default `BOTH`, FR-18). Its migration adds the column with the default, so every existing account keeps studying both directions. A Card still always has both Scheduling Records whatever the setting (AD-9 unchanged). `User` also carries `cultivationXp` (int, default 0) and `cultivationSettledThrough` (date, nullable) (AD-15). `CultivationDay` is `(userId, localDay date, quests JSON)` with a unique `(userId, localDay)`; `XpEvent` is `(userId, localDay date, questKind, delta int, reason CLAIM | PENALTY, createdAt)`, append-only. Both migrations are additive.
 
 ### Deployment & environments
 
@@ -231,15 +249,15 @@ A `Card` always has exactly two `SchedulingRecord`s (one per Recall Direction, A
 | FR-16 Card viewer | `app/(routes)/flashcards/[id]` (reads the existing `GET api/flashcards/[id]`) | AD-2, AD-14 |
 | FR-17 Learn session | `app/(routes)/flashcards/[id]/learn`, `app/api/review/learn`, `app/api/review/grade` | AD-4, AD-7, AD-14 |
 | FR-18 Study directions | `app/(routes)/settings`, `app/api/settings`, `packages/domain/learned.ts` | AD-2, AD-6, AD-14 |
-| FR-12 Streak | `packages/domain/streak.ts`, `app/api/review/grade` | AD-8 |
-| FR-13, FR-14 Export/restore | `app/api/export`, `app/api/restore` | AD-2, AD-4, AD-6, AD-10, AD-11 |
-| FR-15 Stats | `app/api/stats`, `app/(routes)/stats` | AD-2, AD-10 |
+| FR-12 Cultivation, FR-19 Daily Quests | `packages/domain/cultivation.ts`, `app/api/cultivation/**`, `app/(routes)/cultivation` | AD-1, AD-8, AD-14, AD-15 |
+| FR-13, FR-14 Export/restore | `app/api/export`, `app/api/restore` | AD-2, AD-4, AD-6, AD-10, AD-11, AD-15 |
+| FR-15 Stats (on the Cultivation page) | `app/api/stats`, `app/(routes)/cultivation` | AD-2, AD-10 |
 
 ## Deferred
 
 - **Light-mode contrast verification** (sage background × white cards × charcoal text) — flagged `[ASSUMPTION]` in `DESIGN.md` as unverified; resolve during UI build, not an architectural concern.
-- **Grade-distribution / streak-pressure mitigation (PRD SM-C1)** — PRD explicitly defers this; no architectural hook is pre-built for it in v1.
-- **`User.timezone` editability** — v1 captures it once at signup (AD-8) and does not expose a settings UI to change it; revisit if a user ever travels across timezones mid-streak.
+- **Grade-distribution / quest-pressure monitoring (PRD SM-C1)** — the only v1 mitigation is that no quest or XP rule reads grade values (AD-15); no grade-distribution check is built.
+- **`User.timezone` editability** — v1 captures it once at signup (AD-8) and does not expose a settings UI to change it; revisit if a user ever travels across timezones, since a timezone change would shift quest days and settlement.
 - **Multi-user / multi-tenant features** — data model is `User`-scoped (AD inherited from PRD FR-1) but no multi-account UI, invite flow, or per-tenant isolation beyond the foreign key is built; revisit only if the product ever grows beyond its single-operator scope.
 - **CSV/Excel parsing library choice** (e.g. `papaparse` vs `exceljs` vs `xlsx`) — implementation-level seed, not architecturally load-bearing; pick at build time behind the `packages/domain/import.ts` boundary (AD-5) without needing a spine update.
 - **Rate limiting / abuse protection** — not needed for a single-user product; revisit only if the deployment ever becomes multi-tenant.

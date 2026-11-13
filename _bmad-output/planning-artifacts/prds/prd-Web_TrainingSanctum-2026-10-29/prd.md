@@ -2,7 +2,7 @@
 title: Training Sanctum — Flashcards PRD
 status: final
 created: 2026-10-29
-updated: 2026-11-13
+updated: 2026-11-14
 ---
 
 # PRD: Training Sanctum — Flashcards
@@ -26,7 +26,7 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 - As the builder, I need a zero-paywall, zero-clutter place to log and drill advanced vocabulary/idioms I encounter day-to-day, so the moment of discovery doesn't get lost.
 - I need recall testing that's honest in both directions — recognizing a word and producing it are different skills, and I need to know which one I'm actually weak on. Both directions is the default; studying only one is a deliberate opt-out (FR-18).
 - I need review sessions fast and frictionless enough (keyboard-only, instant transitions) that I do them daily without the session itself becoming the reason I skip a day.
-- I need to trust the tool with months of study history — a lost streak or corrupted schedule is a dealbreaker for a daily-dependency habit tool.
+- I need to trust the tool with months of study history — lost cultivation progress or a corrupted schedule is a dealbreaker for a daily-dependency habit tool.
 - As a portfolio piece, I need the finished product to demonstrate correct algorithmic implementation and testing discipline I can speak to in an interview or case study.
 
 ### 2.2 Non-Users (v1)
@@ -40,7 +40,7 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 
 - **UJ-1. Logging a word in under 5 seconds.** The user, mid-conversation or mid-reading, hits a word worth keeping. They open the app, hit "Add card" (from a Flashcard, or the quick-add shortcut, which remembers the last Flashcard used), type it with the structured fields, and it's saved to the right Flashcard before they lose their train of thought. *(realizes FR-3, FR-5)*
 
-- **UJ-2. The daily review session.** Each day, the user opens the app to a single focused review screen — no nav, no sidebar, no streak badge competing for attention. They flip through due cards of learned Cards in both directions (studied directions, FR-18), grading recall with one keystroke per card (Space to flip, 1–4/J/K/L/; to grade), until the due queue is empty — though grading even one card today is enough to keep the streak alive; the queue doesn't have to fully clear. New Cards never appear here until they are learned in a Flashcard's Learn session (UJ-4). *(realizes FR-9, FR-11)*
+- **UJ-2. The daily review session.** Each day, the user opens the app to a single focused review screen — no nav, no sidebar, no realm badge competing for attention. They flip through due cards of learned Cards in both directions (studied directions, FR-18), grading recall with one keystroke per card (Space to flip, 1–4/J/K/L/; to grade), until the due queue is empty, which completes the day's Clear Review quest (FR-19). They then tick the quest to claim its XP. New Cards never appear here until they are learned in a Flashcard's Learn session (UJ-4). *(realizes FR-9, FR-11)*
 
 - **UJ-3. Bulk import after a study binge.** The user has accumulated 30 new words in a notes app over a week. They open the target Flashcard, choose "Add cards → Import", and paste the list or upload a CSV; the system parses term/definition pairs (and optional extra fields) into the same row editor as manual entry, flagging malformed lines and duplicates. They fix two typos, press Save, and the cards land in that Flashcard in one pass, instead of 30 manual entries. *(realizes FR-6, FR-7)*
 
@@ -59,10 +59,12 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 - **Folder** — A user-defined grouping of Flashcards inside exactly one Class. Folders do not nest: the hierarchy is fixed at four levels, Class → Folder → Flashcard → Card.
 - **Flashcard** — A named set of Cards (the brief's "collections/sets") inside exactly one Folder. A Flashcard has only a name, unique within its Folder (case-insensitive). It can be created, renamed, deleted, and moved to any Folder.
 - **Unsorted Folder** — The built-in Folder every Class gets on creation. It cannot be renamed or deleted, and it receives Flashcards when another Folder in the same Class is deleted with "move flashcards".
-- **Review Session** — A single sitting in which the user grades one or more due Scheduling Records of learned Cards; a session need not clear the entire due queue to count toward the streak (see FR-12).
-- **Learn Session** — A graded sitting scoped to one Flashcard that introduces its Unlearned Cards, then continues with that Flashcard's due records (FR-17). Its Grades use the same SM-2 write path and count toward the streak.
+- **Review Session** — A single sitting in which the user grades one or more due Scheduling Records of learned Cards; clearing the whole due queue completes the day's Clear Review quest (FR-19).
+- **Learn Session** — A graded sitting scoped to one Flashcard that introduces its Unlearned Cards, then continues with that Flashcard's due records (FR-17). Its Grades use the same SM-2 write path and count toward the Learn Flashcards quest (FR-19).
 - **Due Queue** — The set of learned Scheduling Records (not Cards) in studied directions whose `next_review_date` has arrived, pulled per-direction.
-- **Streak** — Count of consecutive calendar days on which at least one Scheduling Record was graded (local-timezone day boundary, same basis as `next_review_date` — see FR-12).
+- **Cultivation Realm / Stage** — The user's rank on a fixed 90-level ladder (Ngưng Khí · Tầng 1 … Đạp Thiên Cảnh), grouped into four Bộ, derived only from total XP (FR-12). Replaces the Streak (Sprint Change 2026-11-14).
+- **XP** — Points gained by claiming Daily Quests and lost through missed-quest penalties. It never goes below 0.
+- **Daily Quest** — One of the two targets for a local calendar day (Learn Flashcards, Clear Review), sized by the user's Bộ at the start of that day (FR-19). Days use the same local-timezone basis as `next_review_date`.
 
 ## 4. Features
 
@@ -76,7 +78,7 @@ A user can create an account and log in/out with email and password.
 
 **Consequences (testable):**
 - Unauthenticated requests to any class/folder/flashcard/card/review endpoint are rejected.
-- All persisted data (Classes, Folders, Flashcards, Cards, Scheduling Records, streak history) is scoped to a `user_id`, even though only one account exists in practice.
+- All persisted data (Classes, Folders, Flashcards, Cards, Scheduling Records, cultivation history) is scoped to a `user_id`, even though only one account exists in practice.
 
 #### FR-2: Session persistence
 
@@ -208,7 +210,7 @@ The system presents due Scheduling Records of learned Cards (pulled per-directio
 **Consequences (testable):**
 - A Card with both studied directions due in the same session appears as two separate queue entries, gradable independently and in any order.
 - An unlearned Scheduling Record (Glossary) never appears in the Review queue, even when its `next_review_date` has arrived; neither does any record of a direction the user does not study (FR-18).
-- The default session pulls due entries from all Classes. A user can also start a session scoped to one Class ("Review this class") or one Folder ("Review this folder"); a scoped session pulls only that scope's due entries and otherwise follows every rule in FR-9 and FR-11. A Flashcard's graded entry point is Learn (FR-17), not a scoped review. Grades from any session count toward the same streak (FR-12).
+- The default session pulls due entries from all Classes. A user can also start a session scoped to one Class ("Review this class") or one Folder ("Review this folder"); a scoped session pulls only that scope's due entries and otherwise follows every rule in FR-9 and FR-11. A Flashcard's graded entry point is Learn (FR-17), not a scoped review. Clearing a scoped session does not complete the Clear Review quest unless the whole due queue is empty (FR-19).
 - Within the due queue, entries are ordered oldest-due-first (by `next_review_date` ascending); this is the only ordering guarantee required for v1 — no randomization or direction-interleaving rule is required.
 - Flip and grade actions are fully keyboard-operable: Space or a click/tap flips the card either way; 1–4 or J/K/L/; submit a Grade, available once the answer has been shown. No action in the review loop requires the mouse.
 - Grading a card and advancing to the next renders with no perceptible lag under rapid sequential key presses. "Instantaneous" is the standard for architecture: sub-100ms perceived transition latency.
@@ -219,7 +221,7 @@ Superseded by Learn (FR-17). New Cards no longer enter the Review queue automati
 
 #### FR-11: Focus mode
 
-During an active Review Session, navigation, sidebar, streak badge, and other non-essential chrome are hidden; only the card and recall controls are visible.
+During an active Review Session, navigation, sidebar, realm badge, and other non-essential chrome are hidden; only the card and recall controls are visible.
 
 **Consequences (testable):**
 - Entering review hides all chrome identified above; exiting review (queue cleared or user exits) restores normal navigation.
@@ -247,7 +249,7 @@ A "Learn" button directly below the viewer starts a Learn Session for that Flash
 - The session first presents the Flashcard's unlearned records in studied directions (FR-18) — Cards in creation order, each Card's studied directions together, Term → Definition first — then continues with the Flashcard's learned, due records in studied directions, oldest-due-first.
 - The first Grade of a Scheduling Record marks it as learned; from its next due date it appears in Review, whether or not the Card's other direction has been graded.
 - After the session ends, "Study all cards again" runs every Card in studied directions as unsaved practice: same keys and Again repeats, no Grade is persisted. *(Recorded from Story 4.8b.)*
-- Learn grades count toward the streak (FR-12) exactly like Review grades.
+- Learn grades count toward the Learn Flashcards quest (FR-19): a Flashcard counts once its last unlearned record in studied directions is first-graded.
 - Within a Learn session, an entry graded Again goes back to the end of the session queue and is shown again until it is graded Hard, Good or Easy. Only the first Grade of the entry in that session is persisted (it sets the SM-2 schedule, e.g. Again → due tomorrow); the in-session repeats are practice and are never sent to the grade route. *(Decision 2026-11-13, Quizlet-style "repeat until correct"; classical SM-2 scheduling is unchanged.)*
 - When nothing is left, the session shows a calm completion line and a way back to the Flashcard. Never confetti or cheer copy (§7).
 - The button label shows what is waiting, e.g. "Learn · 12 new · 3 due"; with nothing waiting it reads "Learn" and opens the completion state.
@@ -265,44 +267,63 @@ A user chooses, in Settings, which Recall Directions they study: **Both** (defau
 
 ---
 
-### 4.7 Progress & Streaks
+### 4.7 Progress & Cultivation
 
-**Description:** Visible progress tracking that reinforces the daily habit the product depends on, without becoming a vanity metric that distorts study behavior (see counter-metric in §7).
+**Description:** Visible progress tracking that reinforces the daily habit the product depends on, without becoming a vanity metric that distorts study behavior (see counter-metric SM-C1). The day-count streak is replaced by a tu-tiên cultivation progression: daily quests award XP, and XP sets the user's realm. *(Sprint Change 2026-11-14.)*
 
-#### FR-12: Streak tracking
+#### FR-12: Cultivation progression
 
-The system tracks consecutive calendar days with at least one graded Scheduling Record (grading a single card is sufficient — the due queue does not need to fully clear) and displays the current streak outside of active review (not during, per FR-11).
+The system keeps a total XP per user and derives the user's Cultivation Realm and Stage from it using the fixed ladder (addendum: Cultivation realm ladder). The realm and XP progress toward the next stage are shown outside active review (not during, per FR-11).
 
 **Consequences (testable):**
-- Grading zero cards on a calendar day breaks the streak at local-timezone day boundary. No streak-freeze/vacation-pause mechanic ships in v1 — a strict daily requirement is intentional.
-- Grading at least one Scheduling Record on a calendar day, regardless of how much of the due queue remains, counts that day toward the streak. This is the single, textually consistent definition of streak completion used across this PRD (Glossary, UJ-2, this FR).
-- `next_review_date` (FR-8/FR-9) and the streak's calendar-day boundary (this FR) use the same timezone basis — user-local time — as the single source of truth. A review graded just before local midnight and one graded just after are evaluated against the same clock for both due-date computation and streak-day attribution.
-- Grades from a Learn Session (FR-17) count exactly like Review grades; any graded Scheduling Record on a local calendar day keeps the streak.
+- XP changes only when a Daily Quest is claimed (+ its XP) or when a past day is settled (−2 × the XP of each unclaimed quest; FR-19).
+- XP is floored at 0. The realm is always recomputed from XP, so a penalty can move the user down by stages or realms; the lowest level is Ngưng Khí · Tầng 1.
+- The ladder has four Bộ and 90 levels. Major realms have four stages (Sơ kỳ, Trung kỳ, Hậu kỳ, Đại viên mãn); Ngưng Khí has Tầng 1–15, Thiên Nhân Ngũ Suy has five suy, Không Kiếp has Đại Tôn, Kim Tôn, Thiên Tôn and Đại Thiên Tôn, and Đạp Thiên Kiều has nine bridges.
+- Đạp Thiên Cảnh is the final level. XP keeps adding up past it.
+- Quest days and settlement use the same `User.timezone` local-day basis as `next_review_date` (FR-8/FR-9). Work done just before local midnight and just after is attributed against the same clock as due dates.
+- Realm names are shown in Vietnamese. Other copy follows the app's language.
+
+#### FR-19: Daily Quests
+
+Each local day, the user has two quests, sized by their Bộ at the start of that day (addendum: Daily quest table):
+- **Learn Flashcards:** fully learn 1 (Nhất Bộ), 2 (Nhị Bộ), 3 (Tam Bộ) or 4 (Tứ Bộ) Flashcards. A Flashcard counts on the day its last unlearned record in studied directions gets its first Grade (FR-17).
+- **Clear Review:** grade at least one learned record that day and leave the due queue (all Classes) empty.
+
+XP per quest is 10 in Nhất Bộ, 20 in Nhị Bộ and 40 in Tam Bộ and Tứ Bộ. *(Added by Sprint Change 2026-11-14.)*
+
+**Consequences (testable):**
+- A quest's checkbox unlocks only when its condition is met that day. The user ticks it to claim its XP; the server re-checks the condition. A claim is final and happens at most once per quest per day.
+- A quest whose work does not exist that day (nothing due at the start of the day; no Flashcard with unlearned records) is shown as skipped and is neither rewarded nor penalized. When fewer Flashcards have unlearned records than the target, the target is the number available.
+- When a day ends, every quest on it that was neither claimed nor skipped costs 2 × its XP, even if its work was done but not ticked. This includes days the user never opened the app. Days are settled in order the next time the user opens the app; no scheduled job runs.
+- No penalty is charged for days before cultivation started for the user, or for days between an export and its restore (FR-14).
+- No quest or XP rule reads grade values (SM-C1).
+- No vacation pause or streak-freeze equivalent ships in v1.
 
 #### FR-13: Data export/backup
 
-A user can export their full Card + Scheduling Record + streak history to a portable format (e.g. JSON) on demand.
+A user can export their full Card + Scheduling Record + cultivation history (XP, quest days, XP events) to a portable format (e.g. JSON) on demand.
 
 **Consequences (testable):**
-- Export completes and produces a file containing every Class, every Folder, every Flashcard (with its Folder), every Card (with its Flashcard), both Scheduling Records per Card, and streak history, sufficient to reconstruct state.
+- Export completes and produces a file containing every Class, every Folder, every Flashcard (with its Folder), every Card (with its Flashcard), both Scheduling Records per Card, and the cultivation history, sufficient to reconstruct state.
 - The export includes each Scheduling Record's `firstGradedAt`, so a restore (FR-14) preserves which Cards are learned versus unlearned.
 - The export includes the user's study-directions setting (FR-18).
 
 **Feature-specific NFRs:**
-- Data durability for Cards, Scheduling Records, and streak history is treated as a hard non-functional requirement, not best-effort — this is addressed system-wide in §6 Cross-Cutting NFRs, since a daily-dependency tool losing history is a stated dealbreaker risk in the brief.
+- Data durability for Cards, Scheduling Records, and cultivation history is treated as a hard non-functional requirement, not best-effort — this is addressed system-wide in §6 Cross-Cutting NFRs, since a daily-dependency tool losing history is a stated dealbreaker risk in the brief.
 
 #### FR-14: Restore from backup
 
-A user can import a previously-exported FR-13 JSON file to fully reconstruct their data, including both Scheduling Records per Card (interval, repetitions, ease_factor, next_review_date) and streak history — not just the five Card content fields.
+A user can import a previously-exported FR-13 JSON file to fully reconstruct their data, including both Scheduling Records per Card (interval, repetitions, ease_factor, next_review_date) and cultivation history — not just the five Card content fields.
 
 **Consequences (testable):**
-- Restoring a valid FR-13 export recreates the same Class → Folder → Flashcard structure and every Card in its original Flashcard, with both of its Scheduling Records in exactly the state captured at export time (same interval/repetitions/ease_factor/next_review_date), and restores streak history.
+- Restoring a valid FR-13 export recreates the same Class → Folder → Flashcard structure and every Card in its original Flashcard, with both of its Scheduling Records in exactly the state captured at export time (same interval/repetitions/ease_factor/next_review_date), and restores the cultivation history.
+- After a restore, every day up to yesterday counts as settled, so no penalty is charged for days between the export and the restore (FR-19).
 - Restoring into an account that already has data requires explicit confirmation before proceeding (default: restore replaces existing data; the system does not silently merge or silently overwrite without confirmation).
 - This closes the loop the brief's durability dealbreaker requires: an export with no restore path is not a backup, so FR-13 and FR-14 ship together in Phase 1 MVP.
 
 #### FR-15: Progress & stats view
 
-A user can view a basic stats screen, outside of active review (per FR-11), showing: current and longest streak, total Cards (learned / unlearned, per the studied directions — FR-18), and a simple visualization of the SM-2 retention curve (e.g. distribution of Scheduling Records by current `interval` length, or review-outcome history over time) per Recall Direction.
+A user can view a basic stats screen, outside of active review (per FR-11), showing: current realm and stage, total XP, XP progress to the next stage, XP history over time, today's Daily Quests (FR-19), total Cards (learned / unlearned, per the studied directions — FR-18), and a simple visualization of the SM-2 retention curve (e.g. distribution of Scheduling Records by current `interval` length, or review-outcome history over time) per Recall Direction.
 
 **Consequences (testable):**
 - The stats view is reachable from normal (non-review) navigation and reflects the latest graded state without requiring a page reload tied to a specific review session.
@@ -322,7 +343,7 @@ A user can view a basic stats screen, outside of active review (per FR-11), show
 
 ## 6. Cross-Cutting NFRs
 
-- **Data durability.** Card, Scheduling Record, and streak data must survive normal operation without loss; persistence approach (managed Postgres, backup cadence) is an architecture-phase decision, but "no silent data loss" is a hard requirement here, not optional polish (brief-flagged dealbreaker risk). FR-13 (export) and FR-14 (restore) are the product-level mitigation.
+- **Data durability.** Card, Scheduling Record, and cultivation data must survive normal operation without loss; persistence approach (managed Postgres, backup cadence) is an architecture-phase decision, but "no silent data loss" is a hard requirement here, not optional polish (brief-flagged dealbreaker risk). FR-13 (export) and FR-14 (restore) are the product-level mitigation.
 - **Performance (review loop).** Reveal/grade/advance transitions in Review Session must feel instantaneous under rapid repeated input — see FR-9 for the testable interpretation.
 - **Performance (general load).** Opening the app and loading the due queue (outside the review loop itself) must feel fast enough not to introduce its own abandonment friction; the architecture phase sets a concrete page-load budget, but this is named here as a requirement distinct from FR-9's sub-100ms in-session standard, not folded into it.
 - **Testability.** Domain logic (SM-2 engine) is unit-testable in isolation from API/UI layers; the architecture must support unit, API/integration, and E2E (Playwright) test suites running in CI, per the brief's portfolio goals.
@@ -333,7 +354,7 @@ A user can view a basic stats screen, outside of active review (per FR-11), show
 
 - Minimalist, distraction-free visual language — ships dark-mode default with a light-mode toggle, inspired by developer-tool aesthetics (Linear, Raycast) rather than gamified/social layouts (Quizlet).
 - Review Session enforces this most strictly: see FR-11 Focus mode.
-- No sound effects, confetti, or gamification flourishes implied by this direction unless explicitly added later.
+- No sound effects, confetti, or gamification flourishes implied by this direction unless explicitly added later. The cultivation progression (FR-12, FR-19) is the one deliberate exception, added by Sprint Change 2026-11-14; it stays visually quiet (text, a thin XP bar, no animation beyond the bar fill, no modals).
 
 ## 8. MVP Scope
 
@@ -346,7 +367,7 @@ A user can view a basic stats screen, outside of active review (per FR-11), show
 - Dual-direction SM-2 engine (FR-8)
 - Keyboard-driven review session of learned Cards with focus mode (FR-9, FR-11)
 - Flashcard card viewer and Learn session (FR-16, FR-17), with the study-directions setting (FR-18)
-- Streak tracking (FR-12)
+- Cultivation progression and Daily Quests (FR-12, FR-19)
 - Data export/backup and restore (FR-13, FR-14) — promoted into Phase 1: data loss is a stated dealbreaker risk for a daily-dependency tool, and export without a restore path isn't actually a backup, so both ship with the MVP rather than waiting for Phase 2 polish.
 - Basic progress/stats view (FR-15) — needed so the portfolio success metric SM-4 (retention curve) is observable in the shipped product, not just in raw data.
 - Live, publicly accessible deployment (minimal hosting, no architecture docs/case study required at this stage — see §8.2) — required for the brief's portfolio success criteria to be met at all.
@@ -364,11 +385,11 @@ A user can view a basic stats screen, outside of active review (per FR-11), show
 - **SM-5**: Product is deployed to a live, publicly accessible URL. Validates the §6 Live Deployment NFR.
 
 **Post-launch longitudinal metrics** (only measurable after weeks/months of real usage — not sign-off gates for this PRD)
-- **SM-2**: Unbroken daily study streak of 60+ days. Validates FR-9–FR-12, FR-15.
+- **SM-2**: Reach Trúc Cơ (all of Ngưng Khí, about 34 days of full quests) and then hold 60+ days without a demotion. Validates FR-9, FR-12, FR-15, FR-17, FR-19.
 - **SM-4**: Observable, correct SM-2 retention curve — mature cards resurface at mathematically correct intervals, viewable via FR-15. Validates FR-8, FR-15.
 
 **Counter-metrics (do not optimize)**
-- **SM-C1**: Grade distribution should not skew toward "Easy"/"Good" as a side effect of streak pressure — a streak kept alive by dishonest grading defeats the product's purpose. Counterbalances SM-2. **Acknowledged, unaddressed tension for v1:** no FR introduces a grade-distribution check or similar mitigating mechanism; this is a deliberate choice to ship the core loop first; the information is already visible via FR-15 if the user chooses to look, but nothing surfaces it proactively.
+- **SM-C1**: Grade distribution should not skew toward "Easy"/"Good" as a side effect of quest and penalty pressure — XP kept by dishonest grading defeats the product's purpose. Counterbalances SM-2. Mitigation: no quest or XP rule reads grade values (FR-19). **Acknowledged, unaddressed tension for v1:** no FR introduces a grade-distribution check or similar mitigating mechanism; this is a deliberate choice to ship the core loop first; the information is already visible via FR-15 if the user chooses to look, but nothing surfaces it proactively.
 - **SM-C2**: Test coverage percentage alone is not the goal — passing SM-3's checklist, not a coverage-tool percentage, is what counts. Counterbalances SM-3.
 
 ## 10. Open Questions
