@@ -209,6 +209,15 @@ export type ImportParseInput = z.infer<typeof importParseSchema>;
 
 export type ImportField = "term" | "definition" | "example" | "context" | "partOfSpeech";
 
+/** The five Card fields, in display order. */
+export const IMPORT_FIELDS = [
+  "term",
+  "definition",
+  "example",
+  "context",
+  "partOfSpeech",
+] as const satisfies readonly ImportField[];
+
 export interface ImportRowProblem {
   field: ImportField;
   message: string;
@@ -223,6 +232,10 @@ export interface ParsedRow {
   card: number;
   term: string;
   definition: string;
+  /** File import (spec-3-2) fills the optional fields; paste import never does. */
+  example?: string;
+  context?: string;
+  partOfSpeech?: string;
   error?: string;
   /** The field the error belongs to, so the editor can show it in place. */
   errorField?: ImportField;
@@ -349,13 +362,11 @@ export interface ImportParseResponse {
   rows: ImportPreviewRow[];
 }
 
-/** Parse plus duplicate flags: everything Preview needs, nothing persisted. */
-export function previewImport(
-  text: string,
-  separators: ImportSeparators,
+/** Adds the duplicate flags to parsed rows (paste and file import). */
+export function withDuplicateFlags(
+  rows: ParsedRow[],
   existingTerms: Iterable<string>
 ): ImportPreviewRow[] {
-  const rows = parseImportBlock(text, separators);
   const flags = detectDuplicates(rows, existingTerms);
   return rows.map((row, i) => {
     const flag = flags[i]!;
@@ -365,4 +376,13 @@ export function previewImport(
       duplicateOfLine: flag.duplicateOf === null ? null : rows[flag.duplicateOf]!.line,
     };
   });
+}
+
+/** Parse plus duplicate flags: everything Preview needs, nothing persisted. */
+export function previewImport(
+  text: string,
+  separators: ImportSeparators,
+  existingTerms: Iterable<string>
+): ImportPreviewRow[] {
+  return withDuplicateFlags(parseImportBlock(text, separators), existingTerms);
 }

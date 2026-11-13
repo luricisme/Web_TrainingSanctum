@@ -19,13 +19,16 @@ import {
 } from "./manual-row";
 import { PanelFooter } from "./panel-footer";
 
-/** Rows are labelled by source line ("L14") or by card number ("Card 3"). */
-export type RowLabelMode = "line" | "card";
+/**
+ * Rows are labelled by source line ("L14"), by card number ("Card 3") or, for
+ * a file import, by spreadsheet row ("Row 14").
+ */
+export type RowLabelMode = "line" | "card" | "row";
 
 interface ReviewRow extends Row {
   /**
    * The row's label number: its source line in "line" mode, its card number
-   * in "card" mode; null for a row added in the editor. Sent as the commit
+   * in "card" mode, its spreadsheet row in "row" mode; null for a row added in the editor. Sent as the commit
    * row's `line` and echoed back in the results.
    */
   line: number | null;
@@ -49,16 +52,39 @@ export interface ImportCommitRow {
 }
 
 function toReviewRows(rows: ImportPreviewRow[], labelMode: RowLabelMode): ReviewRow[] {
-  return rows.map((row, i) => ({
-    ...emptyRow(i),
-    term: row.term,
-    definition: row.definition,
-    line: labelMode === "card" ? row.card : row.line,
-    parseProblem: row.error
-      ? { field: row.errorField ?? "definition", message: row.error }
-      : null,
-    existing: row.duplicate && row.duplicateOfLine === null,
-  }));
+  return rows.map((row, i) => {
+    const example = row.example ?? "";
+    const context = row.context ?? "";
+    const partOfSpeech = row.partOfSpeech ?? "";
+    return {
+      ...emptyRow(i),
+      term: row.term,
+      definition: row.definition,
+      example,
+      context,
+      partOfSpeech,
+      // A file row with optional fields opens with them shown.
+      more: example !== "" || context !== "" || partOfSpeech !== "",
+      line: labelMode === "card" ? row.card : row.line,
+      parseProblem: row.error
+        ? { field: row.errorField ?? "definition", message: row.error }
+        : null,
+      existing: row.duplicate && row.duplicateOfLine === null,
+    };
+  });
+}
+
+/** Visible label and spoken name of a review row. */
+function rowLabelFor(
+  line: number | null,
+  labelMode: RowLabelMode,
+  newOrdinal: number
+): { text: string; name: string; numeric?: boolean; wide?: boolean } {
+  const wide = labelMode !== "line";
+  if (line === null) return { text: "new", name: `new row ${newOrdinal}`, numeric: false, wide };
+  if (labelMode === "card") return { text: `Card ${line}`, name: `card ${line}`, numeric: false, wide };
+  if (labelMode === "row") return { text: `Row ${line}`, name: `row ${line}`, numeric: false, wide };
+  return { text: `L${line}`, name: `line ${line}` };
 }
 
 /** Rows that take part in Save: every pasted row, plus non-blank added rows. */
@@ -110,14 +136,15 @@ function plural(n: number, one: string, many: string): string {
 }
 
 /**
- * Import review editor (spec-3-1): the Manual row editor prefilled with the
- * parsed rows, labelled by source line, with × and inline problems. Problems
+ * Import review editor (spec-3-1, file rows spec-3-2): the Manual row editor
+ * prefilled with the parsed rows, labelled by source line, card or row, with × and inline problems. Problems
  * never block Save; the commit reports whatever is still wrong.
  */
 export function ImportReview({
   initialRows,
   labelMode,
   flashcardName,
+  backLabel,
   onBack,
   onCancel,
   onSave,
@@ -128,6 +155,8 @@ export function ImportReview({
   initialRows: ImportPreviewRow[];
   labelMode: RowLabelMode;
   flashcardName: string;
+  /** The back link text, e.g. "← Back to paste" or "← Back to mapping". */
+  backLabel: string;
   onBack: () => void;
   onCancel: () => void;
   onSave: (rows: ImportCommitRow[]) => void;
@@ -235,7 +264,11 @@ export function ImportReview({
       partOfSpeech: r.partOfSpeech,
     }));
     if (payload.length === 0) {
-      setNotice("Nothing to save. Add a row or go back to the paste box.");
+      setNotice(
+        `Nothing to save. Add a row or go back to the ${
+          labelMode === "row" ? "mapping" : "paste box"
+        }.`
+      );
       return;
     }
     onSave(payload);
@@ -298,20 +331,18 @@ export function ImportReview({
           disabled={saving}
           className="ml-auto rounded-sm text-body-sm text-foreground-secondary underline-offset-2 transition-state hover:text-foreground hover:underline focus-ring disabled:cursor-not-allowed disabled:opacity-60"
         >
-          ← Back to paste
+          {backLabel}
         </button>
       </div>
 
       <ol aria-label="Imported rows" className="flex flex-col gap-3">
         {rows.map((row, index) => {
           const problem = problemOf(row);
-          const wide = labelMode === "card";
-          const label =
-            row.line === null
-              ? { text: "new", name: `new row ${++newOrdinal}`, numeric: false, wide }
-              : wide
-                ? { text: `Card ${row.line}`, name: `card ${row.line}`, numeric: false, wide }
-                : { text: `L${row.line}`, name: `line ${row.line}` };
+          const label = rowLabelFor(
+            row.line,
+            labelMode,
+            row.line === null ? ++newOrdinal : newOrdinal
+          );
           const dupNote = notes.get(row.key);
           const note: RowProblem | undefined = dupNote
             ? { field: "term", message: dupNote, tone: "warning" }

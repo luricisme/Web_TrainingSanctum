@@ -12,9 +12,20 @@ import {
   type ImportPreviewRow,
   type ImportSeparators,
   IMPORT_EMPTY_MESSAGE,
+  IMPORT_FILE_EMPTY_MESSAGE,
+  IMPORT_FILE_TYPE_MESSAGE,
+  IMPORT_ROW_LIMIT_MESSAGE,
+  MAX_IMPORT_CARDS,
+  type ImportColumnMapping,
+  EMPTY_MAPPING,
   countImportCards,
+  gridColumnCount,
+  guessMapping,
+  importMappingProblems,
+  parseImportTable,
   resolveSeparators,
 } from "@training-sanctum/domain";
+import type { Spreadsheet } from "@/lib/read-spreadsheet";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { formErrorClass } from "@/app/components/ui";
 import { Modal } from "../../classes/modal";
@@ -30,6 +41,8 @@ import {
 } from "./manual-row";
 import { ConfirmBar, PanelFooter, type PendingConfirm } from "./panel-footer";
 import { ImportPaste } from "./import-paste";
+import { ImportUpload } from "./import-upload";
+import { type ImportSource, SourceSwitcher } from "./import-source-switcher";
 import { ImportReview, type ImportCommitRow, type RowLabelMode } from "./import-review";
 import { ImportResults } from "./import-results";
 
@@ -44,7 +57,12 @@ export interface TargetFlashcard {
 const INITIAL_ROWS = 3;
 
 type Mode = "manual" | "import";
-type ImportStep = "paste" | "review" | "results";
+type ImportStep = "input" | "review" | "results";
+
+/** Body of `POST /api/import/parse`: a paste, or a file read into a grid. */
+type PreviewRequest =
+  | (ImportSeparators & { text: string })
+  | { source: "file"; grid: string[][]; hasHeader: boolean; mapping: ImportColumnMapping };
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError && err.status === 404) return "This flashcard no longer exists.";
@@ -53,7 +71,8 @@ function errorMessage(err: unknown, fallback: string): string {
 }
 
 /**
- * Add cards panel (spec-2-3, spec-3-1): Manual mode or Import → Paste, always
+ * Add cards panel (spec-2-3, spec-3-1, spec-3-2): Manual mode or Import →
+ * Paste / Upload file, always
  * into the one Flashcard it was opened from. Manual rows survive a mode
  * switch; reviewed import rows are discarded only after a confirm.
  */
@@ -74,8 +93,13 @@ export function AddCardsPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<PendingConfirm | null>(null);
   const [mode, setMode] = useState<Mode>("manual");
-  const [importStep, setImportStep] = useState<ImportStep>("paste");
+  const [importStep, setImportStep] = useState<ImportStep>("input");
+  const [importSource, setImportSource] = useState<ImportSource>("paste");
   const [pasteText, setPasteText] = useState("");
+  // The chosen file survives switching between Paste and Upload file.
+  const [spreadsheet, setSpreadsheet] = useState<Spreadsheet | null>(null);
+  const [hasHeader, setHasHeader] = useState(true);
+  const [mapping, setMapping] = useState<ImportColumnMapping>(EMPTY_MAPPING);
   const [separators, setSeparators] = useState<ImportSeparators>(DEFAULT_IMPORT_SEPARATORS);
   const [previewRows, setPreviewRows] = useState<ImportPreviewRow[]>([]);
   // Rows are labelled by source line in New line mode, else by card number;
@@ -95,7 +119,7 @@ export function AddCardsPanel({
   });
 
   const preview = useMutation({
-    mutationFn: (input: ImportSeparators & { text: string }) =>
+    mutationFn: (input: PreviewRequest) =>
       apiFetch<ImportParseResponse>("/api/import/parse", {
         method: "POST",
         json: { flashcardId: flashcard.id, ...input },
@@ -126,8 +150,9 @@ export function AddCardsPanel({
   }, [rows]);
 
   const manualDirty = rows.some((row) => !isBlank(row));
+  const hasPaste = pasteText.trim() !== "";
   const importDirty =
-    importStep === "review" || (importStep === "paste" && pasteText.trim() !== "");
+    importStep === "review" || (importStep === "input" && (hasPaste || spreadsheet !== null));
   const busy = save.isPending || preview.isPending || commit.isPending;
 
   function invalidateCards() {
@@ -143,7 +168,14 @@ export function AddCardsPanel({
       onClose();
       return;
     }
-    const importWork = importStep === "review" ? "the reviewed rows" : "the pasted text";
+    const importWork =
+      importStep === "review"
+        ? "the reviewed rows"
+        : hasPaste && spreadsheet
+          ? "the pasted text and the uploaded file"
+          : hasPaste
+            ? "the pasted text"
+            : "the uploaded file";
     setConfirm({
       message:
         manualDirty && importDirty
@@ -160,7 +192,7 @@ export function AddCardsPanel({
     setConfirm(null);
     setImportError(null);
     setPreviewRows([]);
-    setImportStep("paste");
+    setImportStep("input");
   }
 
   function changeMode(next: Mode) {
@@ -179,7 +211,7 @@ export function AddCardsPanel({
     }
     if (importStep === "results") {
       setImportResult(null);
-      setImportStep("paste");
+      setImportStep("input");
     }
     setMode(next);
   }
@@ -327,12 +359,65 @@ export function AddCardsPanel({
     );
   }
 
+  function changeSource(next: ImportSource) {
+    if (busy) return;
+    setConfirm(null);
+    setImportError(null);
+    setImportSource(next);
+  }
+
+  function loadSpreadsheet(next: Spreadsheet) {
+    setImportError(null);
+    setSpreadsheet(next);
+    setHasHeader(true);
+    // The header box starts checked, so the first row names the columns.
+    // Toggling it later keeps the mapping the user has.
+    setMapping(guessMapping(next.grid[0] ?? null, gridColumnCount(next.grid)));
+  }
+
+  function handleFilePreview() {
+    setImportError(null);
+    if (!spreadsheet) {
+      setImportError(IMPORT_FILE_TYPE_MESSAGE);
+      return;
+    }
+    // ImportUpload shows mapping problems inline; the server checks again.
+    const columns = gridColumnCount(spreadsheet.grid);
+    if (Object.keys(importMappingProblems(mapping, columns)).length > 0) return;
+    const count = parseImportTable(spreadsheet.grid, { hasHeader, mapping }).length;
+    if (count === 0) {
+      setImportError(IMPORT_FILE_EMPTY_MESSAGE);
+      return;
+    }
+    if (count > MAX_IMPORT_CARDS) {
+      setImportError(IMPORT_ROW_LIMIT_MESSAGE);
+      return;
+    }
+    preview.mutate(
+      { source: "file", grid: spreadsheet.grid, hasHeader, mapping },
+      {
+        onSuccess: ({ rows: parsed }) => {
+          setConfirm(null);
+          setLabelMode("row");
+          setPreviewRows(parsed);
+          setImportStep("review");
+        },
+        onError: (err) => setImportError(errorMessage(err, "Something went wrong. Try again.")),
+      }
+    );
+  }
+
   function handleCommit(cards: ImportCommitRow[]) {
     setImportError(null);
     commit.mutate(cards, {
       onSuccess: (result) => {
         invalidateCards();
         setConfirm(null);
+        // The import is done: a later visit to Import starts fresh.
+        setPasteText("");
+        setSpreadsheet(null);
+        setMapping(EMPTY_MAPPING);
+        setHasHeader(true);
         setImportResult(result);
         setImportStep("results");
       },
@@ -342,6 +427,10 @@ export function AddCardsPanel({
         ),
     });
   }
+
+  const sourceSwitcher = (
+    <SourceSwitcher source={importSource} onChange={changeSource} disabled={busy} />
+  );
 
   const confirmBar = confirm ? (
     <ConfirmBar confirm={confirm} onKeep={() => setConfirm(null)} />
@@ -419,7 +508,28 @@ export function AddCardsPanel({
             )}
           </PanelFooter>
         </form>
-      ) : importStep === "paste" ? (
+      ) : importStep === "input" && importSource === "file" ? (
+        <ImportUpload
+          spreadsheet={spreadsheet}
+          hasHeader={hasHeader}
+          mapping={mapping}
+          onLoad={loadSpreadsheet}
+          onHasHeaderChange={(next) => {
+            setHasHeader(next);
+            setImportError(null);
+          }}
+          onMappingChange={(next) => {
+            setMapping(next);
+            setImportError(null);
+          }}
+          onPreview={handleFilePreview}
+          onCancel={requestClose}
+          pending={preview.isPending}
+          error={importError}
+          confirm={confirmBar}
+          switcher={sourceSwitcher}
+        />
+      ) : importStep === "input" ? (
         <ImportPaste
           text={pasteText}
           separators={separators}
@@ -436,15 +546,19 @@ export function AddCardsPanel({
           pending={preview.isPending}
           error={importError}
           confirm={confirmBar}
+          switcher={sourceSwitcher}
         />
       ) : importStep === "review" ? (
         <ImportReview
           initialRows={previewRows}
           labelMode={labelMode}
           flashcardName={flashcard.name}
+          backLabel={labelMode === "row" ? "← Back to mapping" : "← Back to paste"}
           onBack={() =>
             setConfirm({
-              message: "Go back to the paste box? Your edits to these rows are discarded.",
+              message: `Go back to the ${
+                labelMode === "row" ? "mapping" : "paste box"
+              }? Your edits to these rows are discarded.`,
               confirmLabel: "Discard edits",
               onConfirm: leaveReview,
             })

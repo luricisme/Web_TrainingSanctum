@@ -7,15 +7,17 @@ import { SectionMarker } from "@/app/components/section-marker";
 import { buttonPrimary } from "../../classes/ui";
 import { PanelFooter } from "./panel-footer";
 
-/** "L14" in line mode, "Card 3" in card mode, "new" for rows added in review. */
+/**
+ * "L14" in line mode, "Card 3" in card mode, "Row 14" in row mode, "new" for
+ * rows added in review. Mono type only for the bare line number.
+ */
 function rowLabel(line: number | null, mode: RowLabelMode): ReactNode {
-  const width = mode === "card" ? "w-16" : "w-12";
-  if (line === null) {
-    return <span className={`${width} shrink-0 text-body-sm text-foreground-tertiary`}>new</span>;
-  }
-  return mode === "card" ? (
-    <span className={`${width} shrink-0 text-body-sm text-foreground-tertiary`}>Card {line}</span>
-  ) : (
+  const width = mode === "line" ? "w-12" : "w-16";
+  const words = `${width} shrink-0 text-body-sm text-foreground-tertiary`;
+  if (line === null) return <span className={words}>new</span>;
+  if (mode === "card") return <span className={words}>Card {line}</span>;
+  if (mode === "row") return <span className={words}>Row {line}</span>;
+  return (
     <span className={`${width} shrink-0 font-mono text-body-sm text-foreground-tertiary`}>
       L{line}
     </span>

@@ -384,3 +384,201 @@ test.describe("POST /api/cards/batch (source: import)", () => {
     ).toBe(60);
   });
 });
+
+// spec-3-2: File import preview. The browser sends the grid it read from the
+// file plus the column mapping; nothing is written.
+test.describe("POST /api/import/parse with source: file", () => {
+  const NONE = { example: null, context: null, partOfSpeech: null };
+  const mapping = (m: Record<string, number | null>) => ({ ...NONE, ...m });
+  const fileBody = (flashcardId: string, patch: Record<string, unknown> = {}) => ({
+    source: "file",
+    flashcardId,
+    hasHeader: true,
+    grid: [
+      ["pos", "meaning", "word"],
+      ["noun", "quả táo", "apple"],
+      ["", "", ""],
+      ["verb", "", "run"],
+    ],
+    mapping: mapping({ term: 2, definition: 1, partOfSpeech: 0 }),
+    ...patch,
+  });
+
+  test("requires a session", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const ctx = await playwright.request.newContext();
+    const res = await ctx.post(`${base}/api/import/parse`, { data: fileBody("x") });
+    expect(res.status()).toBe(401);
+    expect((await res.json()).error.code).toBe("UNAUTHENTICATED");
+  });
+
+  test("a foreign or unknown Flashcard returns 404", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const owner = await newUser(playwright, base);
+    const other = await newUser(playwright, base);
+    const flashcard = await createFlashcard(owner, base, "Private");
+    for (const flashcardId of [flashcard.id, "does-not-exist"]) {
+      const res = await other.request.post(`${base}/api/import/parse`, {
+        data: fileBody(flashcardId),
+      });
+      expect(res.status()).toBe(404);
+      expect((await res.json()).error.code).toBe("NOT_FOUND");
+    }
+  });
+
+  test("returns rows by spreadsheet row with all five fields; writes nothing", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcard = await createFlashcard(s, base, "Words");
+    await addCards(s, base, flashcard.id, ["Apple"]);
+    const res = await s.request.post(`${base}/api/import/parse`, {
+      data: fileBody(flashcard.id),
+    });
+    expect(res.status()).toBe(200);
+    const { rows } = (await res.json()).data;
+    expect(rows).toEqual([
+      {
+        line: 2,
+        card: 1,
+        term: "apple",
+        definition: "quả táo",
+        example: "",
+        context: "",
+        partOfSpeech: "noun",
+        duplicate: true,
+        duplicateOfLine: null,
+      },
+      {
+        line: 4,
+        card: 2,
+        term: "run",
+        definition: "",
+        example: "",
+        context: "",
+        partOfSpeech: "verb",
+        error: "Definition is required",
+        errorField: "definition",
+        duplicate: false,
+        duplicateOfLine: null,
+      },
+    ]);
+    expect(await count(flashcard.id)).toBe(1);
+  });
+
+  test("without a header the first row is line 1", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcard = await createFlashcard(s, base, "Words");
+    const res = await s.request.post(`${base}/api/import/parse`, {
+      data: fileBody(flashcard.id, {
+        hasHeader: false,
+        grid: [["apple", "táo"], ["pear", "lê"]],
+        mapping: mapping({ term: 0, definition: 1 }),
+      }),
+    });
+    expect(res.status()).toBe(200);
+    const { rows } = (await res.json()).data;
+    expect(rows.map((r: { line: number; term: string }) => [r.line, r.term])).toEqual([
+      [1, "apple"],
+      [2, "pear"],
+    ]);
+    expect(await count(flashcard.id)).toBe(0);
+  });
+
+  test("mapping, empty and over-limit errors return 400", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcard = await createFlashcard(s, base, "Words");
+    const cases: [Record<string, unknown>, string][] = [
+      [{ mapping: mapping({ term: null, definition: 1 }) }, "Map a column to Term."],
+      [{ mapping: mapping({ term: 0, definition: 0 }) }, "Each column can be mapped once."],
+      [
+        { grid: [["term", "definition"]], mapping: mapping({ term: 0, definition: 1 }) },
+        "This file has no rows to import.",
+      ],
+      [{ mapping: mapping({ term: 5, definition: 1 }) }, "Choose a column from the file."],
+      [
+        {
+          grid: [["t", "d"], ...Array.from({ length: 201 }, (_, i) => [`t${i}`, "d"])],
+          mapping: mapping({ term: 0, definition: 1 }),
+        },
+        "Upload at most 200 rows per import.",
+      ],
+    ];
+    for (const [patch, message] of cases) {
+      const res = await s.request.post(`${base}/api/import/parse`, {
+        data: fileBody(flashcard.id, patch),
+      });
+      expect(res.status()).toBe(400);
+      const { error } = await res.json();
+      expect(error.code).toBe("VALIDATION_ERROR");
+      expect(error.message).toBe(message);
+    }
+    expect(await count(flashcard.id)).toBe(0);
+  });
+
+  test("30 file rows save with every mapped field and two Scheduling Records each", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcard = await createFlashcard(s, base, "Words");
+    const grid = [
+      ["Definition", "Example", "Term", "Context", "POS"],
+      ...Array.from({ length: 30 }, (_, i) => [`def ${i}`, `ex ${i}`, `w${i}`, `ctx ${i}`, "noun"]),
+    ];
+    const started = Date.now();
+    const preview = await s.request.post(`${base}/api/import/parse`, {
+      data: fileBody(flashcard.id, {
+        grid,
+        mapping: { term: 2, definition: 0, example: 1, context: 3, partOfSpeech: 4 },
+      }),
+    });
+    const { rows } = (await preview.json()).data;
+    const res = await s.request.post(`${base}/api/cards/batch`, {
+      data: { flashcardId: flashcard.id, source: "import", cards: rows },
+    });
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect((await res.json()).data).toMatchObject({ created: 30 });
+    const card = await prisma.card.findFirstOrThrow({
+      where: { flashcardId: flashcard.id, term: "w7" },
+    });
+    expect(card).toMatchObject({
+      definition: "def 7",
+      example: "ex 7",
+      context: "ctx 7",
+      partOfSpeech: "noun",
+    });
+    expect(
+      await prisma.schedulingRecord.count({ where: { card: { flashcardId: flashcard.id } } })
+    ).toBe(60);
+  });
+
+  test("all-malformed rows save nothing and report every row", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const flashcard = await createFlashcard(s, base, "Words");
+    const preview = await s.request.post(`${base}/api/import/parse`, {
+      data: fileBody(flashcard.id, {
+        grid: [["t", "d"], ["a", ""], ["", "b"]],
+        mapping: mapping({ term: 0, definition: 1 }),
+      }),
+    });
+    const { rows } = (await preview.json()).data;
+    const res = await s.request.post(`${base}/api/cards/batch`, {
+      data: { flashcardId: flashcard.id, source: "import", cards: rows },
+    });
+    expect((await res.json()).data).toEqual({
+      created: 0,
+      duplicates: [],
+      errors: [
+        { line: 2, reason: "Definition is required" },
+        { line: 3, reason: "Term is required" },
+      ],
+    });
+  });
+});

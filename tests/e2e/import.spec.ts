@@ -383,3 +383,217 @@ for (const theme of ["dark", "light"] as const) {
     await shot("review-cards");
   });
 }
+
+// spec-3-2: Upload file → map columns → preview → save.
+const CSV = [
+  "pos,meaning,word,example",
+  "noun,a fine light rain,drizzle,A drizzle fell all morning.",
+  ",,,",
+  "noun,a very strong wind,gale,",
+  "adj,feeling slightly ill,Under the weather,",
+  "noun,,squall,",
+].join("\n");
+
+async function uploadCsv(dialog: Locator, name = "weather.csv", body = CSV) {
+  const tab = dialog.getByRole("tab", { name: "Upload file" });
+  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+  await dialog.getByLabel("Choose a .csv or .xlsx file").setInputFiles({
+    name,
+    mimeType: "text/csv",
+    buffer: Buffer.from(body, "utf-8"),
+  });
+}
+
+const mapSelect = (dialog: Locator, label: string) => dialog.getByLabel(label, { exact: true });
+
+test("upload CSV with shuffled columns → map → preview → save → results", async ({ page }) => {
+  const email = await register(page);
+  const flashcard = await seedFlashcard(email);
+  const dialog = await openImport(page, flashcard.id);
+
+  await dialog.getByLabel("Paste cards").fill("kept\ttext");
+  await dialog.getByRole("tab", { name: "Upload file" }).click();
+  await expect(dialog.getByRole("tab", { name: "Upload file" })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+  await expect(dialog.getByRole("button", { name: "Choose file" })).toBeFocused();
+
+  // A wrong type stays on the drop zone.
+  await dialog.getByLabel("Choose a .csv or .xlsx file").setInputFiles({
+    name: "notes.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4"),
+  });
+  await expect(dialog.getByText("Choose a .csv or .xlsx file.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Choose file" })).toBeVisible();
+
+  await uploadCsv(dialog);
+  await expect(dialog.getByText("weather.csv")).toBeVisible();
+  await expect(dialog.getByLabel("First row has column names")).toBeChecked();
+  // Guessed from the header names, in any order.
+  await expect(mapSelect(dialog, "Term")).toHaveValue("2");
+  await expect(mapSelect(dialog, "Definition")).toHaveValue("1");
+  await expect(mapSelect(dialog, "Example sentence")).toHaveValue("3");
+  await expect(mapSelect(dialog, "Part of speech")).toHaveValue("0");
+  await expect(mapSelect(dialog, "Context / collocation")).toHaveValue("");
+  await expect(dialog.getByText("First 3 of 4 rows")).toBeVisible();
+  await expect(dialog.getByRole("rowheader", { name: "Row 2" })).toBeVisible();
+  await expect(dialog.getByRole("rowheader", { name: "Row 4" })).toBeVisible();
+
+  // Mapping errors block Preview.
+  await mapSelect(dialog, "Term").selectOption("");
+  await dialog.getByRole("button", { name: "Preview" }).click();
+  await expect(dialog.getByText("Map a column to Term.")).toBeVisible();
+  await expect(mapSelect(dialog, "Term")).toBeFocused();
+  await mapSelect(dialog, "Term").selectOption("1");
+  await expect(dialog.getByText("Each column can be mapped once.")).toHaveCount(2);
+  await mapSelect(dialog, "Term").selectOption("2");
+  await expect(dialog.getByText("Each column can be mapped once.")).toHaveCount(0);
+
+  // Paste text and the file both survive switching sub-tabs.
+  await dialog.getByRole("tab", { name: "Paste" }).click();
+  await expect(dialog.getByLabel("Paste cards")).toHaveValue("kept\ttext");
+  await dialog.getByRole("tab", { name: "Upload file" }).click();
+  await expect(dialog.getByText("weather.csv")).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Preview" }).click();
+
+  // Review: Row labels, optional fields prefilled and shown.
+  await expect(dialog.getByLabel("Term, row 2")).toHaveValue("drizzle");
+  await expect(dialog.getByLabel("Example sentence, row 2")).toHaveValue(
+    "A drizzle fell all morning."
+  );
+  await expect(dialog.getByLabel("Part of speech, row 2")).toHaveValue("noun");
+  await expect(dialog.getByText("Row 2", { exact: true })).toBeVisible();
+  await expect(dialog.getByLabel(/^Term, row/)).toHaveCount(4);
+  await expect(dialog.getByLabel("Term, row 3")).toHaveCount(0);
+  await expect(dialog.getByText("Already in Weather idioms — will be skipped")).toBeVisible();
+  await expect(dialog.getByText("Definition is required")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "← Back to mapping" })).toBeVisible();
+  expect(await prisma.card.count({ where: { flashcardId: flashcard.id } })).toBe(1);
+
+  await dialog.getByRole("button", { name: "Save 2 cards" }).click();
+  const results = dialog.getByRole("group", { name: "Import results" });
+  await expect(results.getByRole("heading", { name: "Created (2)" })).toBeVisible();
+  await expect(results.getByRole("heading", { name: "Duplicates skipped (1)" })).toBeVisible();
+  await expect(results.getByRole("heading", { name: "Errors (1)" })).toBeVisible();
+  await expect(results).toContainText("Row 5");
+  await expect(results).toContainText("Row 6");
+  await expect(results).toContainText("Definition is required");
+
+  const drizzle = await prisma.card.findFirstOrThrow({
+    where: { flashcardId: flashcard.id, term: "drizzle" },
+    include: { schedulingRecords: true },
+  });
+  expect(drizzle).toMatchObject({
+    definition: "a fine light rain",
+    example: "A drizzle fell all morning.",
+    partOfSpeech: "noun",
+    context: null,
+  });
+  expect(drizzle.schedulingRecords).toHaveLength(2);
+});
+
+test("upload: Back to mapping and close confirms name the uploaded file", async ({ page }) => {
+  const email = await register(page);
+  const flashcard = await seedFlashcard(email);
+  const dialog = await openImport(page, flashcard.id);
+  await uploadCsv(dialog, "short.csv", "term;definition\nalpha;one");
+  await expect(mapSelect(dialog, "Term")).toHaveValue("0");
+
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog.getByText("Discard the uploaded file?")).toBeVisible();
+  await dialog.getByRole("button", { name: "Keep editing" }).click();
+
+  await dialog.getByRole("button", { name: "Preview" }).click();
+  await expect(dialog.getByLabel("Term, row 2")).toHaveValue("alpha");
+  await dialog.getByRole("button", { name: "← Back to mapping" }).click();
+  await expect(
+    dialog.getByText("Go back to the mapping? Your edits to these rows are discarded.")
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Discard edits" }).click();
+  await expect(dialog.getByText("short.csv")).toBeVisible();
+
+  // A header-only file has nothing to preview.
+  await uploadCsv(dialog, "empty.csv", "term,definition\n");
+  await dialog.getByRole("button", { name: "Preview" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("This file has no rows to import.");
+});
+
+test("upload: a CSV dropped on the Upload view opens the mapping step", async ({ page }) => {
+  const email = await register(page);
+  const flashcard = await seedFlashcard(email);
+  const dialog = await openImport(page, flashcard.id);
+  await dialog.getByRole("tab", { name: "Upload file" }).click();
+
+  const dataTransfer = await page.evaluateHandle(() => {
+    const transfer = new DataTransfer();
+    transfer.items.add(
+      new File(["term,definition\ndrizzle,light rain"], "dropped.csv", { type: "text/csv" })
+    );
+    return transfer;
+  });
+  // Dropped on the sub-tabs, outside the dashed zone: still loads.
+  const target = dialog.getByRole("tablist", { name: "Import source" });
+  await target.dispatchEvent("dragenter", { dataTransfer });
+  await target.dispatchEvent("dragover", { dataTransfer });
+  await target.dispatchEvent("drop", { dataTransfer });
+
+  await expect(dialog.getByText("dropped.csv")).toBeVisible();
+  await expect(mapSelect(dialog, "Term")).toHaveValue("0");
+  await expect(dialog.getByRole("rowheader", { name: "Row 2" })).toBeVisible();
+});
+
+// Visual check of the Upload view: drop zone, mapping, review, results.
+for (const theme of ["dark", "light"] as const) {
+  test(`import upload screenshots (${theme})`, async ({ page }) => {
+    mkdirSync("test-results/screenshots", { recursive: true });
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    const email = await register(page);
+    const flashcard = await seedFlashcard(email);
+    await page.goto(`/flashcards/${flashcard.id}`);
+    await page.evaluate((t) => {
+      if (t === "light") document.documentElement.dataset.theme = "light";
+      else delete document.documentElement.dataset.theme;
+    }, theme);
+    const shot = (name: string) =>
+      page.screenshot({
+        path: `test-results/screenshots/upload-${name}-${theme}.png`,
+        animations: "disabled",
+      });
+    await page.getByRole("button", { name: "Add cards" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("tab", { name: "Import" }).click();
+    await dialog.getByRole("tab", { name: "Upload file" }).click();
+    await shot("dropzone");
+    await dialog.getByLabel("Choose a .csv or .xlsx file").setInputFiles({
+      name: "notes.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4"),
+    });
+    await expect(dialog.getByText("Choose a .csv or .xlsx file.")).toBeVisible();
+    await shot("dropzone-error");
+    await uploadCsv(dialog);
+    await expect(dialog.getByText("weather.csv")).toBeVisible();
+    await shot("mapping");
+    await mapSelect(dialog, "Term").selectOption("1");
+    await expect(dialog.getByText("Each column can be mapped once.")).toHaveCount(2);
+    await shot("mapping-error");
+    await mapSelect(dialog, "Term").selectOption("2");
+    await dialog.getByRole("button", { name: "Preview" }).click();
+    await expect(dialog.getByLabel("Term, row 2")).toBeVisible();
+    await shot("review");
+    await dialog.getByRole("button", { name: /^Save \d+ cards?$/ }).click();
+    await expect(dialog.getByRole("group", { name: "Import results" })).toBeVisible();
+    await shot("results");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await dialog.getByRole("button", { name: "Done" }).click();
+    await page.getByRole("button", { name: "Add cards" }).click();
+    const d = page.getByRole("dialog");
+    await d.getByRole("tab", { name: "Import" }).click();
+    await uploadCsv(d);
+    await expect(d.getByText("weather.csv")).toBeVisible();
+    await shot("mapping-mobile");
+  });
+}

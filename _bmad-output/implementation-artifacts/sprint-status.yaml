@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-07-2026 00:00
-last_updated: 11-12-2026 23:30
+last_updated: 11-13-2026 09:30
 project: Web_TrainingSanctum
 project_key: NOKEY
 tracking_system: file-system
@@ -55,7 +55,7 @@ development_status:
 
   epic-3: in-progress
   3-1-paste-import-with-review-editor: review
-  3-2-csv-excel-import-with-column-mapping-and-review-editor: backlog
+  3-2-csv-excel-import-with-column-mapping-and-review-editor: review
   epic-3-retrospective: optional
 
   epic-4: backlog
