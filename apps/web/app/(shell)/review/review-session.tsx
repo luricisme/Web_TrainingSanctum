@@ -154,7 +154,10 @@ interface SessionState {
   entries: ReviewQueueEntry[];
   /** Position of the current entry; everything before it has been graded. */
   index: number;
+  /** Which face shows; Space or a click flips it either way. */
   revealed: boolean;
+  /** The answer has been shown at least once, so the entry can be graded. */
+  seen: boolean;
   failed: boolean;
 }
 
@@ -164,6 +167,7 @@ function Session({ snapshot }: { snapshot: ReviewQueueResponse }) {
     entries: snapshot.entries,
     index: 0,
     revealed: false,
+    seen: false,
     failed: false,
   }));
   // Mirrors `state` synchronously so rapid key presses read the latest
@@ -191,7 +195,7 @@ function Session({ snapshot }: { snapshot: ReviewQueueResponse }) {
       // Advance at once; the in-flight entry rides in the context for onError.
       update((s) =>
         s.entries[s.index]?.schedulingRecordId === entry.schedulingRecordId
-          ? { ...s, index: s.index + 1, revealed: false, failed: false }
+          ? { ...s, index: s.index + 1, revealed: false, seen: false, failed: false }
           : s
       );
       return { entry };
@@ -210,20 +214,22 @@ function Session({ snapshot }: { snapshot: ReviewQueueResponse }) {
         entries.splice(from, 1);
         const index = s.index - 1;
         entries.splice(index, 0, entry);
-        return { entries, index, revealed: false, failed: true };
+        return { entries, index, revealed: false, seen: false, failed: true };
       });
     },
   });
 
-  const reveal = useCallback(() => {
-    update((s) => (s.revealed || !s.entries[s.index] ? s : { ...s, revealed: true }));
+  const flip = useCallback(() => {
+    update((s) =>
+      s.entries[s.index] ? { ...s, revealed: !s.revealed, seen: true } : s
+    );
   }, [update]);
 
   const grade = useCallback(
     (value: ReviewGrade) => {
       const s = live.current;
       const entry = s.entries[s.index];
-      if (!entry || !s.revealed) return;
+      if (!entry || !s.seen) return;
       mutate({ entry, grade: value });
     },
     [mutate]
@@ -235,9 +241,9 @@ function Session({ snapshot }: { snapshot: ReviewQueueResponse }) {
       const s = live.current;
       if (isTextField(event.target) || !s.entries[s.index]) return;
       if (event.code === "Space" || event.key === " ") {
-        // Space only ever reveals; it must not scroll or press a button.
+        // Space flips the card either way; it must not scroll or press a button.
         event.preventDefault();
-        if (!event.repeat) reveal();
+        if (!event.repeat) flip();
         return;
       }
       const value = GRADE_KEYS[event.code];
@@ -247,7 +253,7 @@ function Session({ snapshot }: { snapshot: ReviewQueueResponse }) {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [reveal, grade]);
+  }, [flip, grade]);
 
   const total = state.entries.length;
 
@@ -261,12 +267,13 @@ function Session({ snapshot }: { snapshot: ReviewQueueResponse }) {
             key={current.schedulingRecordId}
             entry={current}
             revealed={state.revealed}
-            onReveal={reveal}
+            seen={state.seen}
+            onFlip={flip}
             onGrade={grade}
           />
 
           <div className="flex min-h-14 w-full max-w-review-card flex-col items-center justify-center gap-4">
-            {state.revealed ? (
+            {state.seen ? (
               <div role="group" aria-label="Grade" className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
                 {REVIEW_GRADES.map((value, i) => (
                   <button

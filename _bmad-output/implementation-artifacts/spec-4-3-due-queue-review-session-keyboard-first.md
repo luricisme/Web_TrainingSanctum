@@ -28,6 +28,7 @@ context:
 **Decisions (human, 2026-11-13):**
 - **Same-day second grade:** keep 4.2's 409 `NOT_DUE`. The first grade of the day wins. The client treats a 409 as already applied, and the grade route is unchanged. This deliberately refines the epic's "last write wins": two grades never compound.
 - **Swipe mapping:** ← Again, ↓ Hard, → Good, ↑ Easy.
+- **Flip back and forth (human, after hand-off):** Space and click/tap flip the card both ways. The grade buttons, the grade keys and swipe go live after the first reveal and stay live on either face, until the entry is graded.
 - **Spec size:** kept whole at about 2,400 tokens, by user choice.
 
 ## Boundaries & Constraints
@@ -139,6 +140,11 @@ context:
 - Swipe grading listens only to touch/pen pointers; a mouse drag never grades.
 
 ## Spec Change Log
+
+- **Human renegotiation after hand-off:** the free flip replaces "Space reveals" (one-way).
+  - Amended: `SessionState` gains `seen`; `reveal` becomes `flip`, which toggles; grading and swipe gate on `seen`; the card's click always flips.
+  - Added e2e test "the card flips back and forth; grading stays available once the answer was seen".
+  - KEEP: the reset to the unflipped prompt on advance and on rollback, the Space repeat guard, and the hint shown only before the first reveal.
 
 ## Review Triage Log
 

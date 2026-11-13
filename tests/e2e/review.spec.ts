@@ -123,6 +123,42 @@ test("keyboard loop: Space reveals, 3 and k grade both directions", async ({ pag
     .toEqual([1, 1]);
 });
 
+test("the card flips back and forth; grading stays available once the answer was seen", async ({
+  page,
+}) => {
+  const email = await register(page);
+  await seedCard(email);
+  const grades = await recordGrades(page);
+  await page.goto("/review");
+  await expect(page.getByText("1 / 2")).toBeVisible();
+
+  const card = page.locator("button").filter({ hasText: "Weather idioms ·" });
+  const prompt = card.getByText("drizzle", { exact: true });
+  const answer = card.getByText("light rain", { exact: true });
+
+  await page.keyboard.press("Space");
+  await expect(answer.locator("..")).toHaveAttribute("aria-hidden", "false");
+  await expect(page.getByRole("button", { name: /^Good/ })).toBeVisible();
+
+  // Space flips back to the prompt; the grade buttons stay.
+  await page.keyboard.press("Space");
+  await expect(prompt.locator("..")).toHaveAttribute("aria-hidden", "false");
+  await expect(page.getByRole("button", { name: /^Good/ })).toBeVisible();
+
+  // A click flips it again, either way.
+  await card.click();
+  await expect(answer.locator("..")).toHaveAttribute("aria-hidden", "false");
+  await card.click();
+  await expect(prompt.locator("..")).toHaveAttribute("aria-hidden", "false");
+  await expect(page.getByText("1 / 2")).toBeVisible();
+
+  // Grading from the prompt face works once the answer was seen.
+  await page.keyboard.press("3");
+  await expect(page.getByText("2 / 2")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Good/ })).toHaveCount(0);
+  await expect.poll(() => grades).toEqual(["good"]);
+});
+
 test("a failed grade brings the entry back with an alert", async ({ page }) => {
   const email = await register(page);
   await seedCard(email);

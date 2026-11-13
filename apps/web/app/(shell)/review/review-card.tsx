@@ -26,12 +26,15 @@ const faceClass =
 export function ReviewCard({
   entry,
   revealed,
-  onReveal,
+  seen,
+  onFlip,
   onGrade,
 }: {
   entry: ReviewQueueEntry;
   revealed: boolean;
-  onReveal: () => void;
+  /** The answer has been shown once; swipe grading is live from then on. */
+  seen: boolean;
+  onFlip: () => void;
   onGrade: (grade: ReviewGrade) => void;
 }) {
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -49,7 +52,7 @@ export function ReviewCard({
     swiped.current = false;
     // Swipe is a touch layer on top of the grade buttons, not a mouse drag.
     start.current =
-      revealed && event.pointerType !== "mouse" ? { x: event.clientX, y: event.clientY } : null;
+      seen && event.pointerType !== "mouse" ? { x: event.clientX, y: event.clientY } : null;
   }
 
   function onPointerUp(event: PointerEvent) {
@@ -67,7 +70,7 @@ export function ReviewCard({
     <button
       type="button"
       onClick={() => {
-        if (!swiped.current && !revealed) onReveal();
+        if (!swiped.current) onFlip();
         swiped.current = false;
       }}
       onPointerDown={onPointerDown}
@@ -75,7 +78,7 @@ export function ReviewCard({
       onPointerCancel={() => (start.current = null)}
       aria-label={revealed ? undefined : `Reveal the answer to: ${prompt}`}
       className={`block w-full max-w-review-card rounded-lg perspective-review focus-ring ${
-        revealed ? "cursor-default touch-none" : "cursor-pointer"
+        seen ? "cursor-pointer touch-none" : "cursor-pointer"
       }`}
     >
       <span className={`review-flip grid ${revealed ? "rotate-y-180" : ""}`}>
