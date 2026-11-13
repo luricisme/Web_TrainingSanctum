@@ -51,7 +51,8 @@ export const stageClass = "flex w-full flex-col items-center gap-8";
 /**
  * One position in the session. `key` is unique per slot (the record id, plus
  * `#n` for a repeat) so a repeated card mounts unflipped. A `practice` slot is
- * a repeat after Again (spec-4-8): it is graded locally and never POSTed.
+ * graded locally and never POSTed: a repeat after Again (spec-4-8), or any
+ * slot of a practice run (spec-4-8b). Grading one Again always repeats it.
  */
 interface Slot {
   entry: ReviewQueueEntry;
@@ -91,13 +92,16 @@ function advance(s: SessionState, slot: Slot, repeat: boolean): SessionState {
  * entries are one snapshot; grading advances locally at once and POSTs in
  * the background (AD-7). With `repeatAgain`, an entry graded Again comes back
  * at the end until it is graded Hard, Good or Easy; only its first grade is
- * saved.
+ * saved. With `practice` (spec-4-8b, Learn's "Study all cards again"), no
+ * grade is saved at all and Again always repeats. Like `entries`, it is read
+ * once on mount: key the component to start a new run.
  */
 export function GradingSession({
   entries,
   header,
   finished,
   repeatAgain,
+  practice = false,
   onGradeSettled,
 }: {
   entries: ReviewQueueEntry[];
@@ -105,6 +109,11 @@ export function GradingSession({
   /** Shown once every slot has been graded. */
   finished: ReactNode;
   repeatAgain: boolean;
+  /**
+   * spec-4-8b: every slot is practice, so no grade is ever POSTed and
+   * scheduling never changes; Again still repeats at the end.
+   */
+  practice?: boolean;
   /** Runs after each saved grade settles, even if the session has unmounted. */
   onGradeSettled?: () => void;
 }) {
@@ -112,7 +121,7 @@ export function GradingSession({
     slots: entries.map((entry) => ({
       entry,
       key: entry.schedulingRecordId,
-      practice: false,
+      practice,
     })),
     index: 0,
     revealed: false,

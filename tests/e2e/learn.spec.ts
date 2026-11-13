@@ -91,6 +91,7 @@ async function recordGrades(page: Page): Promise<string[]> {
 
 const hint = "Click the card, or press Space, to reveal";
 const doneLine = "Nothing left to learn in Weather idioms right now.";
+const practiceDoneLine = "You've gone through every card in Weather idioms.";
 
 const NEW_A = { term: "drizzle", definition: "light rain" };
 const NEW_B = { term: "squall", definition: "sudden gust" };
@@ -244,6 +245,10 @@ test("a Learn session with nothing waiting shows Learn complete", async ({ page 
     "href",
     `/flashcards/${flashcard.id}`
   );
+  // spec-4-8b: the usual way in — a practice run straight from an idle Flashcard.
+  await page.getByRole("button", { name: "Study all cards again" }).click();
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(page.getByText("gale", { exact: true }).first()).toBeVisible();
 });
 
 test("a failed first Again rolls back and removes its practice copy", async ({ page }) => {
@@ -331,6 +336,89 @@ test("a late failure of a first Again, after its practice copy was graded, resto
   ]);
 });
 
+test("Study all cards again runs every Card as practice: Again repeats, nothing is saved", async ({
+  page,
+}) => {
+  const email = await register(page);
+  // A new Card (older) and a learned one that is not due.
+  const { flashcard } = await seed(email, [NEW_A, { ...LEARNED_DUE, dueIn: [3, 3] }]);
+  const posts = await recordGrades(page);
+
+  // Learn the new Card first, so the session ends in its complete state.
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  for (let i = 0; i < 2; i++) {
+    await page.keyboard.press("Space");
+    await page.keyboard.press("3");
+  }
+  await expect(page.getByText(doneLine)).toBeVisible();
+  await expect.poll(() => posts.length).toBe(2);
+  const snapshot = () =>
+    prisma.schedulingRecord
+      .findMany({ where: { card: { flashcardId: flashcard.id } }, orderBy: { id: "asc" } })
+      .then((rows) =>
+        rows.map((r) => [
+          r.id,
+          r.interval,
+          r.repetitions,
+          r.easeFactor,
+          r.nextReviewDate.toISOString(),
+          r.firstGradedAt?.toISOString() ?? null,
+        ])
+      );
+  await expect.poll(async () => (await snapshot()).every((row) => row[5] !== null)).toBe(true);
+  const before = await snapshot();
+
+  // The restart is secondary, never the accent.
+  const again = page.getByRole("button", { name: "Study all cards again" });
+  await expect(again).not.toHaveClass(/bg-accent/);
+  await again.click();
+
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Practicing Weather idioms · grades aren't saved"
+  );
+  // Every Card, oldest first, both directions together.
+  await expect(page.getByText("1 / 4")).toBeVisible();
+  await expect(page.getByText("Weather idioms · Term → Definition").first()).toBeVisible();
+  await expect(page.getByText("drizzle", { exact: true }).first()).toBeVisible();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("1"); // Again: repeated at the end.
+  // Then drizzle Definition → Term, then the learned Card in both directions.
+  const order: [string, string, string][] = [
+    ["2 / 5", "Definition → Term", "light rain"],
+    ["3 / 5", "Term → Definition", "gale"],
+    ["4 / 5", "Definition → Term", "very strong wind"],
+  ];
+  for (const [counter, direction, prompt] of order) {
+    await expect(page.getByText(counter)).toBeVisible();
+    await expect(page.getByText(`Weather idioms · ${direction}`).first()).toBeVisible();
+    await expect(page.getByText(prompt, { exact: true }).first()).toBeVisible();
+    await page.keyboard.press("Space");
+    await page.keyboard.press("3");
+  }
+  // The repeat of drizzle Term → Definition, unflipped.
+  await expect(page.getByText("5 / 5")).toBeVisible();
+  await expect(page.getByText(hint)).toBeVisible();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("4");
+
+  await expect(page.getByText(practiceDoneLine)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to Weather idioms" })).toHaveAttribute(
+    "href",
+    `/flashcards/${flashcard.id}`
+  );
+  // Nothing was POSTed and no Scheduling Record changed. Grades POST in the
+  // background, so give a stray one time to land before asserting.
+  await page.waitForTimeout(500);
+  expect(posts).toHaveLength(2);
+  expect(await snapshot()).toEqual(before);
+
+  // Another run starts from the first Card.
+  await page.getByRole("button", { name: "Study all cards again" }).click();
+  await expect(page.getByText("1 / 4")).toBeVisible();
+  await expect(page.getByText(hint)).toBeVisible();
+});
+
 test("an unknown Flashcard's Learn link offers a way back", async ({ page }) => {
   await register(page);
   await page.goto("/flashcards/does-not-exist/learn");
@@ -389,6 +477,17 @@ for (const theme of ["dark", "light"] as const) {
       }
       await expect(page.getByText(doneLine)).toBeVisible();
       await shot("complete");
+
+      // spec-4-8b: the unsaved practice run and its end state.
+      await page.getByRole("button", { name: "Study all cards again" }).click();
+      await expect(page.getByText("1 / 6")).toBeVisible();
+      await shot("practice");
+      for (let i = 0; i < 6; i++) {
+        await page.keyboard.press("Space");
+        await page.keyboard.press("3");
+      }
+      await expect(page.getByText(practiceDoneLine)).toBeVisible();
+      await shot("practice-complete");
     });
   }
 }
