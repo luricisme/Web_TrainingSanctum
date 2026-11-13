@@ -127,8 +127,8 @@
   evidence: Existing e2e tests change the setting via prisma plus a full reload, so dropping the `["flashcard"]` invalidation in study-directions.tsx would fail no test.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-5-focus-mode.md`
-  summary: Story 5.1 adds the current streak count (mono display, above the calm line) to the Empty due-queue state built in 4.5.
-  evidence: DESIGN.md/EXPERIENCE.md put the streak at the top of the Empty due-queue state, but no streak model exists before 5.1; decided 2026-11-13 to ship 4.5 without it.
+  summary: Story 5.1 adds the realm · stage with its XP bar (and "Today's quests 1 / 2" once 5.6 lands) above the calm line in the Empty due-queue state built in 4.5. Re-targeted from the streak count by Sprint Change 2026-11-14.
+  evidence: DESIGN.md/EXPERIENCE.md put the realm at the top of the Empty due-queue state, but no cultivation model exists before 5.1; decided 2026-11-13 to ship 4.5 without it.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-5-focus-mode.md`
   summary: Flashcard picker for the Empty due-queue "+ Add card" so the user can change the last-used target Flashcard (EXPERIENCE.md Component Patterns).

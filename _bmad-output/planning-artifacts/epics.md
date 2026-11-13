@@ -38,25 +38,27 @@ FR-9: Due-queue review — the system presents due Scheduling Records of learned
 
 FR-10: Removed (Sprint Change 2026-11-13) — superseded by FR-17; new Cards are introduced only through Learn, so there is no daily cap.
 
-FR-11: Focus mode — during an active Review Session, navigation, sidebar, streak badge, and other non-essential chrome are hidden; only the card and recall controls are visible. Exiting review restores normal navigation.
+FR-11: Focus mode — during an active Review Session, navigation, sidebar, realm badge, and other non-essential chrome are hidden; only the card and recall controls are visible. Exiting review restores normal navigation.
 
-FR-12: Streak tracking — the system tracks consecutive calendar days with at least one graded Scheduling Record and displays the current streak outside active review. Grading zero cards on a calendar day breaks the streak at the local-timezone day boundary (no streak-freeze mechanic). `next_review_date` and streak-day attribution share the same local-timezone basis.
+FR-12: Cultivation progression — the system keeps a total XP per user and derives a Cultivation Realm and Stage from it on a fixed 90-level ladder in four Bộ (Ngưng Khí · Tầng 1 … Đạp Thiên Cảnh; PRD addendum), shown outside active review. XP changes only by claiming a Daily Quest or by settling a past day; it never goes below 0, and a penalty can demote by stages or realms. Realm names are in Vietnamese. Quest days share the `User.timezone` local-day basis with `next_review_date`. (Replaces Streak, Sprint Change 2026-11-14.)
 
-FR-13: Data export/backup — a user can export their full Class/Folder/Flashcard/Card structure + Card + Scheduling Record + streak history to a portable JSON format on demand, sufficient to reconstruct state.
+FR-13: Data export/backup — a user can export their full Class/Folder/Flashcard/Card structure + Card + Scheduling Record + cultivation history (XP, quest days, XP events) to a portable JSON format on demand, sufficient to reconstruct state.
 
-FR-14: Restore from backup — a user can import a previously-exported FR-13 JSON file to fully reconstruct their data (both Scheduling Records per Card, streak history). Restoring into an account with existing data requires explicit confirmation (default: replace, never silent merge/overwrite).
+FR-14: Restore from backup — a user can import a previously-exported FR-13 JSON file to fully reconstruct their data (both Scheduling Records per Card, cultivation history). Restoring into an account with existing data requires explicit confirmation (default: replace, never silent merge/overwrite). After a restore every day up to yesterday counts as settled (no gap penalty).
 
-FR-15: Progress & stats view — a user can view a stats screen (outside active review) showing current/longest streak, total Cards (learned / unlearned), and a simple visualization of the SM-2 retention curve (distribution of Scheduling Records by current interval, or review-outcome history) per Recall Direction. Reflects latest graded state without requiring a page reload tied to a specific session.
+FR-15: Progress & stats view — a user can view a stats screen (outside active review) showing realm and stage, total XP, XP progress and XP history, today's Daily Quests, total Cards (learned / unlearned), and a simple visualization of the SM-2 retention curve (distribution of Scheduling Records by current interval, or review-outcome history) per Recall Direction. Reflects latest graded state without requiring a page reload tied to a specific session.
 
 FR-16: Flashcard card viewer — the Flashcard page shows a card viewer above its Cards list: every Card one at a time in list order, Term side first; Space or click/tap flips either way; ← / → (buttons and arrow keys) move between Cards with a mono "X / N" counter, no wrap-around, shuffle or autoplay; keys ignored in fields and open panels/modals; viewing never changes scheduling; hidden on an empty Flashcard.
 
-FR-17: Learn session — a "Learn" button below the viewer starts a graded session for that Flashcard (same session screen, keys, grade write path and focus mode as Review): its unlearned records first (studied directions, graded independently), then its learned, due records in studied directions. A record is learned once graded; it then joins Review on its due date (per direction, FR-18). Learn grades count toward the streak. An entry graded Again is re-shown at the end of the session until graded Hard/Good/Easy; only its first grade is persisted. Completion shows a calm line and a way back. The button label shows what is waiting ("Learn · 12 new · 3 due").
+FR-17: Learn session — a "Learn" button below the viewer starts a graded session for that Flashcard (same session screen, keys, grade write path and focus mode as Review): its unlearned records first (studied directions, graded independently), then its learned, due records in studied directions. A record is learned once graded; it then joins Review on its due date (per direction, FR-18). Learn grades count toward the Learn Flashcards quest (FR-19). An entry graded Again is re-shown at the end of the session until graded Hard/Good/Easy; only its first grade is persisted. Completion shows a calm line and a way back. The button label shows what is waiting ("Learn · 12 new · 3 due").
 
 FR-18: Study directions setting — per account: Both (default), Term → Definition only, or Definition → Term only. Applies to Learn, Review, the Learn practice run and the card viewer; turning a direction off changes no Scheduling Record. "Learned" is per direction (AD-14). (Sprint Change 2026-11-13b)
 
+FR-19: Daily Quests — each local day the user has two quests sized by their Bộ at the start of the day: Learn Flashcards (fully learn 1 / 2 / 3 / 4 Flashcards in Nhất / Nhị / Tam / Tứ Bộ) and Clear Review (grade at least one learned record and leave the due queue empty). XP per quest 10 / 20 / 40 / 40. A quest's checkbox unlocks only when its condition is met; the user ticks it to claim the XP, once. A quest with no work that day is skipped (no reward, no penalty). At day end each quest neither claimed nor skipped costs 2 × its XP, including done-but-unticked quests and days the app wasn't opened; settled lazily, in order, on the next visit. No penalty before cultivation started or for a restore gap. No rule reads grade values (SM-C1). (Sprint Change 2026-11-14)
+
 ### NonFunctional Requirements
 
-NFR-1: Data durability — Card, Scheduling Record, and streak data must survive normal operation with no silent data loss; FR-13/FR-14 are the product-level mitigation on top of infrastructure-level durability (Neon PITR).
+NFR-1: Data durability — Card, Scheduling Record, and cultivation data must survive normal operation with no silent data loss; FR-13/FR-14 are the product-level mitigation on top of infrastructure-level durability (Neon PITR).
 
 NFR-2: Performance (review loop) — reveal/grade/advance transitions in Review Session must feel instantaneous under rapid repeated input: sub-100ms perceived latency (enforced via optimistic updates, architecture AD-7).
 
@@ -78,10 +80,11 @@ NFR-6: Live deployment — the product ships to a live, publicly accessible depl
 - Import logic lives in domain (AD-5): `parseImportBlock` and `detectDuplicates` are pure functions in `packages/domain`, called identically by paste and CSV/Excel import routes.
 - Request validation boundary (AD-6): every Route Handler validates body/query with a Zod schema before calling domain/db code; validation failures return the standard error envelope.
 - Optimistic client data flow (AD-7): the review screen uses TanStack Query with optimistic updates — local cache updates and advances immediately, background grade POST, rollback + error surfaced only on failure.
-- Local day-boundary source of truth (AD-8): `User.timezone` (IANA string, captured at signup, not user-editable in v1) is the single source of local-day truth for both due-queue filtering and streak-day attribution, via a shared `toLocalCalendarDay` domain helper.
+- Local day-boundary source of truth (AD-8): `User.timezone` (IANA string, captured at signup, not user-editable in v1) is the single source of local-day truth for due-queue filtering, quest-day attribution and cultivation settlement, via a shared `toLocalCalendarDay` domain helper.
 - Single shared card-creation path (AD-9): manual creation, paste import, and CSV import all call one `createCardWithSchedulingRecords` domain function; no Route Handler constructs a `SchedulingRecord` by hand.
 - Response envelope & shared export/restore schema (AD-10): every successful response is `{ data: T }` (or `{ data: T[], meta?: {...} }`); FR-13 export and FR-14 restore share one Zod schema (`backupExportSchema`) in `packages/domain`.
 - Backup cadence & destructive-operation atomicity (AD-11): Neon PITR covers infrastructure durability; FR-13 export is user-initiated/on-demand only (no scheduled export job in v1); folder-delete, flashcard-delete and class-delete cascades (FR-5) and restore (FR-14) are each wrapped in one Prisma transaction (all-or-nothing).
+- Cultivation ledger & lazy settlement (AD-15): ladder, quest table, condition evaluators and `settleDays` are pure functions in `packages/domain/cultivation.ts`; only the claim route and settlement write XP (`XpEvent`, cached in `User.cultivationXp`, floored at 0); `CultivationDay` snapshots each day's quests; settlement runs inside one transaction at the start of `GET /api/cultivation` and the claim route, idempotent via unique `(userId, localDay)` and `User.cultivationSettledThrough`; no cron job. The grade route is unchanged.
 - Testing architecture (AD-12): Vitest for `packages/domain` unit tests (no network/DB/browser dependency); Playwright for API/integration (seeded test DB) and E2E suites; GitHub Actions runs all three on every push.
 - Performance budgets (AD-13): sub-100ms grade→next-card transition; 200ms app-open→due-queue-paint; sub-5s paste/CSV import end-to-end.
 - Auth convention: Better Auth session cookie required on every Route Handler except `/api/auth/**`; unauthenticated requests return 401 with the standard error envelope; 30-day sliding session window.
@@ -99,19 +102,21 @@ UX-DR2: Build the Review card component: large soft-rounded (`rounded.lg`) surfa
 
 UX-DR3: Build the Grade buttons component (Review and Learn): Again / Hard / Good / Easy, visible after the first flip and staying while the card is flipped back, until the entry is graded, each labeled with its keyboard shortcut; Again styled with the `error` color (never the accent); Hard/Good/Easy equal weight to each other (never implying Hard shortens the next interval, per classical SM-2).
 
-UX-DR4: Build the Sidebar nav component: fixed 240px width, four flat icon+label items (Review, Classes, Stats, Settings), active-item styling (`elevated` background + accent text), hidden entirely during review focus mode and on mobile (<640px). There is no Import item — import lives inside a Folder's "Add cards" (UX-DR9).
+UX-DR4: Build the Sidebar nav component: fixed 240px width, four flat icon+label items (Review, Classes, Cultivation, Settings — Cultivation replaced Stats, Sprint Change 2026-11-14), active-item styling (`elevated` background + accent text), hidden entirely during review focus mode and on mobile (<640px). There is no Import item — import lives inside a Folder's "Add cards" (UX-DR9).
 
 UX-DR5: Build the List/folder/flashcard row component: rows grouped under section headers preceded by the small accent-colored square section-bullet marker, hover state (`row-hover`), trailing "..." overflow menu for rename/delete (Flashcard rows: Rename, Move to…, Delete).
 
-UX-DR6: Build the Progress counter (mono-font "X / Y") and streak indicator (flame icon + day count), both visible outside active review only (per FR-11/FR-12).
+UX-DR6: Build the Progress counter (mono-font "X / Y") and the Realm badge (realm · stage + 4px XP bar + mono "40 / 100 XP", no icon) at the sidebar bottom, both visible outside active review only (per FR-11/FR-12).
 
 UX-DR7: Build the Modal component for: folder-delete confirmation (two explicit buttons — "Move flashcards to Unsorted" primary / "Delete flashcards too" secondary-danger, no checkbox); flashcard-delete confirmation (names the Flashcard and its Card count); move-flashcard modal (Folder picker across Classes); class-delete confirmation ("Move folders to…" with a target-Class picker as primary, "Delete class and everything in it" secondary-danger that only enables after typing the Class name; when no other Class exists only the delete option is shown); and restore-from-backup confirmation (consequence statement + Confirm/Cancel, no type-to-confirm).
 
-UX-DR8: Build the Empty due-queue state: centered, prominent streak count, calm line, then up to 3 Flashcards with Unlearned Cards ("Weather idioms · 12 new", linking to their page) or, when none exist, a primary "+ Add card" button (opens Manual mode in the last-used Flashcard, with a Flashcard picker to change it) — never a bare "nothing to do" message.
+UX-DR8: Build the Empty due-queue state: centered, prominent realm · stage with XP bar and "Today's quests 1 / 2" linking to Cultivation, calm line, then up to 3 Flashcards with Unlearned Cards ("Weather idioms · 12 new", linking to their page) or, when none exist, a primary "+ Add card" button (opens Manual mode in the last-used Flashcard, with a Flashcard picker to change it) — never a bare "nothing to do" message.
 
 UX-DR17: Build the Card viewer on Flashcard detail (Sprint Change 2026-11-13, FR-16): one review card over all of the Flashcard's Cards, Term side first; outline circular ← / → buttons around a mono "X / N" counter (neutral, never the accent; disabled arrow at 0.4 opacity); the primary "Learn" button directly below, labelled with what is waiting ("Learn · 12 new · 3 due", FR-17); "Add cards" secondary while the viewer is shown.
 
 UX-DR18: Build the Study directions control on Settings (Sprint Change 2026-11-13b, FR-18): the reused `components.mode-switcher` pill with three options, saved on change with a quiet "Saved" status and inline error rollback; stacks vertically below 640px; a radio group operable with arrow keys.
+
+UX-DR19: Build the Cultivation page (Sprint Change 2026-11-14, FR-12/FR-15/FR-19), replacing Stats in the sidebar: realm card with XP bar; Daily quest list (two Quest rows with locked, done-not-ticked, skipped and claimed states; tick claims at once with inline rollback on failure); quiet missed-quests notice (warning left border) and breakthrough notice, no modal or confetti; then the FR-15 stats.
 
 UX-DR9: Build the "Add cards" panel opened from inside a Flashcard, with two modes in a pill switcher: **Manual** (Quizlet-style editor — numbered term/definition rows, optional fields expandable per row, "+ Add row", Tab moves to the next field and Enter on the last field adds a row, one Save creates all valid rows) and **Import** (Paste / Upload-file sub-tabs; Paste → delimiter + "Preview", Upload → column mapping). Import always ends in the **import review editor**: the same row editor as Manual, prefilled with the parsed rows, each labelled with its source line number, with inline errors on malformed rows, a "Already in {Flashcard} — will be skipped" flag on duplicates (cleared when the Term is edited), and a remove (×) button per row; a summary strip above the rows reads "30 rows · 2 need fixing · 1 duplicate". Save commits, then a results view shows exactly 3 groups (Created / Duplicates skipped / Errors, each error with line number + reason). The target Flashcard is fixed to the Flashcard the panel was opened from and shown in the panel header. There is no standalone Import page or nav item.
 
@@ -142,13 +147,14 @@ FR-8: Epic 4 - Classical SM-2 scheduling engine, per Recall Direction
 FR-9: Epic 4 - Due-queue review session (keyboard-first, ordered, dual-direction entries)
 FR-10: Removed (Sprint Change 2026-11-13)
 FR-11: Epic 4 - Focus mode (chrome hidden during review)
-FR-12: Epic 5 - Streak tracking (consecutive graded calendar days)
+FR-12: Epic 5 - Cultivation progression (realm ladder, XP ledger)
 FR-13: Epic 5 - Data export/backup to JSON
 FR-14: Epic 5 - Restore from backup JSON
-FR-15: Epic 5 - Progress & stats view (streaks, totals, retention curve)
+FR-15: Epic 5 - Cultivation & stats page (realm, XP history, totals, retention curve)
 FR-16: Epic 4 - Flashcard card viewer (flip, ← →, non-graded)
 FR-17: Epic 4 - Learn session (graded introduction of Unlearned Cards per Flashcard)
 FR-18: Epic 4 - Study directions setting (per-direction learned model)
+FR-19: Epic 5 - Daily Quests (claim, skip, double penalty, settlement)
 
 ## Epic List
 
@@ -170,12 +176,12 @@ A user can paste line-delimited term/definition pairs or upload a CSV/Excel file
 ### Epic 4: Spaced Repetition Review Engine
 A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with distraction-free focus mode in place. New Cards are introduced deliberately through a Flashcard's card viewer and Learn session; Review only brings back Cards already learned. The user chooses which Recall Directions they study (both by default); "learned" is tracked per direction, so a graded direction joins Review without waiting for the other.
 **FRs covered:** FR-8, FR-9, FR-11, FR-16, FR-17
-**Implementation notes:** `packages/domain/sm2.ts` as a pure, framework-free engine unit-tested against the PRD addendum's worked fixtures (NFR-4, SM-3); the grade write path is the single `POST /api/review/grade` route calling `applyGrade` inside one Prisma transaction (AD-4); TanStack Query optimistic updates for sub-100ms perceived transitions (AD-7, NFR-2); `toLocalCalendarDay` domain helper introduced here for due-queue filtering (AD-8) and reused by Epic 5's streak attribution; 200ms app-open-to-due-queue budget (AD-13, NFR-3); Review card flip, Grade buttons, review-mode sidebar hiding, full keyboard interaction, mobile tap/swipe, and the Empty due-queue state (UX-DR2, UX-DR3, UX-DR4, UX-DR6 progress counter, UX-DR8, UX-DR11, UX-DR12); Card viewer and Learn entry on Flashcard detail (UX-DR17); `first_graded_at` marker and the shared learned/unlearned predicate (AD-14).
+**Implementation notes:** `packages/domain/sm2.ts` as a pure, framework-free engine unit-tested against the PRD addendum's worked fixtures (NFR-4, SM-3); the grade write path is the single `POST /api/review/grade` route calling `applyGrade` inside one Prisma transaction (AD-4); TanStack Query optimistic updates for sub-100ms perceived transitions (AD-7, NFR-2); `toLocalCalendarDay` domain helper introduced here for due-queue filtering (AD-8) and reused by Epic 5's quest-day attribution and settlement; 200ms app-open-to-due-queue budget (AD-13, NFR-3); Review card flip, Grade buttons, review-mode sidebar hiding, full keyboard interaction, mobile tap/swipe, and the Empty due-queue state (UX-DR2, UX-DR3, UX-DR4, UX-DR6 progress counter, UX-DR8, UX-DR11, UX-DR12); Card viewer and Learn entry on Flashcard detail (UX-DR17); `first_graded_at` marker and the shared learned/unlearned predicate (AD-14).
 
-### Epic 5: Progress, Streaks & Data Safety
-A user can see their current/longest streak and basic stats (including the SM-2 retention curve) at a glance outside of review, and can trust the product with months of history — exporting it on demand and restoring it, with destructive operations always confirmed and atomic.
-**FRs covered:** FR-12, FR-13, FR-14, FR-15
-**Implementation notes:** Streak-day attribution reuses Epic 4's `toLocalCalendarDay` helper so due-dates and streak days share one clock (AD-8); FR-13/FR-14 share one `backupExportSchema` (AD-10) and restore runs inside one Prisma transaction (AD-11); restore-confirmation modal (UX-DR7) and streak/progress-counter display outside review (UX-DR6); Stats view surfaces the retention curve per Recall Direction (SM-4). As the final epic, this is also the natural point for a closing pass on cross-cutting UX items that touch every surface built so far: WCAG AA contrast verification in both themes (UX-DR13, with particular attention to the flagged light-mode combination), full keyboard focus-visible states app-wide (UX-DR14), and a microcopy/voice consistency check (UX-DR15).
+### Epic 5: Cultivation Progress & Data Safety
+A user advances through a tu-tiên cultivation ladder (Ngưng Khí → Đạp Thiên Cảnh) by claiming two daily quests — Learn Flashcards (1–4 by Bộ) and Clear Review — that they tick off themselves once the work is done; unclaimed quests cost double XP and can demote them. They see their realm, quests and basic stats (including the SM-2 retention curve) outside review, and can trust the product with months of history — exporting it on demand and restoring it, with destructive operations always confirmed and atomic.
+**FRs covered:** FR-12, FR-13, FR-14, FR-15, FR-19
+**Implementation notes:** Quest-day attribution and settlement reuse Epic 4's `toLocalCalendarDay` helper so due-dates and quest days share one clock (AD-8); XP ledger, quest snapshots and lazy settlement per AD-15 (`packages/domain/cultivation.ts`, no cron, grade route unchanged); FR-13/FR-14 share one `backupExportSchema` (AD-10) with a `cultivation` section, and restore runs inside one Prisma transaction (AD-11) and marks days through yesterday settled; restore-confirmation modal (UX-DR7), Realm badge (UX-DR6), Empty due-queue realm (UX-DR8) and the Cultivation page (UX-DR19); the Cultivation page surfaces the retention curve per Recall Direction (SM-4). Build order: 5.1 → 5.6 → 5.7 → 5.4 → 5.2 → 5.3 → 5.5 (Sprint Change 2026-11-14). As the final epic, this is also the natural point for a closing pass on cross-cutting UX items that touch every surface built so far: WCAG AA contrast verification in both themes (UX-DR13, with particular attention to the flagged light-mode combination), full keyboard focus-visible states app-wide (UX-DR14), and a microcopy/voice consistency check (UX-DR15).
 
 ## Epic 1: Foundation, Auth & Live Deployment
 
@@ -615,7 +621,7 @@ So that daily study stays fast and frictionless.
 
 **Given** I'm viewing a Class or a Folder
 **When** I choose "Review this class" or "Review this folder"
-**Then** the session contains only that scope's due entries and otherwise behaves exactly like the default session, and its grades count toward the same streak
+**Then** the session contains only that scope's due entries and otherwise behaves exactly like the default session (amended by Sprint Change 2026-11-14: clearing a scoped session does not by itself complete the Clear Review quest, FR-19)
 
 **Given** a Card due in both directions
 **When** it appears
@@ -645,12 +651,12 @@ So that I can concentrate without distraction.
 
 **Given** I enter a Review or Learn session
 **When** it starts
-**Then** sidebar, streak badge, and other non-essential chrome are hidden — only the card and recall controls are visible
+**Then** sidebar, realm badge, and other non-essential chrome are hidden — only the card and recall controls are visible
 
 **Given** I exit review (queue cleared or I navigate away)
 **When** I leave
 **Then** normal navigation and chrome are restored
-**And** when nothing is due, the Empty due-queue state shows streak count, a calm line, and either up to 3 Flashcards with Unlearned Cards (each linking to its page) or, when none exist, a "+ Add card" button — instead of the sidebar-less review card
+**And** when nothing is due, the Empty due-queue state shows a calm line (the realm and quest count are added by Story 5.1, Sprint Change 2026-11-14), and either up to 3 Flashcards with Unlearned Cards (each linking to its page) or, when none exist, a "+ Add card" button — instead of the sidebar-less review card
 
 *Build order (Sprint Change 2026-11-13, 2026-11-13b): 4.6 → 4.7 → 4.8 → 4.9 → 4.5.*
 
@@ -755,7 +761,7 @@ So that I grade new Cards deliberately and they then join my daily Review.
 
 **Given** nothing is left to learn or review in the Flashcard
 **Then** a calm line "Nothing left to learn in {Flashcard} right now." with a link back to the Flashcard shows
-**And** Learn grades count toward the streak through the same grade route
+**And** Learn grades go through the same grade route (their `firstGradedAt` drives the Learn Flashcards quest, FR-19, Sprint Change 2026-11-14)
 *Amended by Sprint Change 2026-11-13b: the queue now filters to studied directions and "learned" is per direction (Story 4.9). Story 4.8b added "Study all cards again" (unsaved practice).*
 
 ### Story 4.9: Study Directions Setting & Per-Direction Learned Model
@@ -793,45 +799,44 @@ So that I study the recall skill I actually need.
 
 *Build order (Sprint Change 2026-11-13b): 4.8 → 4.9 → 4.5. 4.5's Empty due-queue list of Flashcards with Unlearned Cards uses the 4.9 predicates.*
 
-## Epic 5: Progress, Streaks & Data Safety
+## Epic 5: Cultivation Progress & Data Safety
 
-A user can see their current/longest streak and basic stats (including the SM-2 retention curve) at a glance outside of review, and can trust the product with months of history — exporting it on demand and restoring it, with destructive operations always confirmed and atomic.
+A user advances through a tu-tiên cultivation ladder by claiming two daily quests that grow with their Bộ; unclaimed quests cost double XP and can demote them. They see their realm, quests and basic stats (including the SM-2 retention curve) outside of review, and can trust the product with months of history — exporting it on demand and restoring it, with destructive operations always confirmed and atomic.
 
-### Story 5.1: Streak Tracking
+*Sprint Change 2026-11-14 replaced the streak with the cultivation progression: 5.1 rewritten, 5.6 and 5.7 added, 5.2–5.4 amended. Build order: 5.1 → 5.6 → 5.7 → 5.4 → 5.2 → 5.3 → 5.5.*
+
+### Story 5.1: Cultivation Realms & XP Ledger
 
 As a user,
-I want my consecutive-day study streak tracked and shown outside review,
-So that I stay motivated to keep the daily habit.
+I want a cultivation realm that rises with the XP I earn,
+So that months of study show up as a rank I care about.
 
 **Acceptance Criteria:**
 
-**Given** I grade at least one Scheduling Record on a calendar day (local timezone)
-**When** the day ends
-**Then** that day counts toward my streak regardless of how much of the due queue remains
+**Given** the realm ladder
+**Then** `packages/domain/cultivation.ts` defines the 90 levels and the XP each stage needs, exactly as the PRD addendum table (Nhất Bộ: Ngưng Khí Tầng 1–15, then Trúc Cơ … Dương Thực with Sơ kỳ / Trung kỳ / Hậu kỳ / Đại viên mãn; Nhị Bộ incl. Thiên Nhân Ngũ Suy's five suy; Tam Bộ incl. Không Kiếp's four Tôn ranks and Đạp Thiên Kiều's nine bridges; Tứ Bộ: Đạp Thiên Cảnh)
+**And** `levelForXp(xp)` returns the Bộ, realm, stage, XP into the stage and XP needed, unit-tested at every realm boundary, at 0, and past Đạp Thiên Cảnh (XP keeps adding up, level stays final)
 
-**Given** I grade zero cards on a calendar day
-**When** the local-timezone day boundary passes
-**Then** my streak resets to 0
+**Given** my total XP
+**Then** the sidebar shows the Realm badge ("Ngưng Khí · Tầng 3" + XP bar + "5 / 20 XP"), hidden during focus mode (FR-11)
+**And** the Empty due-queue state shows the realm in heading size where the streak was planned (closes the 4.5 deferred item), and the stale streak comment in `empty-due-queue.tsx` is updated
 
-**Given** `next_review_date` and streak-day attribution
-**When** computed
-**Then** both use the same `User.timezone`-based local-day clock, so a review graded near midnight is attributed consistently
-**And** the streak indicator is visible outside active review only
-
-**Given** I grade a card in a Learn session
-**Then** that day counts toward the streak
+**Given** the schema
+**Then** `User.cultivationXp` (default 0), `User.cultivationSettledThrough` (nullable date), `CultivationDay` and `XpEvent` are added in one additive migration (AD-15), deployed to Neon before the dev server runs
+**And** applying the `XpEvent` deltas in order with a running floor at 0 always equals `User.cultivationXp`
+**And** realm names render in Vietnamese; the rest of the copy stays in English
 
 ### Story 5.2: Data Export/Backup
 
 As a user,
-I want to export my full Card + Scheduling Record + streak history on demand,
+I want to export my full Card + Scheduling Record + cultivation history on demand,
 So that I never lose months of study data.
 
 **Acceptance Criteria:**
 
 **Given** I trigger export from Settings
 **When** it completes
-**Then** I receive a JSON file containing every Class, Folder, Flashcard and Card (with its Flashcard), both Scheduling Records per Card, and streak history — sufficient to reconstruct state
+**Then** I receive a JSON file containing every Class, Folder, Flashcard and Card (with its Flashcard), both Scheduling Records per Card, and the cultivation section (XP, settledThrough, CultivationDay snapshots, XpEvents) — sufficient to reconstruct state
 **And** export is strictly user-initiated/on-demand, no scheduled export job
 **And** the payload conforms to the single shared `backupExportSchema` also used by restore
 **And** the export includes `user.studyDirections`
@@ -847,7 +852,7 @@ So that I can recover my data if something goes wrong.
 
 **Given** a valid export file
 **When** I restore it
-**Then** the Class → Folder → Flashcard structure is recreated and every Card is recreated in its original Flashcard with both Scheduling Records in exactly their exported state and streak history is restored
+**Then** the Class → Folder → Flashcard structure is recreated and every Card is recreated in its original Flashcard with both Scheduling Records in exactly their exported state and the cultivation section is restored verbatim
 
 **Given** my account already has data
 **When** I attempt a restore
@@ -856,17 +861,20 @@ So that I can recover my data if something goes wrong.
 **And** each Scheduling Record's `firstGradedAt` is restored verbatim
 **And** `user.studyDirections` is restored
 
-### Story 5.4: Progress & Stats View
+**Given** a restore completes
+**Then** `cultivationSettledThrough` is set to yesterday, so no penalty is charged for days between the export and the restore
+
+### Story 5.4: Cultivation & Stats Page
 
 As a user,
-I want to see a stats screen with my streak, card totals, and SM-2 retention curve,
+I want one page with my realm, today's quests, card totals, and SM-2 retention curve,
 So that I can observe my progress and trust the scheduling is working correctly.
 
 **Acceptance Criteria:**
 
-**Given** I navigate to Stats (outside active review)
+**Given** I navigate to Cultivation (outside active review; it replaces Stats in the sidebar, UX-DR19)
 **When** it loads
-**Then** I see current/longest streak, total Cards (learned / unlearned, counted over my studied directions), and a visualization of Scheduling Records' distribution by interval (or review-outcome history) per Recall Direction
+**Then** I see my realm and stage with its XP bar, total XP, today's quest list (Story 5.6), an XP-over-time chart from `XpEvent`, total Cards (learned / unlearned, counted over my studied directions), and a visualization of Scheduling Records' distribution by interval (or review-outcome history) per Recall Direction
 
 **Given** I've just graded cards
 **When** I view Stats afterward
@@ -892,3 +900,74 @@ So that the app feels like one coherent, trustworthy product.
 **Given** all user-facing copy
 **When** reviewed
 **Then** it follows the direct, imperative Voice and Tone table in `EXPERIENCE.md` — no cheerleading, emoji, or mascot voice
+
+### Story 5.6: Daily Quests
+
+As a user,
+I want two daily quests that grow with my Bộ and that I tick off myself,
+So that each day has a clear target and finishing it feels earned.
+
+**Acceptance Criteria:**
+
+**Given** I open Cultivation for the first time on a local day
+**Then** a `CultivationDay` snapshot is created with Learn Flashcards (target = my Bộ number: 1 Nhất Bộ, 2 Nhị Bộ, 3 Tam Bộ, 4 Tứ Bộ) and Clear Review, their XP (10 Nhất Bộ, 20 Nhị Bộ, 40 Tam/Tứ Bộ) and their skip flags
+**And** realm changes later that day don't change today's targets
+
+**Given** a quest's condition is not met
+**Then** its checkbox is disabled and shows its progress ("0 / 1 Flashcards", "12 due left") and the reason
+
+**Given** a quest's condition is met
+**When** I tick it
+**Then** `POST /api/cultivation/quests/[kind]/claim` re-checks the condition server-side, writes `XpEvent(+xp)`, marks it claimed and returns my new XP and realm
+**And** a second claim of the same quest that day is rejected with no extra XP
+
+**Given** a quest's condition is met but it is not ticked
+**Then** its row says "Done. Tick to claim before the day ends."
+
+**Given** nothing was due at the start of the day, or no Flashcard had unlearned records
+**Then** Clear Review, or Learn Flashcards, shows as skipped ("Nothing to do today.") and can't be claimed
+
+**Given** fewer Flashcards with unlearned records than my target
+**Then** the Learn target that day is the number available
+
+**Given** Learn Flashcards
+**Then** a Flashcard counts once all its unlearned records in my studied directions are learned and the last one was first-graded today (AD-14)
+
+**Given** Clear Review
+**Then** it is met once at least one record learned before today was graded today and the due queue (all Classes, studied directions) is empty
+
+**Given** the quest rules
+**Then** neither quest reads grade values (SM-C1)
+**And** both condition evaluators are pure domain functions, unit-tested including the skip and reduced-target cases
+
+**Given** I reach a new stage by claiming
+**Then** a quiet "Breakthrough: {realm · stage}" notice appears, with no modal or animation beyond the XP bar fill
+**And** UI conforms to DESIGN.md (Quest row, Realm badge) in both themes
+
+### Story 5.7: Day Settlement & Penalties
+
+As a user,
+I want unclaimed quests to cost me,
+So that skipping study has real weight.
+
+**Acceptance Criteria:**
+
+**Given** past days after `cultivationSettledThrough`
+**When** I next load Cultivation or claim a quest
+**Then** each day through yesterday is settled in order in one transaction: −2 × XP per quest that was neither claimed nor skipped (even if its work was done), then `cultivationSettledThrough` moves forward
+
+**Given** a day I never opened the app
+**Then** its quests are rebuilt from my Bộ after the previous day settled, with skip flags derived from the data, and are penalized the same way
+
+**Given** penalties larger than my XP into the current stage
+**Then** I drop stages, realms or a whole Bộ as `levelForXp` says (the next day's targets and XP shrink with it), and XP never goes below 0
+
+**Given** cultivation runs for the first time on my account
+**Then** `cultivationSettledThrough` is set to yesterday and no earlier day is penalized
+
+**Given** settlement runs twice at once (two tabs, or two requests at the same time)
+**Then** each day is penalized exactly once
+
+**Given** a settlement that charged XP
+**Then** the next Cultivation view shows one quiet notice per settled range ("Nov 12: 2 quests missed, −40 XP. Now Ngưng Khí · Tầng 9.")
+**And** `settleDays` is unit-tested for a single missed day, a 30-day absence, demotion across a realm and a Bộ boundary, the 0 floor, a DST day, and skipped quests

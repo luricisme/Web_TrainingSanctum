@@ -379,6 +379,8 @@ test("unknown and invalid scopes offer Review all cards instead of a retry", asy
 
 // spec-4-5: focus mode and the Empty due-queue state.
 const mainNav = (page: Page) => page.getByRole("navigation", { name: "Main" });
+const realmBadge = (page: Page) =>
+  page.getByRole("link", { name: "Ngưng Khí · Tầng 1, 0 / 10 XP" });
 
 /** Moves every Scheduling Record of the user's Cards to tomorrow, so nothing is due. */
 async function nothingDue(email: string) {
@@ -435,14 +437,20 @@ test("focus mode hides the sidebar during the session and brings it back after t
   await page.goto("/classes");
   await expect(mainNav(page)).toBeVisible();
 
+  await expect(realmBadge(page)).toBeVisible();
+
   await page.goto("/review");
   await expect(page.getByText("1 / 2")).toBeVisible();
   await expect(mainNav(page)).toHaveCount(0);
+  // spec-5-1: the Realm badge goes with the sidebar (FR-11).
+  await expect(realmBadge(page)).toHaveCount(0);
+  await expect(page.getByRole("progressbar")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Exit" })).toHaveAttribute("href", "/classes");
 
   for (const key of ["Space", "3", "Space", "3"]) await page.keyboard.press(key);
   await expect(page.getByText(doneLine)).toBeVisible();
   await expect(mainNav(page)).toBeVisible();
+  await expect(realmBadge(page)).toBeVisible();
   await expect(page.getByRole("link", { name: "Exit" })).toHaveCount(0);
 });
 
@@ -581,6 +589,45 @@ test("a failed load of the next step offers Try again", async ({ page }) => {
   await expect(failed).toHaveCount(0);
 });
 
+test("nothing due: the Empty due-queue state shows the realm above the calm line", async ({
+  page,
+}) => {
+  await register(page);
+  const main = page.getByRole("main");
+  await expect(main.getByText(doneLine)).toBeVisible();
+  const realm = main.getByText("Ngưng Khí · Tầng 1", { exact: true });
+  await expect(realm).toBeVisible();
+  await expect(main.getByRole("progressbar", { name: "Ngưng Khí · Tầng 1" })).toHaveAttribute(
+    "aria-valuenow",
+    "0"
+  );
+  await expect(main.getByText("0 / 10 XP")).toBeVisible();
+  // Realm first, then the calm line.
+  const realmBox = await realm.boundingBox();
+  const lineBox = await main.getByText(doneLine).boundingBox();
+  expect(realmBox!.y).toBeLessThan(lineBox!.y);
+});
+
+test("a failed realm load leaves the calm line and the next step", async ({ page }) => {
+  await register(page);
+  await page.route("**/api/cultivation", (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "INTERNAL_ERROR", message: "boom" } }),
+    })
+  );
+  const failed = page.waitForResponse(
+    (res) => res.url().endsWith("/api/cultivation") && res.status() === 500
+  );
+  await page.goto("/review");
+  await failed;
+  const main = page.getByRole("main");
+  await expect(main.getByText(doneLine)).toBeVisible();
+  await expect(main.getByRole("link", { name: "+ Add card" })).toBeVisible();
+  await expect(main.getByRole("progressbar")).toHaveCount(0);
+});
+
 test("a new account's + Add card goes to Classes", async ({ page }) => {
   await register(page);
   await expect(page.getByText(doneLine)).toBeVisible();
@@ -648,6 +695,7 @@ for (const theme of ["dark", "light"] as const) {
       // Cleared queue with nothing new: the + Add card variant.
       for (const key of ["3", "Space", "3"]) await page.keyboard.press(key);
       await expect(page.getByRole("link", { name: "+ Add card" })).toBeVisible();
+      await expect(page.getByRole("main").getByText("0 / 10 XP")).toBeVisible();
       await shot("empty-add");
 
       // The list variant.
@@ -660,6 +708,7 @@ for (const theme of ["dark", "light"] as const) {
       await addNewCards(email, phrasal.id, 3, 100);
       await page.goto("/review");
       await expect(page.getByRole("region", { name: "Ready to learn" })).toBeVisible();
+      await expect(page.getByRole("main").getByText("0 / 10 XP")).toBeVisible();
       await setTheme();
       await shot("empty-list");
     });

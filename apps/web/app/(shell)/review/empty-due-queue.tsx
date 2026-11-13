@@ -10,6 +10,7 @@ import type {
 import { apiFetch } from "@/lib/api-client";
 import { SectionMarker } from "@/app/components/section-marker";
 import { buttonPrimary, buttonQuiet } from "@/app/components/ui";
+import { XpBar, useCultivation, xpText } from "../realm-badge";
 
 /**
  * spec-4-5: the Empty due-queue state (DESIGN.md `Empty due-queue state`).
@@ -17,7 +18,8 @@ import { buttonPrimary, buttonQuiet } from "@/app/components/ui";
  * as list rows, or, with none, a "+ Add card" button, the screen's one accent
  * action (the section bullet is the sanctioned non-actionable accent motif).
  * Fetched fresh each time it shows, so a cleared queue reads the latest
- * counts. The streak joins it in Story 5.1.
+ * counts. spec-5-1: the realm and its XP bar sit above the calm line; today's
+ * quest count joins them in Story 5.6.
  */
 export function EmptyDueQueue({
   scope,
@@ -38,6 +40,7 @@ export function EmptyDueQueue({
 
   return (
     <div className="flex min-h-80 w-full max-w-review-card flex-col items-center justify-center gap-8 text-center">
+      <RealmSummaryBlock />
       <p className="text-balance text-body text-foreground-secondary">
         {scope
           ? `You're all caught up — nothing in ${scope.name} is due for review right now.`
@@ -79,6 +82,35 @@ export function EmptyDueQueue({
           ) : null}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Realm · stage in `heading-1`, its XP bar and the mono XP figure, from the
+ * same query as the sidebar badge. Holds its height while loading and renders
+ * nothing on error: the calm line and the next step still show.
+ */
+function RealmSummaryBlock() {
+  const { data, isPending } = useCultivation();
+  // While loading, hold the block's height so the calm line does not jump.
+  if (isPending) {
+    return (
+      <div aria-hidden="true" className="invisible flex w-full flex-col items-center gap-3">
+        <p className="text-heading-1">&nbsp;</p>
+        <div className="h-1" />
+        <p className="font-mono text-caption">&nbsp;</p>
+      </div>
+    );
+  }
+  if (!data) return null;
+  return (
+    <div className="flex w-full flex-col items-center gap-3">
+      <p className="text-balance text-heading-1 text-foreground">{data.label}</p>
+      <XpBar realm={data} track="bg-border" className="max-w-xs" />
+      <p className="font-mono text-caption text-foreground-tertiary tabular-nums">
+        {xpText(data)}
+      </p>
     </div>
   );
 }
