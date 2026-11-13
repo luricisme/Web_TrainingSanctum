@@ -121,3 +121,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-8-learn-session.md`
   summary: Review and Learn get stuck when the grade route returns 404 NOT_FOUND (for example, the Card was deleted in another tab). The rollback restores the slot every time, and it can never be saved.
   evidence: GradingSession.onError rolls back on any error except NOT_DUE. Review has done the same since spec-4-3. The fix is to drop the slot (and its practice copies) on a 404 instead of restoring it.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-9-study-directions-setting.md`
+  summary: Add an e2e that changes Study directions on Settings via in-app navigation, returns to a Flashcard within the 15s staleTime, and asserts the viewer and Learn counts reflect the new setting.
+  evidence: Existing e2e tests change the setting via prisma plus a full reload, so dropping the `["flashcard"]` invalidation in study-directions.tsx would fail no test.

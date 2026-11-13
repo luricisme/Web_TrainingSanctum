@@ -2,30 +2,39 @@
  * spec-4-8: the Learn queue for one Flashcard, server-side. Both the Learn
  * route and the Flashcard detail counts read through here, so the button's
  * "N new · M due" always matches the session it opens. "Learned" comes only
- * from the AD-14 builders in `@training-sanctum/domain`.
+ * from the AD-14 builders in `@training-sanctum/domain`, filtered to the
+ * user's studied directions (spec-4-9); unstudied records are never read.
  */
 import { prisma, type Prisma } from "@training-sanctum/db";
 import {
   type LearnCounts,
   type LearnQueueResponse,
+  type RecallDirection,
   type ReviewQueueEntry,
-  learnedCardWhere,
+  learnedRecordWhere,
   unlearnedCardWhere,
+  unlearnedRecordWhere,
 } from "@training-sanctum/domain";
 
-/** The ungraded records of the Flashcard's Unlearned Cards. */
-function unlearnedRecordWhere(userId: string, flashcardId: string) {
+/** The Flashcard's ungraded records in the studied directions. */
+function flashcardUnlearnedWhere(userId: string, flashcardId: string, dirs: RecallDirection[]) {
   return {
-    firstGradedAt: null,
-    card: { userId, flashcardId, ...unlearnedCardWhere() },
+    ...unlearnedRecordWhere(dirs),
+    card: { userId, flashcardId },
   } satisfies Prisma.SchedulingRecordWhereInput;
 }
 
-/** The due records of the Flashcard's learned Cards ("due" as the grade route checks it). */
-function dueLearnedRecordWhere(userId: string, flashcardId: string, now: Date) {
+/** The Flashcard's learned, due records in the studied directions ("due" as the grade route checks it). */
+function flashcardDueWhere(
+  userId: string,
+  flashcardId: string,
+  dirs: RecallDirection[],
+  now: Date
+) {
   return {
     nextReviewDate: { lte: now },
-    card: { userId, flashcardId, ...learnedCardWhere() },
+    ...learnedRecordWhere(dirs),
+    card: { userId, flashcardId },
   } satisfies Prisma.SchedulingRecordWhereInput;
 }
 
@@ -68,25 +77,28 @@ function toEntry(row: EntryRow): ReviewQueueEntry {
 export async function countLearn(
   userId: string,
   flashcardId: string,
+  dirs: RecallDirection[],
   now: Date
 ): Promise<LearnCounts> {
   const [newCards, due] = await Promise.all([
-    prisma.card.count({ where: { userId, flashcardId, ...unlearnedCardWhere() } }),
-    prisma.schedulingRecord.count({ where: dueLearnedRecordWhere(userId, flashcardId, now) }),
+    prisma.card.count({ where: { userId, flashcardId, ...unlearnedCardWhere(dirs) } }),
+    prisma.schedulingRecord.count({ where: flashcardDueWhere(userId, flashcardId, dirs, now) }),
   ]);
   return { newCards, due };
 }
 
 /**
  * The Learn session for an owned Flashcard, or null when the user has no
- * such Flashcard. Unlearned Cards come first, oldest-created first, each
- * Card's two directions together (Postgres orders the direction enum by
- * declaration, so Term → Definition sorts first); then due learned records,
+ * such Flashcard. Unlearned records in the studied directions come first,
+ * oldest-created Card first, each Card's directions together (Postgres
+ * orders the direction enum by declaration, so Term → Definition sorts
+ * first); then learned, due records in the studied directions,
  * oldest-due-first.
  */
 export async function buildLearnQueue(
   userId: string,
   flashcardId: string,
+  dirs: RecallDirection[],
   now: Date
 ): Promise<LearnQueueResponse | null> {
   const flashcard = await prisma.flashcard.findFirst({
@@ -97,7 +109,7 @@ export async function buildLearnQueue(
 
   const [unlearned, due] = await Promise.all([
     prisma.schedulingRecord.findMany({
-      where: unlearnedRecordWhere(userId, flashcardId),
+      where: flashcardUnlearnedWhere(userId, flashcardId, dirs),
       orderBy: [
         { card: { createdAt: "asc" } },
         { cardId: "asc" },
@@ -106,7 +118,7 @@ export async function buildLearnQueue(
       select: entrySelect,
     }),
     prisma.schedulingRecord.findMany({
-      where: dueLearnedRecordWhere(userId, flashcardId, now),
+      where: flashcardDueWhere(userId, flashcardId, dirs, now),
       orderBy: [{ nextReviewDate: "asc" }, { cardId: "asc" }, { direction: "asc" }],
       select: entrySelect,
     }),

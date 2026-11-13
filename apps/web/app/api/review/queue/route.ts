@@ -4,11 +4,12 @@ import {
   type ReviewQueueEntry,
   type ReviewQueueResponse,
   type ReviewScope,
-  learnedCardWhere,
+  learnedRecordWhere,
   reviewQueueQuerySchema,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
 import { fail, ok, validationFailure } from "@/lib/api-response";
+import { getStudiedDirections } from "@/lib/study-directions";
 
 /** Resolves the requested scope to an owned, named entity, or null if absent. */
 async function resolveScope(
@@ -31,8 +32,10 @@ async function resolveScope(
  * spec-4-3: the user's due Scheduling Records, oldest-due-first, one entry
  * per record. "Due" is `nextReviewDate <= now`, the same check the grade
  * route makes, so the queue never offers a record that route would refuse.
- * spec-4-6: only records of learned Cards (AD-14 `learnedCardWhere`); new
- * Cards are met in Learn first. Flashcard scope moved to Learn and is a 400.
+ * spec-4-6 / spec-4-9: only learned records (AD-14 `learnedRecordWhere`) in
+ * the user's studied directions. A graded direction is here on its due date
+ * whatever the other direction's state; unlearned records are met in Learn
+ * first. Flashcard scope moved to Learn and is a 400.
  */
 export async function GET(request: Request): Promise<Response> {
   const result = await requireSession(request);
@@ -67,10 +70,12 @@ export async function GET(request: Request): Promise<Response> {
         ? { folderId: scope.id }
         : undefined;
 
+  const { dirs } = await getStudiedDirections(userId);
   const rows = await prisma.schedulingRecord.findMany({
     where: {
       nextReviewDate: { lte: new Date() },
-      card: { userId, ...learnedCardWhere(), ...(flashcard ? { flashcard } : {}) },
+      ...learnedRecordWhere(dirs),
+      card: { userId, ...(flashcard ? { flashcard } : {}) },
     },
     // Postgres orders enums by declaration: TERM_TO_DEFINITION sorts first.
     orderBy: [{ nextReviewDate: "asc" }, { cardId: "asc" }, { direction: "asc" }],

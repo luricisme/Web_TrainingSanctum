@@ -401,6 +401,31 @@ test("viewing never changes a Scheduling Record", async ({ page }) => {
   expect(await snapshot()).toEqual(before);
 });
 
+// spec-4-9: the viewer follows the study directions setting (FR-18).
+test("Definition → Term only: the Definition is the front, the Term and details the back", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { flashcard } = await seedCards(email);
+  await prisma.user.update({ where: { email }, data: { studyDirections: "DEFINITION_TO_TERM" } });
+  await page.goto(`/flashcards/${flashcard.id}`);
+  const { card, counter } = viewerOf(page);
+  await expect(counter("1 / 3")).toBeVisible();
+
+  await expectShowing(card, "definition of alpha");
+  await expect(card).toHaveAccessibleName("Show the term for: definition of alpha");
+  await page.keyboard.press("Space");
+  await expectShowing(card, "alpha");
+  await expect(card.getByText("noun", { exact: true })).toBeVisible();
+  await expect(card.getByText("An alpha example.", { exact: true })).toBeVisible();
+
+  // Term → Definition only keeps the Term first.
+  await prisma.user.update({ where: { email }, data: { studyDirections: "TERM_TO_DEFINITION" } });
+  await page.reload();
+  await expect(viewerOf(page).counter("1 / 3")).toBeVisible();
+  await expectShowing(viewerOf(page).card, "alpha");
+});
+
 // Visual check: screenshots land in test-results/screenshots.
 for (const theme of ["dark", "light"] as const) {
   for (const width of [1280, 390]) {
@@ -443,6 +468,18 @@ for (const theme of ["dark", "light"] as const) {
       await page.getByRole("button", { name: "Previous card" }).focus();
       await page.keyboard.press("Shift");
       await shot("last");
+
+      // spec-4-9: Definition → Term only puts the Definition on the front.
+      await prisma.user.update({ where: { email }, data: { studyDirections: "DEFINITION_TO_TERM" } });
+      await page.reload();
+      await expect(counter("1 / 3")).toBeVisible();
+      await page.evaluate((t) => {
+        if (t === "light") document.documentElement.dataset.theme = "light";
+        else delete document.documentElement.dataset.theme;
+      }, theme);
+      await shot("d2t-front");
+      await page.keyboard.press("Space");
+      await shot("d2t-back");
     });
   }
 }

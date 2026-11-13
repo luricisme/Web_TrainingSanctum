@@ -419,6 +419,43 @@ test("Study all cards again runs every Card as practice: Again repeats, nothing 
   await expect(page.getByText(hint)).toBeVisible();
 });
 
+// spec-4-9: the practice run asks only the studied directions (FR-18).
+test("Definition → Term only: Learn and the practice run ask Definition first, one direction per Card", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { flashcard } = await seed(email, [NEW_A, NEW_B]);
+  await prisma.user.update({ where: { email }, data: { studyDirections: "DEFINITION_TO_TERM" } });
+  const posts = await recordGrades(page);
+
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  // Learn: one Definition → Term entry per Card.
+  for (const [counter, prompt] of [["1 / 2", "light rain"], ["2 / 2", "sudden gust"]]) {
+    await expect(page.getByText(counter)).toBeVisible();
+    await expect(page.getByText("Weather idioms · Definition → Term").first()).toBeVisible();
+    await expect(page.getByText(prompt, { exact: true }).first()).toBeVisible();
+    await page.keyboard.press("Space");
+    await page.keyboard.press("3");
+  }
+  await expect(page.getByText(doneLine)).toBeVisible();
+  await expect.poll(() => posts.length).toBe(2);
+
+  await page.getByRole("button", { name: "Study all cards again" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Practicing Weather idioms · grades aren't saved"
+  );
+  for (const [counter, prompt] of [["1 / 2", "light rain"], ["2 / 2", "sudden gust"]]) {
+    await expect(page.getByText(counter)).toBeVisible();
+    await expect(page.getByText("Weather idioms · Definition → Term").first()).toBeVisible();
+    await expect(page.getByText(prompt, { exact: true }).first()).toBeVisible();
+    await page.keyboard.press("Space");
+    await page.keyboard.press("3");
+  }
+  await expect(page.getByText(practiceDoneLine)).toBeVisible();
+  await expect(page.getByText("Term → Definition")).toHaveCount(0);
+  expect(posts).toHaveLength(2);
+});
+
 test("an unknown Flashcard's Learn link offers a way back", async ({ page }) => {
   await register(page);
   await page.goto("/flashcards/does-not-exist/learn");

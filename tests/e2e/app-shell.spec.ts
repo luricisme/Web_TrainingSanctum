@@ -1,6 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
 
 async function register(page: Page) {
   await page.goto("/register");
@@ -85,21 +84,4 @@ test("sidebar is hidden below 640px", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
-// Visual check: screenshots land in test-results/screenshots for comparison
-// against DESIGN.md and mockups/key-screens.html.
-for (const theme of ["dark", "light"] as const) {
-  for (const [label, width] of [["desktop", 1280], ["mobile", 600]] as const) {
-    test(`settings screenshot (${theme}, ${label})`, async ({ page }) => {
-      mkdirSync("test-results/screenshots", { recursive: true });
-      await page.setViewportSize({ width, height: 800 });
-      await register(page);
-      await page.goto("/settings");
-      await page.getByRole("radio", { name: theme === "light" ? "Light" : "Dark" }).click();
-      await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
-      await page.screenshot({
-        path: `test-results/screenshots/settings-${theme}-${label}.png`,
-        animations: "disabled",
-      });
-    });
-  }
-}
+// The Settings screenshots (both themes, 1280px and 390px) live in settings.spec.ts (spec-4-9).

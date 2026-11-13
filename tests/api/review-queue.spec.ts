@@ -84,11 +84,16 @@ async function setDue(ids: string[], nextReviewDate: Date) {
   await prisma.schedulingRecord.updateMany({ where: { id: { in: ids } }, data: { nextReviewDate } });
 }
 
+async function setStudyDirections(s: Session, base: string, studyDirections: string) {
+  const res = await s.request.patch(`${base}/api/settings`, { data: { studyDirections } });
+  expect(res.status()).toBe(200);
+}
+
 function queue(s: Session, base: string, query = "") {
   return s.request.get(`${base}/api/review/queue${query}`);
 }
 
-// spec-4-3, spec-4-6: GET /api/review/queue (learned Cards only).
+// spec-4-3, spec-4-6, spec-4-9: GET /api/review/queue (learned records in studied directions).
 test.describe("GET /api/review/queue", () => {
   test("unauthenticated requests return 401", async ({ playwright, baseURL }) => {
     const base = baseURL ?? FALLBACK_BASE;
@@ -268,7 +273,7 @@ test.describe("GET /api/review/queue", () => {
     }
   });
 
-  test("unlearned and half-learned Cards never appear, in any scope (AD-14)", async ({
+  test("unlearned records never appear; a half-learned Card's graded direction does, in any scope (AD-14)", async ({
     playwright,
     baseURL,
   }) => {
@@ -291,15 +296,16 @@ test.describe("GET /api/review/queue", () => {
     for (const query of ["", `?classId=${classId}`, `?folderId=${folderId}`]) {
       const { data } = await (await queue(s, base, query)).json();
       const ids = recordsOf(data.entries);
-      expect(ids, query).toEqual([learned.forward.id, learned.backward.id]);
-      for (const absent of [unlearned, half]) {
-        expect(ids, query).not.toContain(absent.forward.id);
-        expect(ids, query).not.toContain(absent.backward.id);
+      expect([...ids].sort(), query).toEqual(
+        [half.forward.id, learned.forward.id, learned.backward.id].sort()
+      );
+      for (const absent of [unlearned.forward, unlearned.backward, half.backward]) {
+        expect(ids, query).not.toContain(absent.id);
       }
     }
   });
 
-  test("a Card becomes learned only after both directions are graded", async ({
+  test("a graded direction joins Review on its due date without waiting for the other", async ({
     playwright,
     baseURL,
   }) => {
@@ -320,8 +326,10 @@ test.describe("GET /api/review/queue", () => {
       );
 
     expect((await gradeRecord(forward.id)).status()).toBe(200);
-    // Half-learned: the still-due backward record stays out of Review.
+    // Not due until its SM-2 date; the ungraded backward record never shows.
     expect(await queuedIds()).toEqual([]);
+    await setDue([forward.id], new Date(Date.now() - DAY_MS));
+    expect(await queuedIds()).toEqual([forward.id]);
 
     expect((await gradeRecord(backward.id)).status()).toBe(200);
     await setDue([forward.id, backward.id], new Date(Date.now() - DAY_MS));
@@ -383,5 +391,74 @@ test.describe("GET /api/review/queue", () => {
     expect(data.entries.map((e: { schedulingRecordId: string }) => e.schedulingRecordId)).toEqual([
       backward.id,
     ]);
+  });
+
+  test("one direction only: the other direction never appears (FR-18)", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const fc = await createFlashcard(
+      s,
+      base,
+      await createFolder(s, base, await createClass(s, base, "C"), "F"),
+      "W"
+    );
+    const { forward, backward } = await addCard(s, base, fc, "collate");
+    const queuedIds = async () =>
+      (await (await queue(s, base)).json()).data.entries.map(
+        (e: { schedulingRecordId: string }) => e.schedulingRecordId
+      );
+
+    await setStudyDirections(s, base, "TERM_TO_DEFINITION");
+    expect(await queuedIds()).toEqual([forward.id]);
+    await setStudyDirections(s, base, "DEFINITION_TO_TERM");
+    expect(await queuedIds()).toEqual([backward.id]);
+  });
+
+  test("switching back to Both: graded, due records reappear and nothing leaves Review", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const fc = await createFlashcard(
+      s,
+      base,
+      await createFolder(s, base, await createClass(s, base, "C"), "F"),
+      "W"
+    );
+    const a = await addCard(s, base, fc, "collate");
+    const b = await addCard(s, base, fc, "drizzle", { learned: false });
+    // b: only its Definition -> Term direction was ever graded, and it is due.
+    await prisma.schedulingRecord.update({
+      where: { id: b.backward.id },
+      data: { firstGradedAt: new Date(), interval: 1, repetitions: 1 },
+    });
+    const before = await prisma.schedulingRecord.findMany({
+      where: { cardId: { in: [a.cardId, b.cardId] } },
+      orderBy: { id: "asc" },
+    });
+    const queuedIds = async () =>
+      (await (await queue(s, base)).json()).data.entries
+        .map((e: { schedulingRecordId: string }) => e.schedulingRecordId)
+        .sort();
+
+    await setStudyDirections(s, base, "TERM_TO_DEFINITION");
+    const oneWay = await queuedIds();
+    expect(oneWay).toEqual([a.forward.id]);
+
+    await setStudyDirections(s, base, "BOTH");
+    const both = await queuedIds();
+    expect(both).toEqual([a.forward.id, a.backward.id, b.backward.id].sort());
+    for (const id of oneWay) expect(both).toContain(id);
+
+    // Switching changed no Scheduling Record.
+    const after = await prisma.schedulingRecord.findMany({
+      where: { cardId: { in: [a.cardId, b.cardId] } },
+      orderBy: { id: "asc" },
+    });
+    expect(after).toEqual(before);
   });
 });

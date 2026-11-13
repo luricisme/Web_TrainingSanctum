@@ -16,6 +16,7 @@ import {
 } from "@/lib/api-response";
 import { isUniqueViolation } from "@/lib/prisma-errors";
 import { countLearn } from "@/lib/learn-queue";
+import { getStudiedDirections } from "@/lib/study-directions";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -25,7 +26,8 @@ function logDelete(entry: Record<string, unknown>): void {
 
 /**
  * The Flashcard with its Cards, newest first, plus breadcrumb ancestors and
- * what its Learn session holds (spec-4-8).
+ * what its Learn session holds (spec-4-8) and the user's study directions
+ * (spec-4-9), so the viewer and the practice run need no extra fetch.
  */
 export async function GET(
   request: Request,
@@ -65,12 +67,14 @@ export async function GET(
   if (!flashcard) return fail(404, "NOT_FOUND", "Flashcard not found.");
 
   const { folder } = flashcard;
+  const { setting, dirs } = await getStudiedDirections(userId);
   const data: FlashcardCardsResponse = {
     flashcard: { id: flashcard.id, name: flashcard.name },
     folder: { id: folder.id, name: folder.name, isUnsorted: folder.isUnsorted },
     class: folder.class,
     cards: flashcard.cards,
-    learn: await countLearn(userId, flashcard.id, new Date()),
+    learn: await countLearn(userId, flashcard.id, dirs, new Date()),
+    studyDirections: setting,
   };
   return ok(data);
 }
