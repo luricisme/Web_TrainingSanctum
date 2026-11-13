@@ -125,3 +125,15 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-9-study-directions-setting.md`
   summary: Add an e2e that changes Study directions on Settings via in-app navigation, returns to a Flashcard within the 15s staleTime, and asserts the viewer and Learn counts reflect the new setting.
   evidence: Existing e2e tests change the setting via prisma plus a full reload, so dropping the `["flashcard"]` invalidation in study-directions.tsx would fail no test.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-5-focus-mode.md`
+  summary: Story 5.1 adds the current streak count (mono display, above the calm line) to the Empty due-queue state built in 4.5.
+  evidence: DESIGN.md/EXPERIENCE.md put the streak at the top of the Empty due-queue state, but no streak model exists before 5.1; decided 2026-11-13 to ship 4.5 without it.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-5-focus-mode.md`
+  summary: Flashcard picker for the Empty due-queue "+ Add card" so the user can change the last-used target Flashcard (EXPERIENCE.md Component Patterns).
+  evidence: 4.5 ships "+ Add card" as a link to the last-used Flashcard's page with `?add=1`; the picker was deferred to keep scope (decided 2026-11-13).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-5-focus-mode.md`
+  summary: List-row icon chips use `bg-card` but DESIGN.md assigns icon chips `{colors.elevated}` (class-row, class-detail-view, folder-detail-view, empty-due-queue).
+  evidence: On hover the row turns `row-hover` (elevated) and the chip stays darker than the row; pre-existing pattern copied by 4.5.

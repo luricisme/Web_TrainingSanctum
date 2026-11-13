@@ -181,3 +181,9 @@ body {
   color: var(--color-text);
   font-family: var(--font-sans);
 }
+
+/* spec-4-5 focus mode, before hydration: a server-rendered session stage
+   hides the sidebar from first paint. The client flag takes over after. */
+:root:has([data-focus-session]) [data-sidebar] {
+  display: none;
+}

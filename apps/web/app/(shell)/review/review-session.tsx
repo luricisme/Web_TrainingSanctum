@@ -5,6 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReviewQueueResponse, ReviewScope } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { buttonSecondary, linkClass } from "@/app/components/ui";
+import { useFocusMode } from "../focus-mode";
+import { SessionExit } from "../session-exit";
+import { EmptyDueQueue } from "./empty-due-queue";
 import { GradingSession, stageClass } from "./grading-session";
 
 const SCOPE_HREF: Record<ReviewScope["kind"], string> = {
@@ -28,6 +31,36 @@ function ScopeHeader({ scope }: { scope: ReviewScope | null }) {
 }
 
 /**
+ * spec-4-5: where Exit and Esc lead, read from the scope query itself so the
+ * loading screen has it too: the scope's page, else Classes.
+ */
+function exitHrefFor(queryString: string): string {
+  const params = new URLSearchParams(queryString);
+  const classId = params.get("classId");
+  if (classId) return `${SCOPE_HREF.class}/${encodeURIComponent(classId)}`;
+  const folderId = params.get("folderId");
+  if (folderId) return `${SCOPE_HREF.folder}/${encodeURIComponent(folderId)}`;
+  return "/classes";
+}
+
+/** The skeleton card, already in focus mode so the chrome never flashes in. */
+function Loading({ exitHref }: { exitHref: string }) {
+  useFocusMode(true);
+  return (
+    <div className={stageClass} data-focus-session="">
+      <SessionExit href={exitHref} />
+      <h1 className="sr-only">Review</h1>
+      <div
+        role="status"
+        className="min-h-80 w-full max-w-review-card rounded-lg border border-divider bg-card shadow-medium"
+      >
+        <span className="sr-only">Loading your review queue</span>
+      </div>
+    </div>
+  );
+}
+
+/**
  * spec-4-3: the client review session. The queue is one snapshot fetched when
  * the session starts; grading advances locally at once and POSTs in the
  * background (AD-7). Keyed by its scope query upstream.
@@ -45,19 +78,7 @@ export function ReviewSession({ queryString }: { queryString: string }) {
     refetchOnReconnect: false,
   });
 
-  if (isPending) {
-    return (
-      <div className={stageClass}>
-        <h1 className="sr-only">Review</h1>
-        <div
-          role="status"
-          className="min-h-80 w-full max-w-review-card rounded-lg border border-divider bg-card shadow-medium"
-        >
-          <span className="sr-only">Loading your review queue</span>
-        </div>
-      </div>
-    );
-  }
+  if (isPending) return <Loading exitHref={exitHrefFor(queryString)} />;
 
   if (!data) {
     const notFound = error instanceof ApiError && error.status === 404;
@@ -93,23 +114,24 @@ export function ReviewSession({ queryString }: { queryString: string }) {
     );
   }
 
-  return <Session snapshot={data} />;
-}
-
-function Session({ snapshot }: { snapshot: ReviewQueueResponse }) {
-  const { scope } = snapshot;
+  const { scope } = data;
+  const empty = <EmptyDueQueue scope={scope} queryString={queryString} />;
+  // spec-4-5: nothing due at the start skips the session (and focus mode).
+  if (data.entries.length === 0) {
+    return (
+      <div className={stageClass}>
+        <ScopeHeader scope={scope} />
+        {empty}
+      </div>
+    );
+  }
   return (
     <GradingSession
-      entries={snapshot.entries}
+      entries={data.entries}
       header={<ScopeHeader scope={scope} />}
+      exitHref={exitHrefFor(queryString)}
       repeatAgain={false}
-      finished={
-        <p className="flex min-h-80 w-full max-w-review-card items-center justify-center text-center text-body text-foreground-secondary">
-          {scope
-            ? `You're all caught up — nothing in ${scope.name} is due for review right now.`
-            : "You're all caught up — nothing is due for review right now."}
-        </p>
-      }
+      finished={empty}
     />
   );
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { SectionMarker } from "@/app/components/section-marker";
+import { useIsFocused } from "./focus-mode";
 
 const iconProps = {
   width: 20,
@@ -61,9 +62,12 @@ const items: { href: string; label: string; icon: ReactNode }[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  // spec-4-5 focus mode: a running session hides all chrome (FR-11).
+  const focused = useIsFocused();
+  if (focused) return null;
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-sidebar shrink-0 flex-col border-r border-divider bg-card px-3 py-8 sm:flex">
+    <aside data-sidebar="" className="sticky top-0 hidden h-screen w-sidebar shrink-0 flex-col border-r border-divider bg-card px-3 py-8 sm:flex">
       <div className="px-3">
         <SectionMarker>Training Sanctum</SectionMarker>
       </div>
