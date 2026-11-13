@@ -100,3 +100,12 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-1-sm-2-scheduling-engine.md`
   summary: Story 4.4 needs one shared "never graded" predicate for the new-card cap (e.g. interval === 0 on both records, or a gradedAt marker), rather than deriving "new" from repetitions === 0.
   evidence: The epic says a card that Again reset to repetitions 0 is not new. applyGrade never returns interval 0, so interval 0 currently means never graded, but only by convention. That belongs to 4.4's queue design, not to this engine.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-grade-a-card-persist-scheduling-update.md`
+  summary: Confirm that `POST /api/review/grade` should answer a not-due record with 409 NOT_DUE (first grade wins per day) instead of the epic's literal "last write wins, no locking".
+  evidence: The epic-4 context says LWW with no locking or conflict UI. Story 4.2 rejects a second grade so two grades never compound. Settle it with the product owner before 4.3 ships.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-grade-a-card-persist-scheduling-update.md`
+  summary: Story 4.3's optimistic grade flow must treat 409 NOT_DUE as "already applied": drop the entry, no rollback, no error.
+  evidence: A lost response followed by a retry, or a second device, gets 409 for a grade that was saved. Rolling it back would show a false error.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-grade-a-card-persist-scheduling-update.md`
+  summary: sprint-status.yaml still lists stories with merged PRs as `review` (4.1 and most of Epics 1–3).
+  evidence: The git log shows the merged PRs (e.g. #14 for 4.1), but the tracker was never moved to done.
