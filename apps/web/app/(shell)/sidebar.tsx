@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { SectionMarker } from "@/app/components/section-marker";
 import { useIsFocused } from "./focus-mode";
+import { RealmBadge } from "./realm-badge";
 
 const iconProps = {
   width: 20,
@@ -39,8 +40,8 @@ const items: { href: string; label: string; icon: ReactNode }[] = [
     ),
   },
   {
-    href: "/stats",
-    label: "Stats",
+    href: "/cultivation",
+    label: "Cultivation",
     icon: (
       <svg {...iconProps}>
         <path d="M5 20V11M12 20V5M19 20v-6" />
@@ -95,6 +96,10 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
+      {/* spec-5-1: the Realm badge, pinned to the sidebar bottom. */}
+      <div className="mt-auto pt-6">
+        <RealmBadge />
+      </div>
     </aside>
   );
 }

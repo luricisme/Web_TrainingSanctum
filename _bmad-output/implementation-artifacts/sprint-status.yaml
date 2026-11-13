@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-07-2026 00:00
-last_updated: 11-14-2026 12:00
+last_updated: 11-14-2026 13:05
 project: Web_TrainingSanctum
 project_key: NOKEY
 tracking_system: file-system
@@ -70,8 +70,8 @@ development_status:
   # build order (Sprint Change 2026-11-13, 2026-11-13b): 4-6 -> 4-7 -> 4-8 -> 4-9 -> 4-5; 4-4 removed
   epic-4-retrospective: optional
 
-  epic-5: backlog
-  5-1-cultivation-realms-xp-ledger: backlog # was 5-1-streak-tracking (Sprint Change 2026-11-14)
+  epic-5: in-progress
+  5-1-cultivation-realms-xp-ledger: review # was 5-1-streak-tracking (Sprint Change 2026-11-14)
   5-2-data-export-backup: backlog
   5-3-restore-from-backup: backlog
   5-4-progress-stats-view: backlog # now "Cultivation & Stats Page"
