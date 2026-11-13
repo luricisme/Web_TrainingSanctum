@@ -7,8 +7,8 @@ paradigm: 'layered monolith with an isolated pure-domain core'
 scope: 'Training Sanctum Flashcards v1 — full-stack architecture for prd-Web_TrainingSanctum-2026-10-29'
 status: final
 created: '2026-11-01'
-updated: '2026-11-08'
-binds: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-15]
+updated: '2026-11-13'
+binds: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17]
 sources:
   - ../../prds/prd-Web_TrainingSanctum-2026-10-29/prd.md
   - ../../ux-designs/ux-Web_TrainingSanctum-2026-10-29/DESIGN.md
@@ -60,9 +60,9 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
 
 ### AD-4 — Grade-submission transaction (single write path for SM-2 state)
 
-- **Binds:** FR-8
+- **Binds:** FR-8, FR-17
 - **Prevents:** a Scheduling Record's `interval`/`repetitions`/`ease_factor`/`next_review_date` being written from more than one code path and diverging from the SM-2 spec; enforces the PRD §5 non-goal that no manual scheduling-state edit exists.
-- **Rule:** Only two Route Handlers may write these four fields: `POST /api/review/grade` (loads current state, calls the pure `applyGrade` domain function, persists the result inside one Prisma `$transaction`) and `POST /api/restore` (FR-14), which writes them verbatim from a validated backup export inside its own transaction, replacing existing rows rather than computing new values. No other Route Handler, script, or admin path writes them, and no path other than these two ever *computes* a new value for them outside `applyGrade`.
+- **Rule:** Only two Route Handlers may write these five fields (`interval`, `repetitions`, `ease_factor`, `next_review_date`, `first_graded_at`): `POST /api/review/grade` (loads current state, calls the pure `applyGrade` domain function, persists the result inside one Prisma `$transaction`, and sets `first_graded_at = now` only when it is null) and `POST /api/restore` (FR-14), which writes them verbatim from a validated backup export inside its own transaction, replacing existing rows rather than computing new values. No other Route Handler, script, or admin path writes them, and no path other than these two ever *computes* a new value for them outside `applyGrade`.
 
 ### AD-5 — Import logic lives in domain
 
@@ -80,7 +80,7 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
 
 - **Binds:** FR-9
 - **Prevents:** the review UI blocking on a full request/response round trip to advance, which would violate the sub-100ms perceived-transition requirement under real network conditions.
-- **Rule:** The review screen uses TanStack Query with optimistic updates: grading a card updates local cache and advances to the next queue entry immediately, fires `POST /api/review/grade` in the background, and rolls back + surfaces an error only on failure. No other screen requires this pattern.
+- **Rule:** The review and Learn screens (one shared session component) use TanStack Query with optimistic updates: grading a card updates local cache and advances to the next queue entry immediately, fires `POST /api/review/grade` in the background, and rolls back + surfaces an error only on failure. No other screen requires this pattern.
 
 ### AD-8 — Local day-boundary source of truth
 
@@ -92,13 +92,13 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
 
 - **Binds:** FR-3, FR-6, FR-7
 - **Prevents:** manual card creation, paste import, and CSV import each independently deciding a new Card's `SchedulingRecord` defaults (e.g. `next_review_date` = creation instant vs. local midnight), which would be individually spine-compliant yet produce inconsistent initial due-dates depending on which entry path was used.
-- **Rule:** All three creation paths call one function, `createCardWithSchedulingRecords` (in `packages/domain`, taking the five Card fields and returning a Card + exactly two fresh `SchedulingRecord`s at defaults `ease_factor = 2.5`, `repetitions = 0`, `next_review_date = start of today` via `toLocalCalendarDay`, AD-8). No Route Handler constructs a `SchedulingRecord` by hand.
+- **Rule:** All three creation paths call one function, `createCardWithSchedulingRecords` (in `packages/domain`, taking the five Card fields and returning a Card + exactly two fresh `SchedulingRecord`s at defaults `ease_factor = 2.5`, `repetitions = 0`, `next_review_date = start of today` via `toLocalCalendarDay`, AD-8, and `first_graded_at = null` — the Card is Unlearned until graded in Learn, FR-17). No Route Handler constructs a `SchedulingRecord` by hand.
 
 ### AD-10 — Response envelope & export/restore schema
 
 - **Binds:** all Route Handlers; FR-13, FR-14
 - **Prevents:** each GET endpoint independently choosing a response shape (bare array vs. `{data:[...]}` vs. `{items,total}`), and the export (FR-13) and restore (FR-14) routes drifting apart on field names/nesting since nothing currently forces them to agree.
-- **Rule:** Every successful Route Handler response is `{ data: T }` (or `{ data: T[], meta?: {...} }` for paginated/listy endpoints) — defined as a shared generic type in `packages/domain/http.ts`, imported by both the Route Handler and the UI's fetch wrapper. FR-13's export payload shape and FR-14's restore input are the **same single Zod schema** (`backupExportSchema`, in `packages/domain`): the export route serializes to it, the restore route parses and validates against it — one schema, not two independently written shapes that happen to agree today.
+- **Rule:** Every successful Route Handler response is `{ data: T }` (or `{ data: T[], meta?: {...} }` for paginated/listy endpoints) — defined as a shared generic type in `packages/domain/http.ts`, imported by both the Route Handler and the UI's fetch wrapper. FR-13's export payload shape and FR-14's restore input are the **same single Zod schema** (`backupExportSchema`, in `packages/domain`): the export route serializes to it, the restore route parses and validates against it — one schema, not two independently written shapes that happen to agree today. `backupExportSchema` includes `firstGradedAt` per Scheduling Record (Sprint Change 2026-11-13).
 
 ### AD-11 — Backup cadence, on-demand export, and destructive-operation atomicity (resolves PRD §10 Q1)
 
@@ -117,6 +117,12 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
 - **Binds:** FR-9, §6 general-load NFR
 - **Prevents:** "fast" being a vague, unmeasurable target that different parts of the app interpret differently.
 - **Rule:** In-session grade→next-card transition: sub-100ms perceived latency (enforced by AD-7's optimistic update). App open → due queue rendered: 200ms budget, measured from navigation start to due-queue paint, excluding cold serverless function start. Paste/CSV import (FR-6, FR-7): under 5 seconds of system time — the parse call (Preview click → review editor rendered) plus the commit call (Save click → Cards persisted and visible in the Folder), excluding the user's editing time in between. This bounds import batch size, not just the parse step.
+
+### AD-14 — Learned vs. unlearned is one predicate (Sprint Change 2026-11-13)
+
+- **Binds:** FR-9, FR-15, FR-16, FR-17
+- **Prevents:** the Review queue, the Learn queue, the Learn button counts and Stats each deriving "learned" differently (e.g. `interval === 0`, `repetitions === 0`, or "has any grade"), which would let a Card show up in both queues or in neither.
+- **Rule:** A **learned Card** is one whose two Scheduling Records both have `first_graded_at IS NOT NULL`. The predicate lives once in `packages/domain` as Prisma-`where`-shaped fragment builders (`learnedCardWhere` / `unlearnedCardWhere`, plain objects, no DB import) and is used by `GET /api/review/queue`, `GET /api/review/learn` and `GET /api/stats`. Review queue = due records of learned Cards. Learn queue = the Flashcard's unlearned Cards' records with `first_graded_at IS NULL` (Cards in creation order, each Card's two directions together, TERM_TO_DEFINITION first), followed by that Flashcard's due records of learned Cards, oldest-due-first. In-session "repeat until correct" (an Again entry re-shown at the end of a Learn session) is client-side practice only: the session POSTs each entry's first Grade once and never POSTs the repeats, so AD-4's single write path and the grade route's not-due 409 stay intact.
 
 ## Consistency Conventions
 
@@ -165,7 +171,8 @@ training-sanctum/
           cards/                # Card CRUD; cards/batch (takes `flashcardId`) = the single multi-row create used by Manual mode and import commit
           import/parse/         # paste + CSV/Excel parse for a flashcardId — read-only, returns rows for the review editor
           review/
-            queue/              # GET due queue; optional ?classId=, ?folderId= or ?flashcardId= scope (FR-9)
+            queue/              # GET due queue of learned Cards; optional ?classId= or ?folderId= scope (FR-9, AD-14)
+            learn/              # GET Learn queue for ?flashcardId= (required): unlearned entries then due entries, plus counts (FR-17, AD-14)
             grade/               # POST grade (AD-4)
           stats/
           export/                # FR-13
@@ -201,7 +208,7 @@ erDiagram
   USER ||--o{ STREAK_LOG : logs
 ```
 
-A `Card` always has exactly two `SchedulingRecord`s (one per Recall Direction, AD enforced by the Card-creation Route Handler, not a DB constraint beyond a unique `(cardId, direction)` index). Every `Class` has exactly one `Folder` with `isUnsorted = true`, created in the same transaction as the Class and enforced by a partial unique index on `(classId) WHERE isUnsorted`. `Folder.classId`, `Flashcard.folderId` and `Card.flashcardId` are required (non-null) — there is no Card without a Flashcard, no Flashcard without a Folder and no Folder without a Class. `Flashcard` carries only a `name`, unique per Folder case-insensitively, and `Card` also carries `userId`.
+A `Card` always has exactly two `SchedulingRecord`s (one per Recall Direction, AD enforced by the Card-creation Route Handler, not a DB constraint beyond a unique `(cardId, direction)` index). Every `Class` has exactly one `Folder` with `isUnsorted = true`, created in the same transaction as the Class and enforced by a partial unique index on `(classId) WHERE isUnsorted`. `Folder.classId`, `Flashcard.folderId` and `Card.flashcardId` are required (non-null) — there is no Card without a Flashcard, no Flashcard without a Folder and no Folder without a Class. `Flashcard` carries only a `name`, unique per Folder case-insensitively, and `Card` also carries `userId`. `SchedulingRecord` carries `first_graded_at` (nullable UTC timestamp, AD-14). Its migration adds the column and backfills `first_graded_at = updated_at` where `interval > 0` — the only rows ever graded, since `applyGrade` never returns interval 0.
 
 ### Deployment & environments
 
@@ -219,7 +226,9 @@ A `Card` always has exactly two `SchedulingRecord`s (one per Recall Direction, A
 | FR-5 Class, Folder & Flashcard CRUD (incl. Flashcard move) | `app/api/classes/**`, `app/api/folders/**`, `app/api/flashcards/**` | AD-2, AD-6, AD-11 |
 | FR-6, FR-7 Import (mode of a Flashcard's Add cards) | `app/api/import/**`, `packages/domain/import.ts` | AD-5, AD-6, AD-9, AD-13 |
 | FR-8 SM-2 engine | `packages/domain/sm2.ts`, `app/api/review/grade` | AD-1, AD-4 |
-| FR-9, FR-10, FR-11 Review session | `app/(routes)/review`, `app/api/review/**` | AD-4, AD-7, AD-13 |
+| FR-9, FR-11 Review session | `app/(routes)/review`, `app/api/review/queue`, `app/api/review/grade` | AD-4, AD-7, AD-13, AD-14 |
+| FR-16 Card viewer | `app/(routes)/flashcards/[id]` (reads the existing `GET api/flashcards/[id]`) | AD-2, AD-14 |
+| FR-17 Learn session | `app/(routes)/flashcards/[id]/learn`, `app/api/review/learn`, `app/api/review/grade` | AD-4, AD-7, AD-14 |
 | FR-12 Streak | `packages/domain/streak.ts`, `app/api/review/grade` | AD-8 |
 | FR-13, FR-14 Export/restore | `app/api/export`, `app/api/restore` | AD-2, AD-4, AD-6, AD-10, AD-11 |
 | FR-15 Stats | `app/api/stats`, `app/(routes)/stats` | AD-2, AD-10 |

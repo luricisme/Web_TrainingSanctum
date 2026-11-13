@@ -34,9 +34,9 @@ FR-7: CSV/Excel import — upload a CSV/Excel file, map its columns to the five 
 
 FR-8: SM-2 scheduling per direction — the system computes the next `interval`, `repetitions`, and `ease_factor` for a Scheduling Record using the classical SM-2 algorithm, independently per Recall Direction. New Scheduling Record defaults: `ease_factor = 2.5`, `repetitions = 0`. Learning-phase intervals: Step 1 = 1 day, Step 2 = 6 days, then EF-driven. "Again" (quality 1) resets `repetitions` to 0, restarts learning steps, and does not change `ease_factor`. `ease_factor` floors at 1.3. At equal `repetitions`, Hard/Good/Easy produce an identical next interval, diverging only in resulting `ease_factor`. Grade-to-quality mapping: Again=1, Hard=3, Good=4, Easy=5. Grading one direction does not alter the other direction's Scheduling Record. Must match the worked fixtures in the PRD addendum exactly.
 
-FR-9: Due-queue review — the system presents due Scheduling Records (per-direction) one at a time: prompt, then reveal, then Grade capture. A Card due in both directions appears as two separate, independently-gradable queue entries. Default scope is all Classes; a session can also be scoped to one Class, one Folder or one Flashcard ("Review this class/folder/flashcard"). Entries ordered oldest-due-first. Fully keyboard-operable (Space reveals; 1–4 or J/K/L/; grades). Grading and advancing renders with sub-100ms perceived transition latency under rapid input.
+FR-9: Due-queue review — the system presents due Scheduling Records of learned Cards (per-direction) one at a time: prompt, then flip, then Grade capture. Records of Unlearned Cards never appear in Review. A Card due in both directions appears as two separate, independently-gradable queue entries. Default scope is all Classes; a session can also be scoped to one Class or one Folder ("Review this class/folder"); a Flashcard's graded entry point is Learn (FR-17). Entries ordered oldest-due-first. Fully keyboard-operable (Space or click flips either way; 1–4 or J/K/L/; grades once the answer has been shown). Grading and advancing renders with sub-100ms perceived transition latency under rapid input.
 
-FR-10: Daily batch cap — the due queue for a session is capped at a configurable daily limit (default 20) applying only to new-card introduction; already-due cards are never withheld. The cap counts Cards (not Scheduling Records). A Card reset to `repetitions = 0` via "Again" is not a New Card and is uncapped.
+FR-10: Removed (Sprint Change 2026-11-13) — superseded by FR-17; new Cards are introduced only through Learn, so there is no daily cap.
 
 FR-11: Focus mode — during an active Review Session, navigation, sidebar, streak badge, and other non-essential chrome are hidden; only the card and recall controls are visible. Exiting review restores normal navigation.
 
@@ -46,7 +46,11 @@ FR-13: Data export/backup — a user can export their full Class/Folder/Flashcar
 
 FR-14: Restore from backup — a user can import a previously-exported FR-13 JSON file to fully reconstruct their data (both Scheduling Records per Card, streak history). Restoring into an account with existing data requires explicit confirmation (default: replace, never silent merge/overwrite).
 
-FR-15: Progress & stats view — a user can view a stats screen (outside active review) showing current/longest streak, total Cards, and a simple visualization of the SM-2 retention curve (distribution of Scheduling Records by current interval, or review-outcome history) per Recall Direction. Reflects latest graded state without requiring a page reload tied to a specific session.
+FR-15: Progress & stats view — a user can view a stats screen (outside active review) showing current/longest streak, total Cards (learned / unlearned), and a simple visualization of the SM-2 retention curve (distribution of Scheduling Records by current interval, or review-outcome history) per Recall Direction. Reflects latest graded state without requiring a page reload tied to a specific session.
+
+FR-16: Flashcard card viewer — the Flashcard page shows a card viewer above its Cards list: every Card one at a time in list order, Term side first; Space or click/tap flips either way; ← / → (buttons and arrow keys) move between Cards with a mono "X / N" counter, no wrap-around, shuffle or autoplay; keys ignored in fields and open panels/modals; viewing never changes scheduling; hidden on an empty Flashcard.
+
+FR-17: Learn session — a "Learn" button below the viewer starts a graded session for that Flashcard (same session screen, keys, grade write path and focus mode as Review): its Unlearned Cards first (both directions, graded independently), then its due records of learned Cards. A Card is learned once both directions are graded. Learn grades count toward the streak. An entry graded Again is re-shown at the end of the session until graded Hard/Good/Easy; only its first grade is persisted. Completion shows a calm line and a way back. The button label shows what is waiting ("Learn · 12 new · 3 due").
 
 ### NonFunctional Requirements
 
@@ -89,9 +93,9 @@ NFR-6: Live deployment — the product ships to a live, publicly accessible depl
 
 UX-DR1: Implement the dual-theme design token set (dark default / light toggle) exactly as specified in DESIGN.md — colors, typography scale, spacing scale, corner radii, elevation levels, motion durations/easings — as CSS variables mapped for Tailwind v4.
 
-UX-DR2: Build the Review card component: large soft-rounded (`rounded.lg`) surface, center-aligned, fixed bounds that never resize between prompt and revealed states, Quizlet-style 3D Y-axis flip (520ms, ease-out) on click/tap/Space, inert top-right icon row (pin/audio/star).
+UX-DR2: Build the Review card component: large soft-rounded (`rounded.lg`) surface, center-aligned, fixed bounds that never resize between prompt and revealed states, Quizlet-style 3D Y-axis flip (520ms, ease-out) on click/tap/Space, flipping either way; shared by Review, Learn and the Card viewer; no icon row in v1 (Sprint Change 2026-11-13).
 
-UX-DR3: Build the Grade buttons component: Again / Hard / Good / Easy, visible only after flip, each labeled with its keyboard shortcut; Again styled with the `error` color (never the accent); Hard/Good/Easy equal weight to each other (never implying Hard shortens the next interval, per classical SM-2).
+UX-DR3: Build the Grade buttons component (Review and Learn): Again / Hard / Good / Easy, visible after the first flip and staying while the card is flipped back, until the entry is graded, each labeled with its keyboard shortcut; Again styled with the `error` color (never the accent); Hard/Good/Easy equal weight to each other (never implying Hard shortens the next interval, per classical SM-2).
 
 UX-DR4: Build the Sidebar nav component: fixed 240px width, four flat icon+label items (Review, Classes, Stats, Settings), active-item styling (`elevated` background + accent text), hidden entirely during review focus mode and on mobile (<640px). There is no Import item — import lives inside a Folder's "Add cards" (UX-DR9).
 
@@ -101,13 +105,15 @@ UX-DR6: Build the Progress counter (mono-font "X / Y") and streak indicator (fla
 
 UX-DR7: Build the Modal component for: folder-delete confirmation (two explicit buttons — "Move flashcards to Unsorted" primary / "Delete flashcards too" secondary-danger, no checkbox); flashcard-delete confirmation (names the Flashcard and its Card count); move-flashcard modal (Folder picker across Classes); class-delete confirmation ("Move folders to…" with a target-Class picker as primary, "Delete class and everything in it" secondary-danger that only enables after typing the Class name; when no other Class exists only the delete option is shown); and restore-from-backup confirmation (consequence statement + Confirm/Cancel, no type-to-confirm).
 
-UX-DR8: Build the Empty due-queue state: centered, prominent streak count, calm congratulatory line, primary "+ Add card" button (opens Manual mode in the last-used Flashcard, with a Flashcard picker to change it) — never a bare "nothing to do" message.
+UX-DR8: Build the Empty due-queue state: centered, prominent streak count, calm line, then up to 3 Flashcards with Unlearned Cards ("Weather idioms · 12 new", linking to their page) or, when none exist, a primary "+ Add card" button (opens Manual mode in the last-used Flashcard, with a Flashcard picker to change it) — never a bare "nothing to do" message.
+
+UX-DR17: Build the Card viewer on Flashcard detail (Sprint Change 2026-11-13, FR-16): one review card over all of the Flashcard's Cards, Term side first; outline circular ← / → buttons around a mono "X / N" counter (neutral, never the accent; disabled arrow at 0.4 opacity); the primary "Learn" button directly below, labelled with what is waiting ("Learn · 12 new · 3 due", FR-17); "Add cards" secondary while the viewer is shown.
 
 UX-DR9: Build the "Add cards" panel opened from inside a Flashcard, with two modes in a pill switcher: **Manual** (Quizlet-style editor — numbered term/definition rows, optional fields expandable per row, "+ Add row", Tab moves to the next field and Enter on the last field adds a row, one Save creates all valid rows) and **Import** (Paste / Upload-file sub-tabs; Paste → delimiter + "Preview", Upload → column mapping). Import always ends in the **import review editor**: the same row editor as Manual, prefilled with the parsed rows, each labelled with its source line number, with inline errors on malformed rows, a "Already in {Flashcard} — will be skipped" flag on duplicates (cleared when the Term is edited), and a remove (×) button per row; a summary strip above the rows reads "30 rows · 2 need fixing · 1 duplicate". Save commits, then a results view shows exactly 3 groups (Created / Duplicates skipped / Errors, each error with line number + reason). The target Flashcard is fixed to the Flashcard the panel was opened from and shown in the panel header. There is no standalone Import page or nav item.
 
 UX-DR10: Implement responsive breakpoints (mobile <640px, tablet 640–1024px, desktop >1024px): sidebar hidden and grade-button row wraps below 640px; review session stays single-column/centered (card capped at 640px) at all sizes.
 
-UX-DR11: Implement full keyboard interaction for the review loop: Space reveals, 1–4 or J/K/L/; grade, no mouse dependency anywhere in the loop, with sub-100ms perceived transition latency.
+UX-DR11: Implement full keyboard interaction for the Review and Learn loop: Space flips either way, 1–4 or J/K/L/; grade once the answer has been shown; in the Card viewer, Space flips and ← / → move between Cards; no mouse dependency anywhere in the loop, with sub-100ms perceived transition latency.
 
 UX-DR12: Implement mobile touch interactions for review: tap-to-flip plus 4-directional swipe mapped to the four grades, additive to (not replacing) the grade buttons' own tap targets.
 
@@ -130,12 +136,14 @@ FR-6: Epic 3 - Paste import (Import mode of a Flashcard's Add cards) → import 
 FR-7: Epic 3 - CSV/Excel import with column mapping → import review editor → Save, with per-row error/duplicate reporting
 FR-8: Epic 4 - Classical SM-2 scheduling engine, per Recall Direction
 FR-9: Epic 4 - Due-queue review session (keyboard-first, ordered, dual-direction entries)
-FR-10: Epic 4 - Daily new-card batch cap
+FR-10: Removed (Sprint Change 2026-11-13)
 FR-11: Epic 4 - Focus mode (chrome hidden during review)
 FR-12: Epic 5 - Streak tracking (consecutive graded calendar days)
 FR-13: Epic 5 - Data export/backup to JSON
 FR-14: Epic 5 - Restore from backup JSON
 FR-15: Epic 5 - Progress & stats view (streaks, totals, retention curve)
+FR-16: Epic 4 - Flashcard card viewer (flip, ← →, non-graded)
+FR-17: Epic 4 - Learn session (graded introduction of Unlearned Cards per Flashcard)
 
 ## Epic List
 
@@ -155,9 +163,9 @@ A user can paste line-delimited term/definition pairs or upload a CSV/Excel file
 **Implementation notes:** `parseImportBlock` and `detectDuplicates` as shared pure domain functions used identically by both import paths (AD-5); read-only `POST /api/import/parse` feeding the import review editor, committed through Epic 2's `POST /api/cards/batch` (shared with Manual mode, duplicates re-checked at commit) and `createCardWithSchedulingRecords` (AD-9) rather than constructing Cards independently; column-mapping step for files only; Import mode of the Flashcard's "Add cards" panel with Paste/Upload sub-tabs, the import review editor and the 3-group results view (UX-DR9), always targeting the Flashcard it was opened from; `details` (line-numbered) error-envelope shape; sub-5-second import system-time budget (AD-13).
 
 ### Epic 4: Spaced Repetition Review Engine
-A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with the new-card batch cap and distraction-free focus mode in place.
-**FRs covered:** FR-8, FR-9, FR-10, FR-11
-**Implementation notes:** `packages/domain/sm2.ts` as a pure, framework-free engine unit-tested against the PRD addendum's worked fixtures (NFR-4, SM-3); the grade write path is the single `POST /api/review/grade` route calling `applyGrade` inside one Prisma transaction (AD-4); TanStack Query optimistic updates for sub-100ms perceived transitions (AD-7, NFR-2); `toLocalCalendarDay` domain helper introduced here for due-queue filtering (AD-8) and reused by Epic 5's streak attribution; 200ms app-open-to-due-queue budget (AD-13, NFR-3); Review card flip, Grade buttons, review-mode sidebar hiding, full keyboard interaction, mobile tap/swipe, and the Empty due-queue state (UX-DR2, UX-DR3, UX-DR4, UX-DR6 progress counter, UX-DR8, UX-DR11, UX-DR12).
+A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with distraction-free focus mode in place. New Cards are introduced deliberately through a Flashcard's card viewer and Learn session; Review only brings back Cards already learned.
+**FRs covered:** FR-8, FR-9, FR-11, FR-16, FR-17
+**Implementation notes:** `packages/domain/sm2.ts` as a pure, framework-free engine unit-tested against the PRD addendum's worked fixtures (NFR-4, SM-3); the grade write path is the single `POST /api/review/grade` route calling `applyGrade` inside one Prisma transaction (AD-4); TanStack Query optimistic updates for sub-100ms perceived transitions (AD-7, NFR-2); `toLocalCalendarDay` domain helper introduced here for due-queue filtering (AD-8) and reused by Epic 5's streak attribution; 200ms app-open-to-due-queue budget (AD-13, NFR-3); Review card flip, Grade buttons, review-mode sidebar hiding, full keyboard interaction, mobile tap/swipe, and the Empty due-queue state (UX-DR2, UX-DR3, UX-DR4, UX-DR6 progress counter, UX-DR8, UX-DR11, UX-DR12); Card viewer and Learn entry on Flashcard detail (UX-DR17); `first_graded_at` marker and the shared learned/unlearned predicate (AD-14).
 
 ### Epic 5: Progress, Streaks & Data Safety
 A user can see their current/longest streak and basic stats (including the SM-2 retention curve) at a glance outside of review, and can trust the product with months of history — exporting it on demand and restoring it, with destructive operations always confirmed and atomic.
@@ -540,7 +548,7 @@ So that a week's worth of notes-app vocabulary becomes cards in one pass without
 
 ## Epic 4: Spaced Repetition Review Engine
 
-A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with the new-card batch cap and distraction-free focus mode in place.
+A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with distraction-free focus mode in place. New Cards are introduced deliberately through a Flashcard's card viewer and Learn session; Review only brings back Cards already learned.
 
 ### Story 4.1: SM-2 Scheduling Engine
 
@@ -596,12 +604,12 @@ So that daily study stays fast and frictionless.
 
 **Acceptance Criteria:**
 
-**Given** due Scheduling Records exist
+**Given** due Scheduling Records of learned Cards exist (Story 4.6)
 **When** I open Review
 **Then** due entries from all Classes are presented one at a time, prompt side first, ordered oldest-due-first
 
-**Given** I'm viewing a Class, a Folder or a Flashcard
-**When** I choose "Review this class", "Review this folder" or "Review this flashcard"
+**Given** I'm viewing a Class or a Folder
+**When** I choose "Review this class" or "Review this folder"
 **Then** the session contains only that scope's due entries and otherwise behaves exactly like the default session, and its grades count toward the same streak
 
 **Given** a Card due in both directions
@@ -611,32 +619,16 @@ So that daily study stays fast and frictionless.
 **Given** a card showing its prompt
 **When** I press Space
 **Then** it flips to reveal the answer, no mouse needed
+**And** pressing Space or clicking again flips it back; grading stays available
 
 **Given** the answer is revealed
 **When** I press 1–4 or J/K/L/;
 **Then** the Grade is submitted and the next entry appears with no perceptible lag (sub-100ms, via optimistic update)
 **And** on mobile, tapping the card flips it, and swiping in any of the four directions submits the corresponding grade, layered on top of the grade buttons' own tap targets
 
-### Story 4.4: Daily New-Card Batch Cap
+### Story 4.4: Daily New-Card Batch Cap — REMOVED
 
-As a user,
-I want new-card introduction capped at a configurable daily limit,
-So that I'm not overwhelmed while already-due cards are never held back.
-
-**Acceptance Criteria:**
-
-**Given** the default cap of 20
-**When** I review
-**Then** at most 20 New Cards (per the Glossary definition, counting Cards not Scheduling Records) are introduced per day
-
-**Given** I adjust the daily limit in settings
-**When** I save it
-**Then** subsequent sessions respect the new limit
-
-**Given** the cap is reached
-**When** more cards are due
-**Then** the "new cards" portion ends but already-due older cards remain available, uncapped
-**And** a Card reset to `repetitions=0` via an Again grade does not count against this cap
+Removed by Sprint Change 2026-11-13 (retired with FR-10). New Cards are introduced only through Learn (Story 4.8). The story number is not reused.
 
 ### Story 4.5: Focus Mode
 
@@ -646,14 +638,119 @@ So that I can concentrate without distraction.
 
 **Acceptance Criteria:**
 
-**Given** I enter a Review Session
+**Given** I enter a Review or Learn session
 **When** it starts
 **Then** sidebar, streak badge, and other non-essential chrome are hidden — only the card and recall controls are visible
 
 **Given** I exit review (queue cleared or I navigate away)
 **When** I leave
 **Then** normal navigation and chrome are restored
-**And** when nothing is due, the Empty due-queue state shows streak count, a calm congratulatory line, and a "+ Add card" button instead of the sidebar-less review card
+**And** when nothing is due, the Empty due-queue state shows streak count, a calm line, and either up to 3 Flashcards with Unlearned Cards (each linking to its page) or, when none exist, a "+ Add card" button — instead of the sidebar-less review card
+
+*Build order (Sprint Change 2026-11-13): 4.6 → 4.7 → 4.8 → 4.5.*
+
+### Story 4.6: Learned Marker & Learned-Only Review Queue
+
+As a user,
+I want Review to bring back only Cards I have already learned,
+So that new Cards don't flood my daily session before I've studied them.
+
+**Acceptance Criteria:**
+
+**Given** the migration runs
+**When** it completes
+**Then** every SchedulingRecord has `firstGradedAt` (nullable) and every record with `interval > 0` is backfilled with `firstGradedAt = updatedAt`
+
+**Given** a record with `firstGradedAt = null`
+**When** it is graded via `POST /api/review/grade`
+**Then** `firstGradedAt` is set to now
+**And** a later grade never changes it
+
+**Given** a Card created by any path
+**When** it is saved
+**Then** both of its records have `firstGradedAt = null` (AD-9)
+
+**Given** an Unlearned Card whose records are due
+**When** I open Review (default, class or folder scope)
+**Then** neither record appears
+**And** a learned Card's due records still do
+
+**Given** `GET /api/review/queue?flashcardId=…`
+**When** it is called
+**Then** it returns 400 (the flashcard scope moved to Learn)
+**And** "Review this flashcard" is removed from the Flashcard page
+**And** learned/unlearned is computed only through the shared AD-14 predicate, which is unit-tested
+
+### Story 4.7: Flashcard Card Viewer
+
+As a user,
+I want to flip through a Flashcard's Cards on its page,
+So that I can get familiar with them before I'm graded.
+
+**Acceptance Criteria:**
+
+**Given** a Flashcard with N Cards
+**When** I open it
+**Then** a card viewer above the Cards list shows Card 1 Term-side first with "1 / N", Cards in list order
+
+**Given** the viewer
+**When** I press Space or click the card
+**Then** it flips either way
+
+**Given** the viewer
+**When** I press → / ← (or the buttons)
+**Then** the next/previous Card shows Term-side first
+**And** ← is disabled on Card 1 and → on Card N (no wrap-around)
+
+**Given** focus is in a field or the Add cards panel is open
+**When** I press Space or an arrow key
+**Then** the viewer ignores it
+**And** Space never scrolls the page
+
+**Given** any viewing
+**Then** no Scheduling Record changes
+
+**Given** an empty Flashcard
+**Then** the viewer is not shown and the existing empty state is
+
+**Given** mobile
+**When** I swipe left/right on the viewer
+**Then** it moves → / ←
+**And** "Learn" is the page's primary button directly below the viewer; "Add cards" is secondary
+**And** UI conforms to DESIGN.md `components.card-viewer` in both themes
+
+### Story 4.8: Learn Session
+
+As a user,
+I want a Learn session per Flashcard,
+So that I grade new Cards deliberately and they then join my daily Review.
+
+**Acceptance Criteria:**
+
+**Given** `GET /api/review/learn?flashcardId=…`
+**When** it is called
+**Then** it returns the Flashcard's unlearned records (Cards in creation order, each Card's two directions together, Term→Definition first) followed by its due records of learned Cards (oldest-due-first), plus counts `{ newCards, due }`
+**And** 401 / 400 / 404 behave like the queue route
+
+**Given** the Flashcard page
+**Then** the Learn button reads "Learn · {newCards} new · {due} due" (zero parts omitted; just "Learn" when both are 0)
+
+**Given** I press Learn
+**When** the session starts
+**Then** the same session screen as Review runs (flip, keys, swipe, optimistic grade, 409 handling) scoped to this Flashcard, with the header naming it
+
+**Given** I grade an entry Again in a Learn session
+**When** the rest of the queue has been shown
+**Then** that entry appears again at the end of the session, and keeps returning until I grade it Hard, Good or Easy
+**And** only its first grade (Again) is sent to `POST /api/review/grade`; the repeats are practice and never POST, so the record stays due tomorrow and no 409 occurs
+
+**Given** I grade both directions of a new Card
+**When** I next open Review on its due date
+**Then** it appears there
+
+**Given** nothing is left to learn or review in the Flashcard
+**Then** a calm line "Nothing left to learn in {Flashcard} right now." with a link back to the Flashcard shows
+**And** Learn grades count toward the streak through the same grade route
 
 ## Epic 5: Progress, Streaks & Data Safety
 
@@ -680,6 +777,9 @@ So that I stay motivated to keep the daily habit.
 **Then** both use the same `User.timezone`-based local-day clock, so a review graded near midnight is attributed consistently
 **And** the streak indicator is visible outside active review only
 
+**Given** I grade a card in a Learn session
+**Then** that day counts toward the streak
+
 ### Story 5.2: Data Export/Backup
 
 As a user,
@@ -693,6 +793,7 @@ So that I never lose months of study data.
 **Then** I receive a JSON file containing every Class, Folder, Flashcard and Card (with its Flashcard), both Scheduling Records per Card, and streak history — sufficient to reconstruct state
 **And** export is strictly user-initiated/on-demand, no scheduled export job
 **And** the payload conforms to the single shared `backupExportSchema` also used by restore
+**And** each Scheduling Record's `firstGradedAt` is exported verbatim
 
 ### Story 5.3: Restore from Backup
 
@@ -710,6 +811,7 @@ So that I can recover my data if something goes wrong.
 **When** I attempt a restore
 **Then** I must explicitly confirm before it proceeds — restore replaces existing data, never a silent merge/overwrite
 **And** the restore runs inside one transaction: every row changes or none do, even on a partial failure
+**And** each Scheduling Record's `firstGradedAt` is restored verbatim
 
 ### Story 5.4: Progress & Stats View
 
@@ -721,7 +823,7 @@ So that I can observe my progress and trust the scheduling is working correctly.
 
 **Given** I navigate to Stats (outside active review)
 **When** it loads
-**Then** I see current/longest streak, total Cards, and a visualization of Scheduling Records' distribution by interval (or review-outcome history) per Recall Direction
+**Then** I see current/longest streak, total Cards (learned / unlearned), and a visualization of Scheduling Records' distribution by interval (or review-outcome history) per Recall Direction
 
 **Given** I've just graded cards
 **When** I view Stats afterward

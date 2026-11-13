@@ -115,3 +115,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-3-due-queue-review-session-keyboard-first.md`
   summary: Client screens do not handle a 401 from an expired session. The review loop shows "Your grade wasn't saved" on every retry instead of sending the user to sign in.
   evidence: The cause predates this story and affects the whole app. No client code checks 401 (apart from the login form), and proxy.ts only guards page navigation. It needs one app-wide fix in apiFetch or the QueryClient, such as redirecting to /login on UNAUTHENTICATED.
+- source_spec: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-13.md`
+  summary: RESOLVED (supersedes the spec-4-1 entry asking Story 4.4 for one shared "never graded" predicate). Story 4.4 is removed. "Never graded" is now an explicit `SchedulingRecord.firstGradedAt` column with one shared predicate (Architecture AD-14), built in Story 4.6.
+  evidence: The Sprint Change 2026-11-13 proposal was approved, and the PRD, the Architecture Spine and epics.md were updated.

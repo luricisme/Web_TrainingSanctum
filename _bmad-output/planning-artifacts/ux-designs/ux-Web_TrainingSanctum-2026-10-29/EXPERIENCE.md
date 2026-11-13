@@ -1,7 +1,7 @@
 ---
 status: final
 created: 2026-10-29
-updated: 2026-11-08
+updated: 2026-11-13
 sources:
   - ../../prds/prd-Web_TrainingSanctum-2026-10-29/prd.md
   - ../../briefs/brief-Web_TrainingSanctum-2026-10-29/brief.md
@@ -27,14 +27,15 @@ Content hierarchy is fixed at four levels: **Class → Folder → Flashcard → 
 
 | Surface | Reached from | Purpose |
 |---|---|---|
-| Review | Sidebar / app open (default landing when cards are due) | Daily due-queue review session across all Classes (focus mode) |
+| Review | Sidebar / app open (default landing when cards are due) | Daily due-queue review of learned Cards across all Classes (focus mode); never introduces new Cards |
 | Classes | Sidebar | List of Classes with Folder, Flashcard and Card counts; create / rename / delete Class (FR-5) |
 | Class detail | Classes → a Class | That Class's Folders (Unsorted first); create / rename / delete Folder; "Review this class" |
 | Folder detail | Class detail → a Folder | That Folder's Flashcards as rows (Card counts); create Flashcard; per-row "..." menu with Rename, Move to…, Delete; "Review this folder" |
-| Flashcard detail | Folder detail → a Flashcard | That Flashcard's Cards; **"Add cards"** (Manual / Import); Edit and Delete on each Card (no Move); "Review this flashcard" |
+| Flashcard detail | Folder detail → a Flashcard | Card viewer (flip, ← →) on top; **"Learn"** button below it; then that Flashcard's Cards list; "Add cards" (Manual / Import); Edit and Delete on each Card (no Move) |
+| Learn | Flashcard detail → "Learn" | Graded session for one Flashcard: its Unlearned Cards (both directions), then its due Cards; same session screen and focus mode as Review (FR-17). An entry graded Again comes back at the end of the session until graded Hard/Good/Easy (practice repeats are not saved; the first grade sets the schedule). |
 | Add cards panel | Flashcard detail → "Add cards", or "+ Add card" on the Empty due-queue state | Manual mode (Quizlet-style row editor, FR-3) or Import mode (Paste / Upload file, FR-6, FR-7), always into one target Flashcard |
 | Stats | Sidebar | Streak, card totals, SM-2 retention-curve visualization (FR-15) |
-| Settings | Sidebar | Daily new-card limit, theme toggle, export, restore, logout |
+| Settings | Sidebar | Theme toggle, export, restore, logout |
 
 Four-item flat sidebar nav (`{components.sidebar}` in `DESIGN.md`): Review, Classes, Stats, Settings — no secondary nav level. **There is no Import item or Import page**: import is the second mode of a Flashcard's "Add cards", so the target Flashcard is always known. Class detail, Folder detail and Flashcard detail are reached by drilling in from Classes and show a breadcrumb ("Classes / IELTS / Speaking" on a Folder, "Classes / IELTS / Speaking / Weather idioms" on a Flashcard); the Classes sidebar item stays active on all of them. During an active Review Session, the sidebar and all other chrome are hidden entirely (focus mode, FR-11); exiting review (queue cleared or user navigates away) restores it. When the due queue is empty, Review shows the Empty due-queue state instead of the sidebar-less review card.
 
@@ -60,8 +61,8 @@ Behavioral. Visual specs live in `DESIGN.md.components`.
 
 | Component | Use | Behavioral rules |
 |---|---|---|
-| Flip-card | Review | Click/tap anywhere on the card, or press Space, triggers the Quizlet-style 3D Y-axis flip to reveal the answer. Card bounds stay fixed before and after flip — no resize, no content-swap-without-motion. Grading resets the card to its unflipped prompt state for the next queue entry. |
-| Grade buttons | Review, appear after flip only | Again / Hard / Good / Easy, keyboard-mapped 1–4 (or J/K/L/; per PRD FR-9). Again is visually distinct (error-toned, never the accent); Hard/Good/Easy are equal in weight to each other — this is intentional, since classical SM-2 (FR-8) makes Hard/Good/Easy produce an identical next interval; a UI implying otherwise would misrepresent the algorithm. |
+| Flip-card | Review, Learn, Card viewer | Click/tap anywhere on the card, or press Space, flips it either way (Quizlet-style 3D Y-axis). Card bounds stay fixed before and after flip — no resize, no content-swap-without-motion. Grading (Review/Learn) or ← → (Card viewer) shows the next Card on its unflipped prompt side. |
+| Grade buttons | Review and Learn; appear after the first flip and stay while the user flips back, until the entry is graded | Again / Hard / Good / Easy, keyboard-mapped 1–4 (or J/K/L/; per PRD FR-9). Again is visually distinct (error-toned, never the accent); Hard/Good/Easy are equal in weight to each other — this is intentional, since classical SM-2 (FR-8) makes Hard/Good/Easy produce an identical next interval; a UI implying otherwise would misrepresent the algorithm. |
 | Add cards panel | Flashcard detail → "Add cards" | Opens over the Flashcard with the target Flashcard named in its header ("Add cards to Weather idioms") and a two-option pill switcher: **Manual** (default) and **Import**. Switching modes keeps the target Flashcard. Closing with unsaved Manual rows asks before discarding them. |
 | Manual mode | Add cards panel | Quizlet-style editor: numbered rows, each with Term and Definition side by side; a "More fields" toggle per row reveals Example Sentence, Context/Collocation, Part of Speech. Starts with 3 empty rows. Tab moves field to field; Enter in the last field of the last row adds a row; "+ Add row" button below. One "Save" creates every row with Term + Definition filled; fully empty rows are ignored; half-filled rows get inline field errors and are not created, while valid rows still save. |
 | Import mode | Add cards panel | Paste / Upload-file sub-tabs. Paste: delimiter picker + text box + "Preview" (no column mapping). Upload: file → column-mapping step → "Preview". Both end in the import review editor — no divergent flows per source type, and nothing is saved before Save (FR-6, FR-7). |
@@ -74,13 +75,16 @@ Behavioral. Visual specs live in `DESIGN.md.components`.
 | Restore-from-backup modal | Settings, restore action | Simple warning modal stating the consequence ("This will replace all current data") with Confirm/Cancel. No type-to-confirm text input. |
 | Class/Folder/Flashcard list row | Classes, Class detail, Folder detail | Rows grouped under section headers (e.g. "Recently studied", "All folders", "All flashcards"), hover-highlight, trailing overflow ("...") menu. Click a row to drill in; overflow holds rename/delete (Unsorted shows neither); Flashcard rows hold Rename, Move to…, Delete. Class rows show Folder, Flashcard and Card counts; Folder rows show Flashcard + Card counts; Flashcard rows show Card count. |
 | Card row | Flashcard detail | Term and Definition, hover-highlight, overflow menu with Edit and Delete only — no Move (Cards are moved only by moving their Flashcard). |
-| Empty due-queue state | Review, when nothing is due | Shows current/longest streak, a calm congratulatory line, and a prominent "+ Add card" shortcut that opens Manual mode for the last-used Flashcard (with a Flashcard picker to change it) — never a bare message, never a fallthrough to Classes. |
+| Empty due-queue state | Review, when nothing is due | Shows current/longest streak, a calm line, and — when any Flashcard still has Unlearned Cards — a short list of up to 3 such Flashcards ("Weather idioms · 12 new") linking to their page; otherwise a prominent "+ Add card" shortcut that opens Manual mode for the last-used Flashcard (with a Flashcard picker to change it). Never a bare message, never a fallthrough to Classes. |
+| Card viewer | Flashcard detail, top | One flip-card (Term side first) over all of the Flashcard's Cards in list order; ← → buttons flanking a mono "X / N" counter beneath it; ← disabled on the first Card, → on the last; no grading, no shuffle, no autoplay; viewing never changes scheduling (FR-16). Hidden when the Flashcard is empty (its empty state shows instead). |
+| Learn button | Flashcard detail, directly under the Card viewer | The page's one primary (accent) action. Label carries what is waiting: "Learn · 12 new · 3 due"; just "Learn" when nothing waits (FR-17). "Add cards" becomes secondary while the viewer is shown. |
 
 ## State Patterns
 
 | State | Surface | Treatment |
 |---|---|---|
-| Due queue empty | Review | Empty due-queue state: streak + congratulatory line + "+ Add card" (see Component Patterns). |
+| Due queue empty | Review | Empty due-queue state: streak + calm line + Flashcards with Unlearned Cards, or "+ Add card" (see Component Patterns). |
+| Learn complete | Learn | Calm line ("Nothing left to learn in Weather idioms right now.") plus a link back to the Flashcard; no confetti. |
 | Import needs fixing | Import review editor | Problem rows are flagged inline, never blocking: Save is always enabled and saves every valid row; unfixed problems are reported afterwards (FR-6, FR-7). |
 | Import results | Add cards panel, after Save | 3-group layout: Created / Duplicates skipped / Errors, each with counts; Errors list line number + reason per row that was still invalid at Save. |
 | Field-level validation error | Manual mode / card edit | Inline, per-field, per row — e.g. empty Term or Definition rejected with a field-level error on that row, not a blocking modal; other valid rows still save (FR-3). |
@@ -88,15 +92,14 @@ Behavioral. Visual specs live in `DESIGN.md.components`.
 | No Classes yet | Classes | Empty state: one line ("Create a class to start adding cards.") and a primary "Create class" button. |
 | Empty Folder | Folder detail | Empty state with one line ("Create a flashcard to start adding cards.") and a primary "Create flashcard" button. |
 | Empty Flashcard | Flashcard detail | Empty state with a primary "Add cards" button that opens Manual mode. |
-| Scoped review | Review | "Review this class" / "Review this folder" / "Review this flashcard" runs the same session limited to that scope; the session header names the scope. If the scope has nothing due, the Empty due-queue state shows with the scope named. |
+| Scoped review | Review | "Review this class" / "Review this folder" runs the same session limited to that scope's learned Cards; the session header names the scope. A Flashcard's graded entry point is Learn. If the scope has nothing due, the Empty due-queue state shows with the scope named. |
 | Restore confirmation | Settings | Modal gate before replacing existing data — restore requires explicit confirmation when the account already has data (FR-14). |
-| Daily batch cap reached | Review | New-card portion of the session ends; already-due older cards remain available and are never withheld by the cap (FR-10). No blocking message — the queue simply continues with due cards only. |
 | Streak broken | Stats / outside review | Current streak resets to 0 at the next calendar-day boundary with zero graded cards; no "streak frozen" or vacation-pause mechanic ships in v1 (FR-12). |
 
 ## Interaction Primitives
 
-- **Keyboard (desktop-first, Review session):** Space reveals the answer; 1–4 or J/K/L/; submit a Grade (Again/Hard/Good/Easy respectively). No action in the review loop requires the mouse (FR-9). Reveal/grade/advance renders with no perceptible lag under rapid sequential key presses — sub-100ms perceived transition latency (PRD §6 NFR).
-- **Mobile (touch, Review session):** Tap-to-flip the card (touch equivalent of click), **plus** swipe gestures — left/right/up/down mapped to the 4 grades — as an added interaction layer, alongside ordinary tap targets on the grade buttons themselves. Swipe is additive, not a replacement for tapping the grade buttons.
+- **Keyboard (desktop-first, Review and Learn sessions):** Space flips the card either way; 1–4 or J/K/L/; submit a Grade (Again/Hard/Good/Easy respectively) once the answer has been shown. **Card viewer:** Space flips, ← / → move between Cards. Keys are ignored while focus is in a field or a panel/modal is open; Space never scrolls the page. No action in the review loop requires the mouse (FR-9). Reveal/grade/advance renders with no perceptible lag under rapid sequential key presses — sub-100ms perceived transition latency (PRD §6 NFR).
+- **Mobile (touch, Review session):** Tap-to-flip the card (touch equivalent of click), **plus** swipe gestures — left/right/up/down mapped to the 4 grades — as an added interaction layer, alongside ordinary tap targets on the grade buttons themselves. Swipe is additive, not a replacement for tapping the grade buttons. **Card viewer:** tap flips; a horizontal swipe moves ← / → (no grading).
 - **Banned in the review loop:** any affordance implying Hard produces a shorter next interval than Good/Easy at the same repetition count (misrepresents classical SM-2, FR-8); gamified feedback (confetti, badges, mascot animation) on grading.
 
 ## Accessibility Floor
@@ -123,7 +126,7 @@ Failure: he saves with the Definition empty — that row shows an inline field e
 ### Flow 2 — The daily review session (Luric, every day, no exceptions)
 
 1. Luric opens the app. Due cards exist, so Review loads directly into focus mode — no sidebar, no streak badge, no nav competing for attention (FR-11).
-2. The first due Scheduling Record shows its prompt side. He presses Space; the card performs its 3D flip to reveal the answer.
+2. The first due Scheduling Record shows its prompt side. He presses Space; the card performs its 3D flip to reveal the answer. Only learned Cards appear; new Cards wait in their Flashcard (Flow 4).
 3. He grades with a single keystroke (1–4 or J/K/L/;). The card resets and the next due entry appears immediately — no perceptible lag (FR-9).
 4. He repeats through the queue. A Card due in both directions appears as two independent, separately-gradable entries.
 5. He doesn't have to clear the whole queue — grading even one card today is enough.
@@ -141,6 +144,15 @@ Failure: he stops partway through the queue — the streak still counts for the 
 6. **Climax:** the results view shows three grouped outcomes at a glance — "Created (27), Duplicates skipped (2), Errors (1: line 22, missing definition)" — so he can see exactly what happened without hunting through a toast or re-checking his file row by row. Thirty manual entries became one pass and one glance, and "Done" lands him back in the Flashcard with the 27 new Cards listed.
 
 Failure: if every row in the file is malformed and he saves without fixing any, Created shows (0) and every row appears under Errors with its line number and reason — the import still completes without crashing, and nothing is silently lost.
+
+### Flow 4 — Learning a Flashcard (Luric, after adding a batch of new words)
+
+1. Luric opens Classes → IELTS → Speaking → "Weather idioms". The Card viewer shows the first Card, Term side up, "1 / 12".
+2. He presses Space to flip, → to move on, and skims all 12 Cards — nothing is graded, nothing is scheduled (FR-16).
+3. He presses "Learn · 12 new". The session runs in focus mode: each Card appears in both directions, and he grades each one (FR-17). The two he misses (Again) come back at the end of the session until he gets them.
+4. **Climax:** the last grade lands on "Nothing left to learn in Weather idioms right now." From tomorrow, those Cards come back on their own in the daily Review (Flow 2).
+
+Failure: he stops halfway — the Cards he graded in both directions are learned; the rest stay in "Learn · 5 new" for next time.
 
 ## Responsive & Platform
 
