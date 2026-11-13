@@ -90,3 +90,13 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-2-csv-excel-import-with-column-mapping-and-review-editor.md`
   summary: Cap request body size in `readJson` (apps/web/lib/api-response.ts) before JSON parsing, for all API routes.
   evidence: `readJson` calls `request.json()` with no byte limit (pre-existing; paste parse and the new file parse both rely on it). In production Vercel's 4.5 MB body limit bounds it, but self-hosted or local runs buffer bodies of any size.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-sm-2-scheduling-engine.md`
+  summary: Epic 5 restore (FR-14) must validate Scheduling Record invariants (interval ≥ 1 once repetitions ≥ 1, repetitions a non-negative integer, ease_factor ≥ 1.3, valid dates) before writing rows, because applyGrade trusts its input state.
+  evidence: maybe-false, medium if true. applyGrade does not validate input. Today only applyGrade and the creation defaults write these fields, so a bad state can't arise. A hand-edited backup could cause it (e.g. repetitions 3 with interval 0 makes a card due every day). A restore-route test with such a payload would prove it.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-sm-2-scheduling-engine.md`
+  summary: Check how toLocalCalendarDay (time.ts, from Epic 2) behaves in zones where DST changes at midnight (e.g. America/Santiago, America/Havana), where local 00:00 does not exist on the transition day.
+  evidence: maybe-false, medium if true. The helper may return 01:00 or a time on the previous day on those dates, which would affect 4.3's "due if ≤ start of today" filter and Epic 5 streak days. A unit test of toLocalCalendarDay on a Santiago spring-forward date would settle it.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-sm-2-scheduling-engine.md`
+  summary: Story 4.4 needs one shared "never graded" predicate for the new-card cap (e.g. interval === 0 on both records, or a gradedAt marker), rather than deriving "new" from repetitions === 0.
+  evidence: The epic says a card that Again reset to repetitions 0 is not new. applyGrade never returns interval 0, so interval 0 currently means never graded, but only by convention. That belongs to 4.4's queue design, not to this engine.
