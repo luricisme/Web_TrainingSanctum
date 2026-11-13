@@ -107,6 +107,27 @@ export interface ReviewQueueResponse {
 }
 
 /**
+ * Empty due-queue contract (spec-4-5): `GET /api/review/unlearned` takes the
+ * same optional scope as the queue (`reviewQueueQuerySchema`).
+ */
+export interface UnlearnedFlashcard {
+  id: string;
+  name: string;
+  /** Unlearned Cards in the studied directions, as Learn counts them. */
+  newCards: number;
+}
+
+export interface UnlearnedFlashcardsResponse {
+  /** At most 3, newest unlearned Card first. */
+  flashcards: UnlearnedFlashcard[];
+  /**
+   * Where "+ Add card" goes: the Flashcard of the newest Card, else the newest
+   * Flashcard, within the scope; null when there is none.
+   */
+  addCardTarget: { id: string; name: string } | null;
+}
+
+/**
  * Learn queue contract (spec-4-8): `GET /api/review/learn?flashcardId=` runs a
  * graded session for one Flashcard. `flashcardId` is required.
  */

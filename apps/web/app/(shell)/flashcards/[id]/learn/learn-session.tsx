@@ -13,15 +13,20 @@ import {
 } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { buttonSecondary, linkClass } from "@/app/components/ui";
+import { useFocusMode } from "../../../focus-mode";
 import { GradingSession, stageClass } from "../../../review/grading-session";
+import { SessionExit } from "../../../session-exit";
 
 const headerClass = "w-full max-w-review-card text-body-sm text-foreground-secondary";
 const finishedClass =
   "flex min-h-80 w-full max-w-review-card flex-col items-center justify-center gap-6 text-center";
 
-function Loading() {
+/** The skeleton card, already in focus mode (spec-4-5) so the chrome never flashes in. */
+function Loading({ exitHref }: { exitHref: string }) {
+  useFocusMode(true);
   return (
-    <div className={stageClass}>
+    <div className={stageClass} data-focus-session="">
+      <SessionExit href={exitHref} />
       <h1 className="sr-only">Learn</h1>
       <div
         role="status"
@@ -91,7 +96,7 @@ export function LearnSession({ flashcardId }: { flashcardId: string }) {
     enabled: round > 0,
   });
 
-  if (isPending) return <Loading />;
+  if (isPending) return <Loading exitHref={`/flashcards/${encodeURIComponent(flashcardId)}`} />;
 
   if (!data) {
     const notFound = error instanceof ApiError && error.status === 404;
@@ -141,7 +146,7 @@ export function LearnSession({ flashcardId }: { flashcardId: string }) {
   );
 
   if (round > 0) {
-    if (cardsQuery.isPending) return <Loading />;
+    if (cardsQuery.isPending) return <Loading exitHref={href} />;
     if (!cardsQuery.data) {
       return (
         <div className={stageClass}>
@@ -176,6 +181,7 @@ export function LearnSession({ flashcardId }: { flashcardId: string }) {
         )}
         repeatAgain
         practice
+        exitHref={href}
         header={
           <h1 className={headerClass}>
             Practicing {nameLink} · grades aren&apos;t saved
@@ -197,6 +203,7 @@ export function LearnSession({ flashcardId }: { flashcardId: string }) {
     <GradingSession
       entries={data.entries}
       repeatAgain
+      exitHref={href}
       onGradeSettled={() =>
         void queryClient.invalidateQueries({ queryKey: ["flashcard", flashcard.id] })
       }

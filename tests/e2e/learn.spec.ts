@@ -236,6 +236,50 @@ test("a full session by keyboard: new Cards in order, Again repeats at the end, 
   await expect(page.getByRole("link", { name: "Learn", exact: true })).toBeVisible();
 });
 
+// spec-4-5: focus mode in Learn and the practice run.
+test("Learn runs in focus mode; the sidebar returns on completion; Exit and Esc lead to the Flashcard", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { flashcard } = await seed(email, [NEW_A]);
+  const mainNav = page.getByRole("navigation", { name: "Main" });
+  const exit = page.getByRole("link", { name: "Exit" });
+
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(mainNav).toHaveCount(0);
+  await expect(exit).toHaveAttribute("href", `/flashcards/${flashcard.id}`);
+  await expect(exit).toHaveAttribute("aria-keyshortcuts", "Escape");
+
+  for (const key of ["Space", "3", "Space", "3"]) await page.keyboard.press(key);
+  await expect(page.getByText(doneLine)).toBeVisible();
+  await expect(mainNav).toBeVisible();
+  await expect(exit).toHaveCount(0);
+
+  // The practice run is in focus mode too; Esc leaves it for the Flashcard.
+  await page.getByRole("button", { name: "Study all cards again" }).click();
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(mainNav).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(`/flashcards/${flashcard.id}`);
+  await expect(mainNav).toBeVisible();
+
+  // Exit mid-session.
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  await page.getByRole("button", { name: "Study all cards again" }).click();
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await exit.click();
+  await expect(page).toHaveURL(`/flashcards/${flashcard.id}`);
+  await expect(mainNav).toBeVisible();
+});
+
+test("an unknown Flashcard's Learn page keeps the sidebar", async ({ page }) => {
+  await register(page);
+  await page.goto("/flashcards/does-not-exist/learn");
+  await expect(page.getByText("This flashcard does not exist.")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+});
+
 test("a Learn session with nothing waiting shows Learn complete", async ({ page }) => {
   const email = await register(page);
   const { flashcard } = await seed(email, [{ ...LEARNED_DUE, dueIn: [1, 1] }]);

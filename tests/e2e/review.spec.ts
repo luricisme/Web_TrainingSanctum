@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import { mkdirSync } from "node:fs";
 import { prisma } from "@training-sanctum/db";
 
 async function register(page: Page): Promise<string> {
@@ -373,4 +374,294 @@ test("unknown and invalid scopes offer Review all cards instead of a retry", asy
   await expect(page.getByText("This review link isn't valid.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Review all cards" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
 });
+
+// spec-4-5: focus mode and the Empty due-queue state.
+const mainNav = (page: Page) => page.getByRole("navigation", { name: "Main" });
+
+/** Moves every Scheduling Record of the user's Cards to tomorrow, so nothing is due. */
+async function nothingDue(email: string) {
+  await prisma.schedulingRecord.updateMany({
+    where: { card: { user: { email } } },
+    data: { nextReviewDate: new Date(Date.now() + 86_400_000) },
+  });
+}
+
+/** Adds `count` unlearned Cards to a Flashcard, each newer than the last. */
+async function addNewCards(email: string, flashcardId: string, count: number, offset = 0) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+  for (let i = 0; i < count; i++) {
+    await prisma.card.create({
+      data: {
+        term: `new ${offset + i}`,
+        definition: `new definition ${offset + i}`,
+        flashcardId,
+        userId: user.id,
+        schedulingRecords: {
+          create: [
+            { direction: "TERM_TO_DEFINITION", nextReviewDate: new Date() },
+            { direction: "DEFINITION_TO_TERM", nextReviewDate: new Date() },
+          ],
+        },
+      },
+    });
+  }
+}
+
+test("the server-rendered session hides the sidebar before any script runs", async ({
+  page,
+  browser,
+}) => {
+  const email = await register(page);
+  await seedCard(email);
+  const noJs = await browser.newContext({
+    storageState: await page.context().storageState(),
+    javaScriptEnabled: false,
+  });
+  const raw = await noJs.newPage();
+  await raw.goto("/review");
+  await expect(raw.locator("[data-focus-session]")).toHaveCount(1);
+  await expect(raw.locator("aside[data-sidebar]")).toHaveCount(1);
+  await expect(raw.getByRole("navigation", { name: "Main" })).toBeHidden();
+  await noJs.close();
+});
+
+test("focus mode hides the sidebar during the session and brings it back after the last grade", async ({
+  page,
+}) => {
+  const email = await register(page);
+  await seedCard(email);
+  await page.goto("/classes");
+  await expect(mainNav(page)).toBeVisible();
+
+  await page.goto("/review");
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(mainNav(page)).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Exit" })).toHaveAttribute("href", "/classes");
+
+  for (const key of ["Space", "3", "Space", "3"]) await page.keyboard.press(key);
+  await expect(page.getByText(doneLine)).toBeVisible();
+  await expect(mainNav(page)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Exit" })).toHaveCount(0);
+});
+
+test("leaving mid-session brings the sidebar back: Exit, Esc, Back and an in-app link", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { cls, folder } = await seedCard(email);
+
+  // Exit (unscoped) goes to Classes.
+  await page.goto("/review");
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await page.getByRole("link", { name: "Exit" }).click();
+  await expect(page).toHaveURL("/classes");
+  await expect(mainNav(page)).toBeVisible();
+
+  // Esc in a class-scoped session goes to the Class.
+  await page.goto(`/review?classId=${cls.id}`);
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(mainNav(page)).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(`/classes/${cls.id}`);
+  await expect(mainNav(page)).toBeVisible();
+
+  // Esc with a modifier is ignored; plain Esc in a folder scope goes to the Folder.
+  await page.goto(`/review?folderId=${folder.id}`);
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Exit" })).toHaveAttribute(
+    "href",
+    `/folders/${folder.id}`
+  );
+  await page.keyboard.press("Shift+Escape");
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(`/folders/${folder.id}`);
+  await expect(mainNav(page)).toBeVisible();
+
+  // Browser Back from a session.
+  await page.goto("/review");
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(`/folders/${folder.id}`);
+  await expect(mainNav(page)).toBeVisible();
+
+  // An in-app link (the scope name in the header).
+  await page.goto(`/review?classId=${cls.id}`);
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await page.getByRole("heading", { level: 1 }).getByRole("link", { name: "IELTS" }).click();
+  await expect(page).toHaveURL(`/classes/${cls.id}`);
+  await expect(mainNav(page)).toBeVisible();
+});
+
+test("nothing due: the Empty due-queue state lists up to 3 Flashcards with new Cards", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { folder, flashcard } = await seedCard(email);
+  await nothingDue(email);
+  await addNewCards(email, flashcard.id, 2);
+  const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+  const more = [];
+  for (const name of ["Phrasal verbs", "Academic verbs", "Linking words"]) {
+    const f = await prisma.flashcard.create({
+      data: { name, folderId: folder.id, userId: user.id },
+    });
+    await addNewCards(email, f.id, 1, more.length * 10 + 10);
+    more.push(f);
+  }
+
+  await page.goto("/review");
+  await expect(page.getByText(doneLine)).toBeVisible();
+  await expect(mainNav(page)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Exit" })).toHaveCount(0);
+
+  const rows = page.getByRole("region", { name: "Ready to learn" }).getByRole("link");
+  await expect(rows).toHaveText([
+    "Linking words · 1 new",
+    "Academic verbs · 1 new",
+    "Phrasal verbs · 1 new",
+  ]);
+  await expect(rows.first()).toHaveAttribute("href", `/flashcards/${more[2].id}`);
+  // No accent action on the list variant.
+  await expect(page.locator("main :is(a, button).bg-accent")).toHaveCount(0);
+
+  await rows.first().click();
+  await expect(page).toHaveURL(`/flashcards/${more[2].id}`);
+});
+
+test("nothing due and nothing new: + Add card opens Add cards on the newest Card's Flashcard", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { flashcard } = await seedCard(email);
+  await nothingDue(email);
+
+  await page.goto("/review");
+  await expect(page.getByText(doneLine)).toBeVisible();
+  const add = page.getByRole("link", { name: "+ Add card" });
+  await expect(add).toHaveAttribute("href", `/flashcards/${flashcard.id}?add=1`);
+  await expect(page.getByText("Adds to Weather idioms")).toBeVisible();
+  // "+ Add card" is the screen's one accent action.
+  const accent = page.locator("main :is(a, button).bg-accent");
+  await expect(accent).toHaveCount(1);
+  await expect(accent).toHaveText("+ Add card");
+
+  await add.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Add cards to Weather idioms");
+  await expect(dialog.getByLabel("Term, row 1")).toBeVisible();
+  await expect(page).toHaveURL(`/flashcards/${flashcard.id}`);
+});
+
+test("a failed load of the next step offers Try again", async ({ page }) => {
+  const email = await register(page);
+  await seedCard(email);
+  await nothingDue(email);
+  let failing = true;
+  await page.route("**/api/review/unlearned*", (route) =>
+    failing
+      ? route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "INTERNAL_ERROR", message: "boom" } }),
+        })
+      : route.continue()
+  );
+
+  await page.goto("/review");
+  await expect(page.getByText(doneLine)).toBeVisible();
+  const failed = page.getByRole("alert").filter({ hasText: "Could not load what to study next." });
+  await expect(failed).toBeVisible();
+  failing = false;
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("link", { name: "+ Add card" })).toBeVisible();
+  await expect(failed).toHaveCount(0);
+});
+
+test("a new account's + Add card goes to Classes", async ({ page }) => {
+  await register(page);
+  await expect(page.getByText(doneLine)).toBeVisible();
+  await expect(page.getByRole("link", { name: "+ Add card" })).toHaveAttribute("href", "/classes");
+});
+
+test("a scoped Review with nothing due names its scope and lists only its Flashcards", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { folder, flashcard } = await seedCard(email);
+  await nothingDue(email);
+  await addNewCards(email, flashcard.id, 1);
+  const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+  const other = await prisma.class.create({
+    data: {
+      name: "TOEFL",
+      userId: user.id,
+      folders: { create: [{ name: "Reading", userId: user.id }] },
+    },
+    include: { folders: true },
+  });
+  const outside = await prisma.flashcard.create({
+    data: { name: "Academic verbs", folderId: other.folders[0].id, userId: user.id },
+  });
+  await addNewCards(email, outside.id, 1, 50);
+
+  await page.goto(`/review?folderId=${folder.id}`);
+  await expect(
+    page.getByText("You're all caught up — nothing in Speaking is due for review right now.")
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Ready to learn" }).getByRole("link")
+  ).toHaveText(["Weather idioms · 1 new"]);
+});
+
+// Visual check: screenshots land in test-results/screenshots for comparison
+// against DESIGN.md and mockups/key-screens.html.
+for (const theme of ["dark", "light"] as const) {
+  for (const width of [1280, 390]) {
+    test(`focus mode and empty-state screenshots (${theme}, ${width}px)`, async ({ page }) => {
+      mkdirSync("test-results/screenshots", { recursive: true });
+      await page.setViewportSize({ width, height: 900 });
+      const email = await register(page);
+      const { flashcard } = await seedCard(email);
+      const setTheme = () =>
+        page.evaluate((t) => {
+          if (t === "light") document.documentElement.dataset.theme = "light";
+          else delete document.documentElement.dataset.theme;
+        }, theme);
+      const shot = (name: string) =>
+        page.screenshot({
+          path: `test-results/screenshots/review-${name}-${theme}-${width}.png`,
+          animations: "disabled",
+        });
+
+      await page.goto("/review");
+      await expect(page.getByText("1 / 2")).toBeVisible();
+      await setTheme();
+      await shot("session");
+      await page.keyboard.press("Space");
+      await expect(page.getByRole("button", { name: /^Again/ })).toBeVisible();
+      await shot("session-revealed");
+
+      // Cleared queue with nothing new: the + Add card variant.
+      for (const key of ["3", "Space", "3"]) await page.keyboard.press(key);
+      await expect(page.getByRole("link", { name: "+ Add card" })).toBeVisible();
+      await shot("empty-add");
+
+      // The list variant.
+      await nothingDue(email);
+      await addNewCards(email, flashcard.id, 12);
+      const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+      const phrasal = await prisma.flashcard.create({
+        data: { name: "Phrasal verbs", folderId: flashcard.folderId, userId: user.id },
+      });
+      await addNewCards(email, phrasal.id, 3, 100);
+      await page.goto("/review");
+      await expect(page.getByRole("region", { name: "Ready to learn" })).toBeVisible();
+      await setTheme();
+      await shot("empty-list");
+    });
+  }
+}

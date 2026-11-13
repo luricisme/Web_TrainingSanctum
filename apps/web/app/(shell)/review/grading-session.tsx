@@ -11,6 +11,8 @@ import {
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { isTextField } from "@/lib/keyboard";
 import { formErrorClass } from "@/app/components/ui";
+import { useFocusMode } from "../focus-mode";
+import { SessionExit } from "../session-exit";
 import { ReviewCard } from "./review-card";
 
 /**
@@ -95,10 +97,13 @@ function advance(s: SessionState, slot: Slot, repeat: boolean): SessionState {
  * saved. With `practice` (spec-4-8b, Learn's "Study all cards again"), no
  * grade is saved at all and Again always repeats. Like `entries`, it is read
  * once on mount: key the component to start a new run.
+ * spec-4-5: while a card is on screen, focus mode hides the sidebar and an
+ * Exit link (or Esc) leaves for `exitHref`.
  */
 export function GradingSession({
   entries,
   header,
+  exitHref,
   finished,
   repeatAgain,
   practice = false,
@@ -106,6 +111,8 @@ export function GradingSession({
 }: {
   entries: ReviewQueueEntry[];
   header: ReactNode;
+  /** Where Exit and Esc lead: the scope or Flashcard page the session came from. */
+  exitHref: string;
   /** Shown once every slot has been graded. */
   finished: ReactNode;
   repeatAgain: boolean;
@@ -132,6 +139,8 @@ export function GradingSession({
   // session before React re-renders (no stale reveal/grade between keys).
   const live = useRef(state);
   const current = state.slots[state.index];
+  // Chrome comes back with the finished screen, or when the session unmounts.
+  useFocusMode(Boolean(current));
 
   const update = useCallback((next: (s: SessionState) => SessionState) => {
     const value = next(live.current);
@@ -227,7 +236,8 @@ export function GradingSession({
   const total = state.slots.length;
 
   return (
-    <div className={stageClass}>
+    <div className={stageClass} data-focus-session={current ? "" : undefined}>
+      {current ? <SessionExit href={exitHref} /> : null}
       {header}
 
       {current ? (

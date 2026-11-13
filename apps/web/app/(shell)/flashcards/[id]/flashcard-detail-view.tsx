@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type CardSummary,
@@ -98,6 +99,22 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
     queryFn: () => apiFetch<FlashcardCardsResponse>(`/api/flashcards/${flashcardId}`),
     retry: (count, err) => !(err instanceof ApiError && err.status === 404) && count < 2,
   });
+
+  // spec-4-5: "+ Add card" on the Empty due-queue state links here with
+  // `?add=1`. Once the Flashcard has loaded, open the Add cards panel (Manual
+  // mode) and drop the parameter so a reload or Back does not reopen it.
+  const router = useRouter();
+  const pathname = usePathname();
+  const addRequested = useSearchParams().get("add") === "1";
+  const [addHandled, setAddHandled] = useState(false);
+  if (addRequested !== addHandled && (data || !addRequested)) {
+    // Adjusting state during render (not in an effect): one pass, no flash.
+    setAddHandled(addRequested);
+    if (addRequested) setAdding(true);
+  }
+  useEffect(() => {
+    if (addHandled && addRequested) router.replace(pathname, { scroll: false });
+  }, [addHandled, addRequested, pathname, router]);
 
   if (isPending) {
     return (
