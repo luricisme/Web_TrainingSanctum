@@ -110,13 +110,18 @@ export function ClassDetailView({ classId }: { classId: string }) {
           <SectionMarker as="h2" id="all-folders">
             All folders
           </SectionMarker>
-          <button
-            type="button"
-            onClick={() => setDialog({ kind: "create" })}
-            className={buttonPrimary}
-          >
-            Create folder
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <Link href={`/review?classId=${classId}`} className={buttonSecondary}>
+              Review this class
+            </Link>
+            <button
+              type="button"
+              onClick={() => setDialog({ kind: "create" })}
+              className={buttonPrimary}
+            >
+              Create folder
+            </button>
+          </div>
         </div>
         <ul>
           {folders.map((folder) => (

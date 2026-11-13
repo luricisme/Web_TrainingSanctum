@@ -128,15 +128,20 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
           <SectionMarker as="h2" id="all-flashcards">
             All flashcards
           </SectionMarker>
-          {empty ? null : (
-            <button
-              type="button"
-              onClick={() => setDialog({ kind: "create" })}
-              className={buttonPrimary}
-            >
-              Create flashcard
-            </button>
-          )}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <Link href={`/review?folderId=${data.folder.id}`} className={buttonSecondary}>
+              Review this folder
+            </Link>
+            {empty ? null : (
+              <button
+                type="button"
+                onClick={() => setDialog({ kind: "create" })}
+                className={buttonPrimary}
+              >
+                Create flashcard
+              </button>
+            )}
+          </div>
         </div>
         {empty ? (
           <div className="flex flex-col items-start gap-4 pt-3">

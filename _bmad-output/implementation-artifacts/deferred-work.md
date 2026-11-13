@@ -109,3 +109,12 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-grade-a-card-persist-scheduling-update.md`
   summary: sprint-status.yaml still lists stories with merged PRs as `review` (4.1 and most of Epics 1–3).
   evidence: The git log shows the merged PRs (e.g. #14 for 4.1), but the tracker was never moved to done.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-3-due-queue-review-session-keyboard-first.md`
+  summary: GET /api/review/queue returns every due record with no `take` or paging, so a large backlog loads as one payload and one client snapshot.
+  evidence: maybe-false, medium if true. A large CSV import makes every card due in both directions at once. To settle it, measure payload size and time-to-paint for about 5k due entries. Story 4.4's new-card cap will bound part of it.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-3-due-queue-review-session-keyboard-first.md`
+  summary: Client screens do not handle a 401 from an expired session. The review loop shows "Your grade wasn't saved" on every retry instead of sending the user to sign in.
+  evidence: The cause predates this story and affects the whole app. No client code checks 401 (apart from the login form), and proxy.ts only guards page navigation. It needs one app-wide fix in apiFetch or the QueryClient, such as redirecting to /login on UNAUTHENTICATED.
+- source_spec: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-13.md`
+  summary: RESOLVED (supersedes the spec-4-1 entry asking Story 4.4 for one shared "never graded" predicate). Story 4.4 is removed. "Never graded" is now an explicit `SchedulingRecord.firstGradedAt` column with one shared predicate (Architecture AD-14), built in Story 4.6.
+  evidence: The Sprint Change 2026-11-13 proposal was approved, and the PRD, the Architecture Spine and epics.md were updated.
