@@ -32,10 +32,10 @@ Content hierarchy is fixed at four levels: **Class → Folder → Flashcard → 
 | Class detail | Classes → a Class | That Class's Folders (Unsorted first); create / rename / delete Folder; "Review this class" |
 | Folder detail | Class detail → a Folder | That Folder's Flashcards as rows (Card counts); create Flashcard; per-row "..." menu with Rename, Move to…, Delete; "Review this folder" |
 | Flashcard detail | Folder detail → a Flashcard | Card viewer (flip, ← →) on top; **"Learn"** button below it; then that Flashcard's Cards list; "Add cards" (Manual / Import); Edit and Delete on each Card (no Move) |
-| Learn | Flashcard detail → "Learn" | Graded session for one Flashcard: its Unlearned Cards (both directions), then its due Cards; same session screen and focus mode as Review (FR-17). An entry graded Again comes back at the end of the session until graded Hard/Good/Easy (practice repeats are not saved; the first grade sets the schedule). |
+| Learn | Flashcard detail → "Learn" | Graded session for one Flashcard: its unlearned directions (in the studied directions, FR-18), then its due Cards; same session screen and focus mode as Review (FR-17). An entry graded Again comes back at the end of the session until graded Hard/Good/Easy (practice repeats are not saved; the first grade sets the schedule). When it ends, "Study all cards again" runs every Card as unsaved practice (FR-17). |
 | Add cards panel | Flashcard detail → "Add cards", or "+ Add card" on the Empty due-queue state | Manual mode (Quizlet-style row editor, FR-3) or Import mode (Paste / Upload file, FR-6, FR-7), always into one target Flashcard |
 | Stats | Sidebar | Streak, card totals, SM-2 retention-curve visualization (FR-15) |
-| Settings | Sidebar | Theme toggle, export, restore, logout |
+| Settings | Sidebar | Theme toggle, Study directions (FR-18), export, restore, logout |
 
 Four-item flat sidebar nav (`{components.sidebar}` in `DESIGN.md`): Review, Classes, Stats, Settings — no secondary nav level. **There is no Import item or Import page**: import is the second mode of a Flashcard's "Add cards", so the target Flashcard is always known. Class detail, Folder detail and Flashcard detail are reached by drilling in from Classes and show a breadcrumb ("Classes / IELTS / Speaking" on a Folder, "Classes / IELTS / Speaking / Weather idioms" on a Flashcard); the Classes sidebar item stays active on all of them. During an active Review Session, the sidebar and all other chrome are hidden entirely (focus mode, FR-11); exiting review (queue cleared or user navigates away) restores it. When the due queue is empty, Review shows the Empty due-queue state instead of the sidebar-less review card.
 
@@ -76,8 +76,9 @@ Behavioral. Visual specs live in `DESIGN.md.components`.
 | Class/Folder/Flashcard list row | Classes, Class detail, Folder detail | Rows grouped under section headers (e.g. "Recently studied", "All folders", "All flashcards"), hover-highlight, trailing overflow ("...") menu. Click a row to drill in; overflow holds rename/delete (Unsorted shows neither); Flashcard rows hold Rename, Move to…, Delete. Class rows show Folder, Flashcard and Card counts; Folder rows show Flashcard + Card counts; Flashcard rows show Card count. |
 | Card row | Flashcard detail | Term and Definition, hover-highlight, overflow menu with Edit and Delete only — no Move (Cards are moved only by moving their Flashcard). |
 | Empty due-queue state | Review, when nothing is due | Shows current/longest streak, a calm line, and — when any Flashcard still has Unlearned Cards — a short list of up to 3 such Flashcards ("Weather idioms · 12 new") linking to their page; otherwise a prominent "+ Add card" shortcut that opens Manual mode for the last-used Flashcard (with a Flashcard picker to change it). Never a bare message, never a fallthrough to Classes. |
-| Card viewer | Flashcard detail, top | One flip-card (Term side first) over all of the Flashcard's Cards in list order; ← → buttons flanking a mono "X / N" counter beneath it; ← disabled on the first Card, → on the last; no grading, no shuffle, no autoplay; viewing never changes scheduling (FR-16). Hidden when the Flashcard is empty (its empty state shows instead). |
+| Card viewer | Flashcard detail, top | One flip-card (Term side first; Definition side first when only Definition → Term is studied, FR-18) over all of the Flashcard's Cards in list order; ← → buttons flanking a mono "X / N" counter beneath it; ← disabled on the first Card, → on the last; no grading, no shuffle, no autoplay; viewing never changes scheduling (FR-16). Hidden when the Flashcard is empty (its empty state shows instead). |
 | Learn button | Flashcard detail, directly under the Card viewer | The page's one primary (accent) action. Label carries what is waiting: "Learn · 12 new · 3 due"; just "Learn" when nothing waits (FR-17). "Add cards" becomes secondary while the viewer is shown. |
+| Study directions | Settings, its own section below Theme | One choice of three: "Both directions" (default), "Term → Definition", "Definition → Term" (FR-18). Saves on change, no Save button; a quiet "Saved" status confirms it and an inline error rolls the choice back. Helper line: "Which way cards are asked in Learn and Review. Turning a direction off keeps its progress." Keyboard: arrow keys move between the three options (radio group). |
 
 ## State Patterns
 
@@ -149,10 +150,10 @@ Failure: if every row in the file is malformed and he saves without fixing any, 
 
 1. Luric opens Classes → IELTS → Speaking → "Weather idioms". The Card viewer shows the first Card, Term side up, "1 / 12".
 2. He presses Space to flip, → to move on, and skims all 12 Cards — nothing is graded, nothing is scheduled (FR-16).
-3. He presses "Learn · 12 new". The session runs in focus mode: each Card appears in both directions, and he grades each one (FR-17). The two he misses (Again) come back at the end of the session until he gets them.
+3. He presses "Learn · 12 new". The session runs in focus mode: each Card appears in both directions (his Study directions setting is the default, Both), and he grades each one (FR-17). The two he misses (Again) come back at the end of the session until he gets them.
 4. **Climax:** the last grade lands on "Nothing left to learn in Weather idioms right now." From tomorrow, those Cards come back on their own in the daily Review (Flow 2).
 
-Failure: he stops halfway — the Cards he graded in both directions are learned; the rest stay in "Learn · 5 new" for next time.
+Failure: he stops halfway — every direction he graded is learned and comes back in Review on its due date; the Cards with an ungraded direction stay in "Learn · 5 new" for next time.
 
 ## Responsive & Platform
 

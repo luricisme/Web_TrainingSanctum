@@ -24,7 +24,7 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 ### 2.1 Jobs To Be Done
 
 - As the builder, I need a zero-paywall, zero-clutter place to log and drill advanced vocabulary/idioms I encounter day-to-day, so the moment of discovery doesn't get lost.
-- I need recall testing that's honest in both directions — recognizing a word and producing it are different skills, and I need to know which one I'm actually weak on.
+- I need recall testing that's honest in both directions — recognizing a word and producing it are different skills, and I need to know which one I'm actually weak on. Both directions is the default; studying only one is a deliberate opt-out (FR-18).
 - I need review sessions fast and frictionless enough (keyboard-only, instant transitions) that I do them daily without the session itself becoming the reason I skip a day.
 - I need to trust the tool with months of study history — a lost streak or corrupted schedule is a dealbreaker for a daily-dependency habit tool.
 - As a portfolio piece, I need the finished product to demonstrate correct algorithmic implementation and testing discipline I can speak to in an interview or case study.
@@ -40,27 +40,28 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 
 - **UJ-1. Logging a word in under 5 seconds.** The user, mid-conversation or mid-reading, hits a word worth keeping. They open the app, hit "Add card" (from a Flashcard, or the quick-add shortcut, which remembers the last Flashcard used), type it with the structured fields, and it's saved to the right Flashcard before they lose their train of thought. *(realizes FR-3, FR-5)*
 
-- **UJ-2. The daily review session.** Each day, the user opens the app to a single focused review screen — no nav, no sidebar, no streak badge competing for attention. They flip through due cards of learned Cards in both directions, grading recall with one keystroke per card (Space to flip, 1–4/J/K/L/; to grade), until the due queue is empty — though grading even one card today is enough to keep the streak alive; the queue doesn't have to fully clear. New Cards never appear here until they are learned in a Flashcard's Learn session (UJ-4). *(realizes FR-9, FR-11)*
+- **UJ-2. The daily review session.** Each day, the user opens the app to a single focused review screen — no nav, no sidebar, no streak badge competing for attention. They flip through due cards of learned Cards in both directions (studied directions, FR-18), grading recall with one keystroke per card (Space to flip, 1–4/J/K/L/; to grade), until the due queue is empty — though grading even one card today is enough to keep the streak alive; the queue doesn't have to fully clear. New Cards never appear here until they are learned in a Flashcard's Learn session (UJ-4). *(realizes FR-9, FR-11)*
 
 - **UJ-3. Bulk import after a study binge.** The user has accumulated 30 new words in a notes app over a week. They open the target Flashcard, choose "Add cards → Import", and paste the list or upload a CSV; the system parses term/definition pairs (and optional extra fields) into the same row editor as manual entry, flagging malformed lines and duplicates. They fix two typos, press Save, and the cards land in that Flashcard in one pass, instead of 30 manual entries. *(realizes FR-6, FR-7)*
 
-- **UJ-4. Learning a Flashcard.** The user opens a Flashcard and flips through its Cards in the viewer (← → to move, Space or click to flip) to get familiar with them, with no grading and no effect on scheduling. When ready, they press "Learn": each Unlearned Card is shown in both directions and graded Again/Hard/Good/Easy. From then on those Cards come back on their own in the daily Review (UJ-2). *(realizes FR-16, FR-17)*
+- **UJ-4. Learning a Flashcard.** The user opens a Flashcard and flips through its Cards in the viewer (← → to move, Space or click to flip) to get familiar with them, with no grading and no effect on scheduling. When ready, they press "Learn": each Unlearned Card is shown in both directions (studied directions, FR-18) and graded Again/Hard/Good/Easy. From then on those Cards come back on their own in the daily Review (UJ-2). *(realizes FR-16, FR-17)*
 
 ## 3. Glossary
 
 - **Card** — The shared content unit: `term`, `definition`, `example_sentence`, `context` (collocation/usage), `part_of_speech`. One Card produces two Scheduling Records.
-- **Recall Direction** — Which way a Card is being tested: *Term → Definition* (recognition/passive) or *Definition → Term* (production/active). Each direction is scheduled independently.
+- **Recall Direction** — Which way a Card is being tested: *Term → Definition* (recognition/passive) or *Definition → Term* (production/active). Each direction is scheduled independently. The user's **study directions** setting (FR-18) decides which directions are studied: both (default), or only one. A direction that is turned off keeps its Scheduling Record unchanged and appears nowhere until it is turned back on.
 - **Scheduling Record** — The SM-2 state for one Card in one Recall Direction: `interval`, `repetitions`, `ease_factor` (EF), `next_review_date`. A Card always has exactly two.
 - **Ease Factor (EF)** — SM-2's per-item difficulty multiplier. Starts at 2.5, floor of 1.3.
 - **Grade** — The recall-quality rating the user gives after revealing a card: Again / Hard / Good / Easy, mapped to SM-2 quality values 1 / 3 / 4 / 5 respectively.
-- **Unlearned Card** — A Card with at least one Scheduling Record that has never received a Grade (`firstGradedAt` is null). Unlearned Cards are introduced only through Learn (FR-17), never through the Review tab. A Card counts as **learned** once both of its Scheduling Records have been graded at least once; a Card that failed back to `repetitions = 0` via an "Again" Grade (FR-8) stays learned. *(Replaces "New Card", Sprint Change 2026-11-13.)*
+- **Learned / unlearned direction** — A Scheduling Record is **learned** once it has received its first Grade (`firstGradedAt` set) and **unlearned** until then. Unlearned records of studied directions are introduced only through Learn (FR-17), never through Review; a learned record of a studied direction enters Review on its due date. A record that failed back to `repetitions = 0` via "Again" (FR-8) stays learned. *(Sprint Change 2026-11-13b: per-direction, replacing the per-Card rule.)*
+- **Unlearned Card** — A Card with at least one unlearned record in a studied direction. A Card is **learned** when every studied direction is learned. Used for counts ("12 new") and Stats (FR-15). *(Replaces "New Card", Sprint Change 2026-11-13.)*
 - **Class** — The top-level, user-defined container (e.g. "IELTS", "Business English"). A Class holds Folders; it never holds Flashcards or Cards directly. Every Class has exactly one built-in "Unsorted" Folder.
 - **Folder** — A user-defined grouping of Flashcards inside exactly one Class. Folders do not nest: the hierarchy is fixed at four levels, Class → Folder → Flashcard → Card.
 - **Flashcard** — A named set of Cards (the brief's "collections/sets") inside exactly one Folder. A Flashcard has only a name, unique within its Folder (case-insensitive). It can be created, renamed, deleted, and moved to any Folder.
 - **Unsorted Folder** — The built-in Folder every Class gets on creation. It cannot be renamed or deleted, and it receives Flashcards when another Folder in the same Class is deleted with "move flashcards".
 - **Review Session** — A single sitting in which the user grades one or more due Scheduling Records of learned Cards; a session need not clear the entire due queue to count toward the streak (see FR-12).
 - **Learn Session** — A graded sitting scoped to one Flashcard that introduces its Unlearned Cards, then continues with that Flashcard's due records (FR-17). Its Grades use the same SM-2 write path and count toward the streak.
-- **Due Queue** — The set of Scheduling Records (not Cards) of learned Cards whose `next_review_date` has arrived, pulled per-direction.
+- **Due Queue** — The set of learned Scheduling Records (not Cards) in studied directions whose `next_review_date` has arrived, pulled per-direction.
 - **Streak** — Count of consecutive calendar days on which at least one Scheduling Record was graded (local-timezone day boundary, same basis as `next_review_date` — see FR-12).
 
 ## 4. Features
@@ -205,8 +206,8 @@ For the failing Grade (quality 1 — Again):
 The system presents due Scheduling Records of learned Cards (pulled per-direction, not per-card) one at a time: prompt side first, then flip, then Grade capture.
 
 **Consequences (testable):**
-- A Card with both directions due in the same session appears as two separate queue entries, gradable independently and in any order.
-- A Scheduling Record whose Card is an Unlearned Card (Glossary) never appears in the Review queue, even when its `next_review_date` has arrived.
+- A Card with both studied directions due in the same session appears as two separate queue entries, gradable independently and in any order.
+- An unlearned Scheduling Record (Glossary) never appears in the Review queue, even when its `next_review_date` has arrived; neither does any record of a direction the user does not study (FR-18).
 - The default session pulls due entries from all Classes. A user can also start a session scoped to one Class ("Review this class") or one Folder ("Review this folder"); a scoped session pulls only that scope's due entries and otherwise follows every rule in FR-9 and FR-11. A Flashcard's graded entry point is Learn (FR-17), not a scoped review. Grades from any session count toward the same streak (FR-12).
 - Within the due queue, entries are ordered oldest-due-first (by `next_review_date` ascending); this is the only ordering guarantee required for v1 — no randomization or direction-interleaving rule is required.
 - Flip and grade actions are fully keyboard-operable: Space or a click/tap flips the card either way; 1–4 or J/K/L/; submit a Grade, available once the answer has been shown. No action in the review loop requires the mouse.
@@ -229,7 +230,7 @@ During an active Review Session, navigation, sidebar, streak badge, and other no
 
 #### FR-16: Flashcard card viewer
 
-The Flashcard page shows a card viewer above its Cards list, presenting the Flashcard's Cards one at a time, Term side first.
+The Flashcard page shows a card viewer above its Cards list, presenting the Flashcard's Cards one at a time, Term side first — or Definition side first when the user studies only Definition → Term (FR-18).
 
 **Consequences (testable):**
 - The viewer includes every Card in the Flashcard, whatever its scheduling state, in the same order as the Cards list.
@@ -243,12 +244,24 @@ The Flashcard page shows a card viewer above its Cards list, presenting the Flas
 A "Learn" button directly below the viewer starts a Learn Session for that Flashcard, using the same session screen, keyboard rules, grade write path and focus mode as Review (FR-9, FR-11).
 
 **Consequences (testable):**
-- The session first presents the Flashcard's Unlearned Cards, each as two entries (one per direction) graded independently, then continues with the Flashcard's due records of learned Cards, oldest-due-first.
-- The first Grade of a Scheduling Record marks it as graded. Once both directions are graded, the Card is learned and leaves the Learn queue's "unlearned" portion.
+- The session first presents the Flashcard's unlearned records in studied directions (FR-18) — Cards in creation order, each Card's studied directions together, Term → Definition first — then continues with the Flashcard's learned, due records in studied directions, oldest-due-first.
+- The first Grade of a Scheduling Record marks it as learned; from its next due date it appears in Review, whether or not the Card's other direction has been graded.
+- After the session ends, "Study all cards again" runs every Card in studied directions as unsaved practice: same keys and Again repeats, no Grade is persisted. *(Recorded from Story 4.8b.)*
 - Learn grades count toward the streak (FR-12) exactly like Review grades.
 - Within a Learn session, an entry graded Again goes back to the end of the session queue and is shown again until it is graded Hard, Good or Easy. Only the first Grade of the entry in that session is persisted (it sets the SM-2 schedule, e.g. Again → due tomorrow); the in-session repeats are practice and are never sent to the grade route. *(Decision 2026-11-13, Quizlet-style "repeat until correct"; classical SM-2 scheduling is unchanged.)*
 - When nothing is left, the session shows a calm completion line and a way back to the Flashcard. Never confetti or cheer copy (§7).
 - The button label shows what is waiting, e.g. "Learn · 12 new · 3 due"; with nothing waiting it reads "Learn" and opens the completion state.
+
+#### FR-18: Study directions setting
+
+A user chooses, in Settings, which Recall Directions they study: **Both** (default), **Term → Definition only**, or **Definition → Term only**. The setting is per account and applies to Learn, Review, the Learn practice run and the card viewer. *(Added by Sprint Change 2026-11-13b.)*
+
+**Consequences (testable):**
+- New accounts default to Both; existing accounts are migrated to Both, so nothing changes until the user picks otherwise.
+- With one direction studied, Learn and Review never show the other direction's records, and the Learn counts ("N new · M due") count only studied directions.
+- Turning a direction off never changes its Scheduling Records; turning it back on makes its unlearned records appear in Learn and its learned, due records appear in Review (possibly many at once).
+- The card viewer (FR-16) and the Learn practice run show the prompt side of the studied direction first: Definition first when only Definition → Term is studied, otherwise Term first.
+- Changing the setting takes effect on the next queue load; a session already running keeps its snapshot.
 
 ---
 
@@ -273,6 +286,7 @@ A user can export their full Card + Scheduling Record + streak history to a port
 **Consequences (testable):**
 - Export completes and produces a file containing every Class, every Folder, every Flashcard (with its Folder), every Card (with its Flashcard), both Scheduling Records per Card, and streak history, sufficient to reconstruct state.
 - The export includes each Scheduling Record's `firstGradedAt`, so a restore (FR-14) preserves which Cards are learned versus unlearned.
+- The export includes the user's study-directions setting (FR-18).
 
 **Feature-specific NFRs:**
 - Data durability for Cards, Scheduling Records, and streak history is treated as a hard non-functional requirement, not best-effort — this is addressed system-wide in §6 Cross-Cutting NFRs, since a daily-dependency tool losing history is a stated dealbreaker risk in the brief.
@@ -288,7 +302,7 @@ A user can import a previously-exported FR-13 JSON file to fully reconstruct the
 
 #### FR-15: Progress & stats view
 
-A user can view a basic stats screen, outside of active review (per FR-11), showing: current and longest streak, total Cards (learned / unlearned), and a simple visualization of the SM-2 retention curve (e.g. distribution of Scheduling Records by current `interval` length, or review-outcome history over time) per Recall Direction.
+A user can view a basic stats screen, outside of active review (per FR-11), showing: current and longest streak, total Cards (learned / unlearned, per the studied directions — FR-18), and a simple visualization of the SM-2 retention curve (e.g. distribution of Scheduling Records by current `interval` length, or review-outcome history over time) per Recall Direction.
 
 **Consequences (testable):**
 - The stats view is reachable from normal (non-review) navigation and reflects the latest graded state without requiring a page reload tied to a specific review session.
@@ -331,7 +345,7 @@ A user can view a basic stats screen, outside of active review (per FR-11), show
 - Paste + CSV import as a mode of a Flashcard's "Add cards" (FR-6, FR-7)
 - Dual-direction SM-2 engine (FR-8)
 - Keyboard-driven review session of learned Cards with focus mode (FR-9, FR-11)
-- Flashcard card viewer and Learn session (FR-16, FR-17)
+- Flashcard card viewer and Learn session (FR-16, FR-17), with the study-directions setting (FR-18)
 - Streak tracking (FR-12)
 - Data export/backup and restore (FR-13, FR-14) — promoted into Phase 1: data loss is a stated dealbreaker risk for a daily-dependency tool, and export without a restore path isn't actually a backup, so both ship with the MVP rather than waiting for Phase 2 polish.
 - Basic progress/stats view (FR-15) — needed so the portfolio success metric SM-4 (retention curve) is observable in the shipped product, not just in raw data.
