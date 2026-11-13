@@ -5,7 +5,8 @@
 // 1.2 adds the registration request validation schema. Story 3.1 adds paste
 // import parsing and duplicate detection (./import); Story 3.2 adds file
 // import (./import-table). Story 4.1 adds the SM-2 scheduling engine
-// (./sm2); the streak helpers land in Epic 5 per the architecture spine.
+// (./sm2); Story 4.2 adds the grade request contract (./review). The streak
+// helpers land in Epic 5 per the architecture spine.
 
 export * from "./http";
 export * from "./auth/registration";
@@ -18,3 +19,4 @@ export * from "./flashcards";
 export * from "./import";
 export * from "./import-table";
 export * from "./sm2";
+export * from "./review";
