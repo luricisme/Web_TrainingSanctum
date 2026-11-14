@@ -7,10 +7,12 @@ import {
   buildDaySnapshot,
   evaluateClearReview,
   evaluateLearnFlashcards,
+  formatMissedNotice,
   levelForXp,
   parseDaySnapshot,
   questKindForSlug,
   questsForSnapshot,
+  settleDays,
 } from "@training-sanctum/domain";
 
 // spec-5-1: the 90-level ladder from the PRD addendum (FR-12, AD-15).
@@ -348,5 +350,83 @@ describe("quest evaluators", () => {
 
     const skipped = questsForSnapshot(buildDaySnapshot(1, { flashcardsWithUnlearned: 0, dueCount: 0 }), facts);
     expect(skipped.map((q) => q.status)).toEqual(["skipped", "skipped"]);
+  });
+});
+
+// spec-5-7: day settlement (FR-19, AD-15).
+describe("settleDays", () => {
+  const day = (n: number) => new Date(Date.UTC(2026, 10, n));
+  const facts = { flashcardsWithUnlearned: 5, dueCount: 5 };
+  const open = (n: number) => ({ localDay: day(n), snapshot: null, startFacts: facts });
+
+  it("charges -2 x xp for each quest neither claimed nor skipped", () => {
+    const r = settleDays(100, [open(12)]);
+    expect(r.penalties.map((p) => [p.kind, p.delta])).toEqual([
+      ["LEARN_FLASHCARDS", -20],
+      ["CLEAR_REVIEW", -20],
+    ]);
+    expect(r.endXp).toBe(60);
+  });
+
+  it("spares skipped and claimed quests and uses a stored snapshot as frozen", () => {
+    const snapshot = buildDaySnapshot(3, facts);
+    snapshot.LEARN_FLASHCARDS.claimed = true;
+    const r = settleDays(500, [{ localDay: day(12), snapshot, startFacts: facts }]);
+    expect(r.penalties).toEqual([{ localDay: day(12), kind: "CLEAR_REVIEW", delta: -80 }]);
+    expect(r.endXp).toBe(420);
+    const skipped = settleDays(50, [
+      { localDay: day(12), snapshot: null, startFacts: { flashcardsWithUnlearned: 0, dueCount: 0 } },
+    ]);
+    expect(skipped.penalties).toEqual([]);
+    expect(skipped.endXp).toBe(50);
+  });
+
+  it("charges a done but unclaimed quest like an undone one", () => {
+    // The snapshot carries no work state: only claimed/skipped matter.
+    const r = settleDays(10, [{ localDay: day(1), snapshot: buildDaySnapshot(1, facts), startFacts: facts }]);
+    expect(r.penalties).toHaveLength(2);
+  });
+
+  it("floors XP at 0 but records the full charge", () => {
+    const r = settleDays(5, [open(12)]);
+    expect(r.endXp).toBe(0);
+    expect(r.penalties.map((p) => p.delta)).toEqual([-20, -20]);
+  });
+
+  it("sizes each day by the realm the previous day left (demotion)", () => {
+    // 9,275 XP is the start of Nhị Bộ (xp 20/quest, -40 each, -80 a day).
+    const r = settleDays(9_275, [open(10), open(11)]);
+    expect(r.penalties.map((p) => p.delta)).toEqual([-40, -40, -20, -20]);
+    expect(r.endXp).toBe(9_275 - 80 - 40);
+    expect(levelForXp(r.endXp).bo).toBe(1);
+  });
+
+  it("settles 30 days in order, ending at 0 as the Bộ shrinks", () => {
+    const days = Array.from({ length: 30 }, (_, i) => open(i + 1));
+    const r = settleDays(200, days);
+    // Nhất Bộ: -40 a day; 200 XP lasts 5 days, then floored.
+    expect(r.endXp).toBe(0);
+    expect(r.penalties).toHaveLength(60);
+    expect(r.penalties[0]!.localDay).toEqual(day(1));
+    expect(r.penalties[59]!.localDay).toEqual(day(30));
+  });
+
+  it("returns nothing for no days", () => {
+    expect(settleDays(42, [])).toEqual({ penalties: [], endXp: 42 });
+  });
+});
+
+describe("formatMissedNotice", () => {
+  const base = { id: "x", fromDay: "2026-11-12", toDay: "2026-11-12", missed: 2, xpLost: 40 };
+  it("reads one day", () => {
+    expect(formatMissedNotice(base, "Ngưng Khí · Tầng 9")).toBe(
+      "Nov 12: 2 quests missed, −40 XP. Now Ngưng Khí · Tầng 9."
+    );
+  });
+  it("reads a range and a single quest", () => {
+    expect(formatMissedNotice({ ...base, fromDay: "2026-11-10", missed: 1, xpLost: 20 }, "Trúc Cơ · Sơ kỳ")).toBe(
+      "Nov 10–12: 1 quest missed, −20 XP. Now Trúc Cơ · Sơ kỳ."
+    );
+    expect(formatMissedNotice({ ...base, fromDay: "2026-10-30" }, "A")).toContain("Oct 30 – Nov 12:");
   });
 });

@@ -53,3 +53,22 @@ export function toLocalDate(now: Date, timeZone: string): Date {
   const wall = wallClockAsUtc(Math.floor(now.getTime() / 1000) * 1000, timeZone);
   return new Date(Math.floor(wall / 86_400_000) * 86_400_000);
 }
+
+/** Milliseconds in one calendar-date step of a `@db.Date` value. */
+export const DAY_MS = 86_400_000;
+
+/**
+ * The UTC instant at which the local calendar date `localDay` (a UTC-midnight
+ * `Date`, the shape of `toLocalDate`) began in `timeZone`. A DST day is still
+ * one calendar day: this snaps to its first instant, 23 or 25 hours long.
+ */
+export function localDayStart(localDay: Date, timeZone: string): Date {
+  const target = localDay.getTime() + 12 * 3_600_000;
+  // An instant whose wall clock reads noon on `localDay`; noon is far enough
+  // from any DST shift that it cannot fall on a neighbouring date.
+  let guess = target;
+  for (let i = 0; i < 2; i++) {
+    guess -= wallClockAsUtc(guess, timeZone) - target;
+  }
+  return toLocalCalendarDay(new Date(guess), timeZone);
+}

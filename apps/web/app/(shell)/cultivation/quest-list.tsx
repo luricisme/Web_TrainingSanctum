@@ -82,7 +82,7 @@ export function QuestList({ quests }: { quests: QuestView[] }) {
   return (
     <section aria-labelledby="daily-quests" className="mt-8">
       <div className="mb-3 px-3">
-        <SectionMarker as="h2" id="daily-quests">
+        <SectionMarker as="h2" id="daily-quests" tabIndex={-1}>
           Today&apos;s quests
         </SectionMarker>
       </div>

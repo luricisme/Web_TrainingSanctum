@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { prisma } from "@training-sanctum/db";
+import { buildDaySnapshot, levelForXp, toLocalDate } from "@training-sanctum/domain";
 
 async function register(page: Page): Promise<string> {
   const email = `e2e-cultivation-${randomUUID()}@example.test`;
@@ -166,6 +167,90 @@ test("with no work both quests read as skipped and the empty state hides the cou
   await expect(page.getByRole("main").getByRole("link", { name: /Today's quests/ })).toHaveCount(0);
 });
 
+/**
+ * Puts the user `xp` XP deep, settled through `n + 1` days ago, with an
+ * unclaimed stored snapshot for each of the last `n` days, then settles by
+ * reading Cultivation through the page's own session.
+ */
+async function missDays(page: Page, email: string, n: number, xp: number) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+  const today = toLocalDate(new Date(), user.timezone).getTime();
+  const snapshot = buildDaySnapshot(1, { flashcardsWithUnlearned: 5, dueCount: 5 });
+  for (let i = 1; i <= n; i++) {
+    const localDay = new Date(today - i * 86_400_000);
+    await prisma.cultivationDay.upsert({
+      where: { userId_localDay: { userId: user.id, localDay } },
+      create: { userId: user.id, localDay, quests: snapshot as never },
+      update: { quests: snapshot as never },
+    });
+  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      cultivationXp: xp,
+      cultivationSettledThrough: new Date(today - (n + 1) * 86_400_000),
+    },
+  });
+  const res = await page.request.get("/api/cultivation");
+  expect(res.ok()).toBeTruthy();
+}
+
+test("a missed day shows a notice that dismisses and stays dismissed after reload", async ({
+  page,
+}) => {
+  const email = await register(page);
+  await missDays(page, email, 1, 100);
+  const label = levelForXp(60).label;
+
+  await page.goto("/cultivation");
+  const main = page.getByRole("main");
+  await expect(
+    main.getByText(`2 quests missed, −40 XP. Now ${label}.`)
+  ).toBeVisible();
+  await expect(main.getByRole("progressbar", { name: label })).toBeVisible();
+
+  await main.getByRole("button", { name: /Dismiss/ }).click();
+  await expect(main.getByText(/quests missed/)).toHaveCount(0);
+  // The strip is gone, so focus moves to the quests heading, not the body.
+  await expect(main.getByRole("heading", { name: "Today's quests" })).toBeFocused();
+
+  await page.reload();
+  await expect(main.getByText("Today's quests")).toBeVisible();
+  await expect(main.getByText(/quests missed/)).toHaveCount(0);
+
+  // A later run is newer than the watermark and shows again.
+  await missDays(page, email, 1, 60);
+  await page.reload();
+  await expect(main.getByText(/quests missed/)).toHaveCount(1);
+});
+
+test("dismissing hides that notice and every older one, and focus stays in place", async ({
+  page,
+}) => {
+  const email = await register(page);
+  await missDays(page, email, 1, 9_300);
+  await missDays(page, email, 3, 400);
+  await missDays(page, email, 1, 150);
+  await page.goto("/cultivation");
+  const main = page.getByRole("main");
+  const notices = main.getByText(/quests missed/);
+  await expect(notices).toHaveCount(3);
+
+  // The middle (three-day) notice hides itself and the older one only.
+  await main.getByRole("button", { name: /Dismiss/ }).nth(1).click();
+  await expect(notices).toHaveCount(1);
+  await expect(main.getByText(/6 quests missed/)).toHaveCount(0);
+  await expect(main.getByRole("button", { name: /Dismiss/ })).toBeFocused();
+
+  await main.getByRole("button", { name: /Dismiss/ }).click();
+  await expect(notices).toHaveCount(0);
+  await expect(main.getByRole("heading", { name: "Today's quests" })).toBeFocused();
+
+  await page.reload();
+  await expect(main.getByRole("heading", { name: "Today's quests" })).toBeVisible();
+  await expect(notices).toHaveCount(0);
+});
+
 // Visual check: screenshots land in test-results/screenshots for comparison
 // against DESIGN.md and history/focus-indigo/mockups/key-screens.html.
 for (const theme of ["dark", "light"] as const) {
@@ -213,6 +298,30 @@ for (const theme of ["dark", "light"] as const) {
       await expect(page.getByRole("link", { name: /Today's quests\s*1 \/ 2/ })).toBeVisible();
       await setTheme();
       await shot("empty-state");
+    });
+  }
+}
+
+for (const theme of ["dark", "light"] as const) {
+  for (const width of [1280, 390]) {
+    test(`missed-day notice screenshots (${theme}, ${width}px)`, async ({ page }) => {
+      mkdirSync("test-results/screenshots", { recursive: true });
+      await page.setViewportSize({ width, height: 900 });
+      const email = await register(page);
+      // Oldest first: a demotion, then a three-day range, then one day.
+      await missDays(page, email, 1, 9_300);
+      await missDays(page, email, 3, 400);
+      await missDays(page, email, 1, 150);
+      await page.goto("/cultivation");
+      await expect(page.getByText(/quests missed/)).toHaveCount(3);
+      await page.evaluate((t) => {
+        if (t === "light") document.documentElement.dataset.theme = "light";
+        else delete document.documentElement.dataset.theme;
+      }, theme);
+      await page.screenshot({
+        path: `test-results/screenshots/cultivation-missed-${theme}-${width}.png`,
+        animations: "disabled",
+      });
     });
   }
 }

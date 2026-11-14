@@ -5,10 +5,11 @@ import type { CultivationResponse } from "@training-sanctum/domain";
 import { apiFetch } from "@/lib/api-client";
 import { PageHeader } from "../page-header";
 import { XpBar, xpText } from "../realm-badge";
+import { MissedNotices } from "./missed-notices";
 import { QuestList } from "./quest-list";
 
 /**
- * spec-5-6: the realm with its XP bar and today's quests. Fresh on mount
+ * spec-5-6: the realm with its XP bar, any missed-day notices and today's quests. Fresh on mount
  * (staleTime 0) so a visit after grading shows the latest progress. Stats,
  * the chart and the Realm Ladder join in Story 5.4.
  */
@@ -48,6 +49,7 @@ export default function CultivationPage() {
               {xpText(data)}
             </p>
           </div>
+          <MissedNotices notices={data.notices} realmLabel={data.label} />
           <QuestList quests={data.quests} />
         </>
       )}

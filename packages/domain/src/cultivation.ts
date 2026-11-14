@@ -123,7 +123,11 @@ export interface RealmSummary {
 }
 
 /** Shape returned by `GET /api/cultivation`: the realm plus today's quests (spec-5-6). */
-export type CultivationResponse = RealmSummary & { quests: QuestView[] };
+export type CultivationResponse = RealmSummary & {
+  quests: QuestView[];
+  /** Missed-day notices from settlement, newest first, at most three (spec-5-7). */
+  notices: MissedNotice[];
+};
 
 function assertXp(xp: number, name: string): void {
   if (!Number.isSafeInteger(xp) || xp < 0) {
@@ -347,4 +351,88 @@ export interface QuestClaimResponse {
   realm: RealmSummary;
   /** True when the claim reached a new stage. */
   breakthrough: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Day settlement (spec-5-7, FR-19, AD-15). Pure: the caller loads each day's
+// stored snapshot or its start-of-day facts and persists the result.
+// ---------------------------------------------------------------------------
+
+/** One local day to settle, oldest first. */
+export interface SettleDayInput {
+  /** The local date as a UTC-midnight Date (the `@db.Date` shape). */
+  localDay: Date;
+  /** The day's stored snapshot, or null when the day was never opened. */
+  snapshot: DaySnapshot | null;
+  /** Start-of-day facts used to rebuild a never-opened day. */
+  startFacts: DayStartFacts;
+}
+
+/** One penalised quest: a `PENALTY` XpEvent in the making. */
+export interface SettlePenalty {
+  localDay: Date;
+  kind: QuestKindName;
+  /** -2 × the quest's XP, as charged (the floor may absorb part of it). */
+  delta: number;
+}
+
+export interface SettleResult {
+  penalties: SettlePenalty[];
+  /** Total XP after every day, floored at 0 after each charge. */
+  endXp: number;
+}
+
+/**
+ * Settles days in order. A quest neither claimed nor skipped costs
+ * `-2 × xp`, even when its work was done. Each day is sized by the Bộ of the
+ * XP the previous day left, so a demotion shrinks the next day's quests.
+ */
+export function settleDays(startXp: number, days: readonly SettleDayInput[]): SettleResult {
+  let xp = startXp;
+  const penalties: SettlePenalty[] = [];
+  for (const day of days) {
+    const snapshot = day.snapshot ?? buildDaySnapshot(levelForXp(xp).bo, day.startFacts);
+    for (const kind of QUEST_KINDS) {
+      const entry = snapshot[kind];
+      if (entry.skipped || entry.claimed) continue;
+      const delta = -2 * entry.xp;
+      penalties.push({ localDay: day.localDay, kind, delta });
+      xp = applyXpDelta(xp, delta);
+    }
+  }
+  return { penalties, endXp: xp };
+}
+
+/** A missed-days notice: one settlement run that charged XP. */
+export interface MissedNotice {
+  /** The run's shared `createdAt` as an ISO string; also the dismissal watermark. */
+  id: string;
+  /** First penalised local day, `YYYY-MM-DD`. */
+  fromDay: string;
+  /** Last penalised local day, `YYYY-MM-DD`. */
+  toDay: string;
+  /** Quests charged in the run. */
+  missed: number;
+  /** XP charged (positive), before the floor at 0. */
+  xpLost: number;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function dayParts(iso: string): { month: string; day: number } {
+  return { month: MONTHS[Number(iso.slice(5, 7)) - 1] ?? "", day: Number(iso.slice(8, 10)) };
+}
+
+/** "Nov 12: 2 quests missed, −40 XP. Now Ngưng Khí · Tầng 9." (a range reads "Nov 10–12: …"). */
+export function formatMissedNotice(notice: MissedNotice, realmLabel: string): string {
+  const from = dayParts(notice.fromDay);
+  const to = dayParts(notice.toDay);
+  const when =
+    notice.fromDay === notice.toDay
+      ? `${from.month} ${from.day}`
+      : from.month === to.month
+        ? `${from.month} ${from.day}–${to.day}`
+        : `${from.month} ${from.day} – ${to.month} ${to.day}`;
+  const quests = `${notice.missed} ${notice.missed === 1 ? "quest" : "quests"} missed`;
+  return `${when}: ${quests}, −${notice.xpLost} XP. Now ${realmLabel}.`;
 }

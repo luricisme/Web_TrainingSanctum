@@ -12,6 +12,7 @@ import { requireSession } from "@/lib/session";
 import { HttpError, fail, ok } from "@/lib/api-response";
 import { getStudiedDirections } from "@/lib/study-directions";
 import { ensureToday, gatherQuestFacts } from "@/lib/cultivation-day";
+import { settleUser } from "@/lib/cultivation-settle";
 
 /**
  * spec-5-6: claims one of today's quests (FR-19, AD-15). With settlement
@@ -34,11 +35,21 @@ export async function POST(
 
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { cultivationXp: true, timezone: true },
+    select: { cultivationXp: true, cultivationSettledThrough: true, timezone: true },
   });
   const { dirs } = await getStudiedDirections(userId);
   const now = new Date();
-  const day = await ensureToday(userId, user.timezone, user.cultivationXp, dirs, now);
+  // Settle past days first so today's snapshot and this claim use the
+  // post-settlement realm (spec-5-7).
+  const { xp } = await settleUser(
+    userId,
+    user.timezone,
+    user.cultivationSettledThrough,
+    user.cultivationXp,
+    dirs,
+    now
+  );
+  const day = await ensureToday(userId, user.timezone, xp, dirs, now);
 
   try {
     const data = await prisma.$transaction(async (tx): Promise<QuestClaimResponse> => {
