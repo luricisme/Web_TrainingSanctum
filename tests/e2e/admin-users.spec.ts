@@ -38,6 +38,18 @@ for (const width of [1280, 390]) {
       "href",
       /^\/admin\/users\/.+/
     );
+    await expect(table.getByRole("columnheader", { name: "Backup" })).toBeVisible();
+    await expect(table.getByRole("link", { name: /^Export backup for / }).first()).toHaveAttribute(
+      "href",
+      /^\/api\/admin\/users\/.+\/export$/
+    );
+    const exportLink = table.getByRole("link", { name: /^Export backup for / }).first();
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      exportLink.click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/\.json$/);
+    await expect(page).toHaveURL(/\/admin$/);
     await expect(page.getByRole("navigation", { name: "Pagination" })).toBeVisible();
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth

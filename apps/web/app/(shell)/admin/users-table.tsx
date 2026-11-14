@@ -13,6 +13,10 @@ const th = "px-4 py-3 text-left text-overline uppercase text-foreground-tertiary
 const td = "px-4 py-3 align-middle";
 const pagerLink =
   "inline-flex h-10 items-center rounded-full border border-border bg-card px-4 text-body-sm font-semibold text-foreground shadow-low transition-state hover:border-foreground focus-ring";
+/** Keeps Export reachable at 390px, where the table scrolls sideways. */
+const stickyEnd = "sticky right-0 bg-card transition-state group-hover:bg-row-hover";
+const exportLink =
+  "relative z-10 inline-flex h-10 items-center rounded-full border border-border bg-card px-3 text-caption font-semibold text-foreground shadow-low transition-state hover:border-foreground focus-ring";
 const pagerOff = `${pagerLink} cursor-not-allowed opacity-40 hover:border-border`;
 
 /** Read-only user list (DESIGN.md admin-table): a card surface, each row a link to the user. */
@@ -27,7 +31,7 @@ export function UsersTable({ data }: { data: AdminUsersResponse }) {
   return (
     <section aria-label="Users" className="mt-8">
       <div className="overflow-x-auto rounded-lg border border-divider bg-card shadow-low">
-        <table className="w-full min-w-[40rem] border-collapse text-body-sm">
+        <table className="w-full min-w-[46rem] border-collapse text-body-sm">
           <thead>
             <tr className="border-b border-divider">
               <th scope="col" className={th}>Email</th>
@@ -36,12 +40,13 @@ export function UsersTable({ data }: { data: AdminUsersResponse }) {
               <th scope="col" className={th}>Realm</th>
               <th scope="col" className={`${th} text-right`}>Level</th>
               <th scope="col" className={`${th} text-right`}>XP</th>
+              <th scope="col" className={`${th} ${stickyEnd} text-right`}>Backup</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-foreground-secondary">
+                <td colSpan={7} className="px-4 py-10 text-center text-foreground-secondary">
                   No users on this page.
                 </td>
               </tr>
@@ -49,7 +54,7 @@ export function UsersTable({ data }: { data: AdminUsersResponse }) {
               items.map((u) => (
                 <tr
                   key={u.id}
-                  className="relative cursor-pointer border-b border-divider last:border-b-0 transition-state hover:bg-row-hover"
+                  className="group relative cursor-pointer border-b border-divider last:border-b-0 transition-state hover:bg-row-hover"
                 >
                   <td className={`${td} max-w-[18rem]`}>
                     <Link
@@ -71,6 +76,16 @@ export function UsersTable({ data }: { data: AdminUsersResponse }) {
                   <td className={`${td} text-right font-mono text-foreground`}>{u.level}</td>
                   <td className={`${td} text-right font-mono text-foreground-secondary`}>
                     {numberFormat.format(u.xp)}
+                  </td>
+                  <td className={`${td} ${stickyEnd} text-right`}>
+                    <a
+                      href={`/api/admin/users/${u.id}/export`}
+                      download
+                      aria-label={`Export backup for ${u.email}`}
+                      className={exportLink}
+                    >
+                      Export
+                    </a>
                   </td>
                 </tr>
               ))
