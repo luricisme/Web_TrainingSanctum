@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  CLASS_COLORS,
+  classColorSchema,
   classNameSchema,
+  nextClassColor,
   createClassSchema,
   deleteClassSchema,
   renameClassSchema,
@@ -36,6 +39,28 @@ describe("create and rename schemas", () => {
     expect(createClassSchema.safeParse({ name: "IELTS" }).success).toBe(true);
     expect(createClassSchema.safeParse({}).success).toBe(false);
     expect(renameClassSchema.safeParse({ name: " " }).success).toBe(false);
+  });
+});
+
+describe("class colour (story 6.4)", () => {
+  it("accepts the five colours and rejects anything else", () => {
+    for (const c of CLASS_COLORS) expect(classColorSchema.safeParse(c).success).toBe(true);
+    expect(classColorSchema.safeParse("RED").success).toBe(false);
+    expect(createClassSchema.safeParse({ name: "A", color: "RED" }).success).toBe(false);
+    expect(createClassSchema.safeParse({ name: "A", color: "ROSE" }).success).toBe(true);
+  });
+
+  it("nextClassColor cycles in order by existing count", () => {
+    expect([0, 1, 2, 3, 4, 5, 7].map(nextClassColor)).toEqual([
+      "LAVENDER", "SKY", "MINT", "BUTTER", "ROSE", "LAVENDER", "MINT",
+    ]);
+  });
+
+  it("update takes name and/or colour but not neither", () => {
+    expect(renameClassSchema.safeParse({ name: "A" }).success).toBe(true);
+    expect(renameClassSchema.safeParse({ color: "SKY" }).success).toBe(true);
+    expect(renameClassSchema.safeParse({}).success).toBe(false);
+    expect(renameClassSchema.safeParse({ color: "RED" }).success).toBe(false);
   });
 });
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { ClassFoldersResponse, FolderSummary } from "@training-sanctum/domain";
+import type { ClassColor, ClassFoldersResponse, FolderSummary } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { SectionMarker } from "@/app/components/section-marker";
 import { PageHeader } from "../../page-header";
@@ -16,7 +16,7 @@ import {
   tileGridClass,
   tileIconClass,
   tileSkeletonClass,
-  tintAt,
+  tintFor,
 } from "../ui";
 import { DeleteFolderModal } from "./delete-folder-modal";
 import { FolderFormModal } from "./folder-form-modal";
@@ -130,11 +130,11 @@ export function ClassDetailView({ classId }: { classId: string }) {
           </div>
         </div>
         <ul className={tileGridClass}>
-          {folders.map((folder, index) => (
+          {folders.map((folder) => (
             <FolderRow
               key={folder.id}
               folder={folder}
-              index={index}
+              color={data.class.color}
               onRename={() => setDialog({ kind: "rename", id: folder.id })}
               onDelete={() => setDialog({ kind: "delete", id: folder.id })}
             />
@@ -174,18 +174,18 @@ export function ClassDetailView({ classId }: { classId: string }) {
 /** One Folder tile, linking to the Folder page; Unsorted has no overflow menu. */
 function FolderRow({
   folder,
-  index,
+  color,
   onRename,
   onDelete,
 }: {
   folder: FolderSummary;
-  /** Position in the list; picks the tile's tint. */
-  index: number;
+  /** The Class's colour; picks the tile's tint. */
+  color: ClassColor;
   onRename: () => void;
   onDelete: () => void;
 }) {
   return (
-    <li className={`${tileClass} ${tintAt(index)}`}>
+    <li className={`${tileClass} ${tintFor(color)}`}>
       <Link
         href={`/folders/${folder.id}`}
         className="flex min-w-0 flex-1 items-start gap-3 rounded-sm focus-ring"

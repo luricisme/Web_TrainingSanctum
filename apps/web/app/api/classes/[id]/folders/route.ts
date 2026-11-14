@@ -21,7 +21,7 @@ export async function GET(
 
   const cls = await prisma.class.findFirst({
     where: { id, userId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, color: true },
   });
   if (!cls) return fail(404, "NOT_FOUND", "Class not found.");
 

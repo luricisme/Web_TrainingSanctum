@@ -18,7 +18,7 @@ async function register(page: Page): Promise<string> {
 async function seedFlashcard(email: string) {
   const user = await prisma.user.findUniqueOrThrow({ where: { email } });
   const cls = await prisma.class.create({
-    data: {
+    data: { color: "LAVENDER",
       name: "IELTS",
       userId: user.id,
       folders: { create: [{ name: "Speaking", userId: user.id }] },

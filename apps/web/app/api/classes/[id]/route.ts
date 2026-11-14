@@ -39,9 +39,17 @@ export async function PATCH(
 
   const { count } = await prisma.class.updateMany({
     where: { id, userId },
-    data: { name: parsed.data.name },
+    data: {
+      ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+      ...(parsed.data.color !== undefined ? { color: parsed.data.color } : {}),
+    },
   });
   if (count === 0) return fail(404, "NOT_FOUND", "Class not found.");
+  const updated = await prisma.class.findFirst({
+    where: { id, userId },
+    select: { name: true, color: true },
+  });
+  if (!updated) return fail(404, "NOT_FOUND", "Class not found.");
 
   const folders = await prisma.folder.findMany({
     where: { classId: id, userId },
@@ -51,7 +59,8 @@ export async function PATCH(
   });
   const data: ClassSummary = {
     id,
-    name: parsed.data.name,
+    name: updated.name,
+    color: updated.color,
     folderCount: folders.length,
     flashcardCount: folders.reduce((n, f) => n + f.flashcards.length, 0),
     cardCount: folders.reduce(

@@ -107,7 +107,7 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
     const res = await s.request.get(`${base}/api/classes/${cls.id}/folders`);
     expect(res.status()).toBe(200);
     const data = (await res.json()).data;
-    expect(data.class).toEqual({ id: cls.id, name: "IELTS" });
+    expect(data.class).toMatchObject({ id: cls.id, name: "IELTS", color: "LAVENDER" });
     expect(data.folders.map((f: { name: string }) => f.name)).toEqual([
       "Unsorted",
       "Alpha",
@@ -411,7 +411,7 @@ test.describe("/api/classes/:id/folders and /api/folders/:id", () => {
     expect(res.status()).toBe(200);
     const data = (await res.json()).data;
     expect(data.folder).toEqual({ id: folder.id, name: "Speaking", isUnsorted: false });
-    expect(data.class).toEqual({ id: cls.id, name: "IELTS" });
+    expect(data.class).toMatchObject({ id: cls.id, name: "IELTS", color: "LAVENDER" });
     expect(
       data.flashcards.map((f: { name: string; cardCount: number }) => [f.name, f.cardCount])
     ).toEqual([

@@ -20,6 +20,7 @@ import {
 type Dialog =
   | { kind: "create" }
   | { kind: "rename"; id: string }
+  | { kind: "colour"; id: string }
   | { kind: "delete"; id: string }
   | null;
 
@@ -96,12 +97,12 @@ export function ClassesView() {
               </button>
             </div>
             <ul className={tileGridClass}>
-              {classes.map((item, index) => (
+              {classes.map((item) => (
                 <ClassRow
                   key={item.id}
                   item={item}
-                  index={index}
                   onRename={() => setDialog({ kind: "rename", id: item.id })}
+                  onColour={() => setDialog({ kind: "colour", id: item.id })}
                   onDelete={() => setDialog({ kind: "delete", id: item.id })}
                 />
               ))}
@@ -113,6 +114,14 @@ export function ClassesView() {
       {dialog?.kind === "create" ? <ClassFormModal onClose={close} /> : null}
       {dialog?.kind === "rename" && selected ? (
         <ClassFormModal key={selected.id} existing={selected} onClose={close} />
+      ) : null}
+      {dialog?.kind === "colour" && selected ? (
+        <ClassFormModal
+          key={selected.id}
+          existing={selected}
+          focusColour
+          onClose={close}
+        />
       ) : null}
       {dialog?.kind === "delete" && selected ? (
         <DeleteClassModal

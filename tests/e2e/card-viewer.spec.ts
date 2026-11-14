@@ -24,7 +24,7 @@ const TERMS = ["alpha", "bravo", "charlie"];
 async function seedCards(email: string, count = 3) {
   const user = await prisma.user.findUniqueOrThrow({ where: { email } });
   const cls = await prisma.class.create({
-    data: {
+    data: { color: "LAVENDER",
       name: "IELTS",
       userId: user.id,
       folders: {

@@ -6,6 +6,7 @@
  * may reuse them for client-side checks).
  */
 import { z } from "zod";
+import type { ClassColor } from "./classes";
 
 export const FOLDER_NAME_MAX_LENGTH = 80;
 
@@ -53,6 +54,6 @@ export interface FolderSummary {
 
 /** Shape returned by `GET /api/classes/:id/folders`. */
 export interface ClassFoldersResponse {
-  class: { id: string; name: string };
+  class: { id: string; name: string; color: ClassColor };
   folders: FolderSummary[];
 }
