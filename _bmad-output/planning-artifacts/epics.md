@@ -146,6 +146,8 @@ UX-DR22: Build Class colour (Sprint Change 2026-11-14b, FR-5): five swatches in 
 
 UX-DR23: Build the realm avatar (Sprint Change 2026-11-14b, FR-12): one cultivator illustration per realm (19), more striking at higher realms, decorative only, shown inside the Realm badge ring; the realm and stage are always also written out.
 
+UX-DR24: Build the Realm Ladder on the Cultivation page (change request 2026-11-14): a row of all 19 realms in order, each an avatar (UX-DR23) over its Vietnamese name; the current realm highlighted with a "Current" label and scrolled into view, passed realms reached, realms ahead dimmed; horizontal scroll below 640px; highlight never colour alone.
+
 ### FR Coverage Map
 
 FR-1: Epic 1 - User account creation and login/logout
@@ -899,6 +901,14 @@ So that I can observe my progress and trust the scheduling is working correctly.
 **Given** I navigate to Cultivation (outside active review; it replaces Stats in the main nav, UX-DR19)
 **When** it loads
 **Then** I see my realm and stage with its XP bar, total XP, today's quest list (Story 5.6), an XP-over-time chart from `XpEvent`, total Cards (learned / unlearned, counted over my studied directions), and a visualization of Scheduling Records' distribution by interval (or review-outcome history) per Recall Direction
+
+**Given** the Cultivation page
+**Then** it shows a Realm Ladder (UX-DR24): all 19 realms in order from lowest to highest, each with its avatar (UX-DR23) and its Vietnamese name
+**And** my current realm is highlighted and scrolled into view on load, realms I have passed look reached and realms ahead look dimmed
+**And** the highlight is never colour alone: the current realm also carries a "Current" label and the stage is written out ("Ngưng Khí · Tầng 3")
+**And** after a breakthrough or a demotion (Stories 5.6, 5.7) the highlight moves to the realm `levelForXp` returns
+**And** below 640px the ladder scrolls horizontally, each realm is reachable by keyboard, and avatars stay decorative (empty alt, realm name as text)
+**And** the ladder reads its realm list from `packages/domain/cultivation.ts`, not a second copy
 
 **Given** I've just graded cards
 **When** I view Stats afterward
