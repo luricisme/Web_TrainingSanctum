@@ -8,7 +8,8 @@ import { FocusModeProvider } from "./focus-mode";
 export default async function ShellLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  if (!(await getServerSession())) redirect("/login");
+  const session = await getServerSession();
+  if (!session) redirect("/login");
 
   return (
     <div className="min-h-screen bg-backdrop sm:p-3">
@@ -19,7 +20,7 @@ export default async function ShellLayout({
         <QueryProvider>
           {/* spec-4-5: Review and Learn turn focus mode on to hide the app bar. */}
           <FocusModeProvider>
-            <AppBar />
+            <AppBar userName={session.user.name} />
             {/* Below 640px the bottom padding keeps the dock off the page end. */}
             <main className="min-w-0 flex-1 bg-background px-4 pb-28 pt-10 sm:rounded-panel sm:px-8 sm:pb-10">
               <div className="mx-auto w-full max-w-content">{children}</div>

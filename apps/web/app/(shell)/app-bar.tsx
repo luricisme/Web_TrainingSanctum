@@ -9,9 +9,9 @@ import { RealmBadge } from "./realm-badge";
 /**
  * The app bar: the top of the dark app frame. Brand on the left, the Main nav
  * centred (the current page is a raised pill; the others show their label
- * from 1024px), and the Realm badge on the right, outside the nav.
+ * from 1024px), and the account menu (RealmBadge) on the right, outside the nav.
  */
-export function AppBar() {
+export function AppBar({ userName }: { userName: string }) {
   const pathname = usePathname();
   // spec-4-5 focus mode: a running session hides all chrome (FR-11).
   const focused = useIsFocused();
@@ -64,9 +64,9 @@ export function AppBar() {
         </ul>
       </nav>
 
-      {/* spec-5-1: the Realm badge, at the right end of the app bar. */}
+      {/* The account menu (name, realm, Settings, Log out), at the right end of the app bar. */}
       <div className="justify-self-end">
-        <RealmBadge />
+        <RealmBadge userName={userName} />
       </div>
     </header>
   );

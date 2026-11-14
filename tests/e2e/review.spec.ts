@@ -380,7 +380,7 @@ test("unknown and invalid scopes offer Review all cards instead of a retry", asy
 // spec-4-5: focus mode and the Empty due-queue state.
 const mainNav = (page: Page) => page.getByRole("navigation", { name: "Main" });
 const realmBadge = (page: Page) =>
-  page.getByRole("link", { name: "Ngưng Khí · Tầng 1, 0 / 10 XP" });
+  page.getByRole("button", { name: /, Ngưng Khí · Tầng 1, 0 \/ 10 XP$/ });
 
 /** Moves every Scheduling Record of the user's Cards to tomorrow, so nothing is due. */
 async function nothingDue(email: string) {

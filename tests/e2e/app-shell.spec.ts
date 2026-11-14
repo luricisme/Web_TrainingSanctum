@@ -27,29 +27,64 @@ test("sidebar links open each placeholder page", async ({ page }) => {
   }
 });
 
-// spec-5-1: the Realm badge at the sidebar bottom (FR-12).
-test("the sidebar shows the Realm badge, linking to Cultivation", async ({ page }) => {
+// The account menu at the right end of the app bar: name, realm under it, Settings and Log out.
+test("the app bar shows the user's name with the realm under it, and opens Settings and Log out", async ({
+  page,
+}) => {
   await register(page);
   await page.goto("/classes");
-  const badge = page.locator("[data-app-bar]").getByRole("link", {
-    name: "Ngưng Khí · Tầng 1, 0 / 10 XP",
-  });
-  await expect(badge).toBeVisible();
-  await expect(badge.getByRole("progressbar", { name: "Ngưng Khí · Tầng 1" })).toHaveAttribute(
-    "aria-valuemax",
-    "10"
-  );
-  await expect(badge.getByText("0 / 10 XP")).toBeVisible();
-  // The badge sits outside the Main nav, below it.
+  const bar = page.locator("[data-app-bar]");
+  const trigger = bar.getByRole("button", { name: "Shell Test, Ngưng Khí · Tầng 1, 0 / 10 XP" });
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  // The name is on top, the realm label under it.
+  const nameBox = (await trigger.getByText("Shell Test", { exact: true }).boundingBox())!;
+  const realmBox = (await trigger.getByText("Ngưng Khí · Tầng 1", { exact: true }).boundingBox())!;
+  expect(nameBox.y).toBeLessThan(realmBox.y);
+  // The badge sits outside the Main nav.
   await expect(
-    page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: /Ngưng Khí/ })
+    page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: /Shell Test/ })
   ).toHaveCount(0);
 
-  await badge.click();
+  // Opening shows Settings and Log out; Escape closes and returns focus.
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  const menu = page.getByRole("menu", { name: "Account" });
+  await expect(menu.getByRole("menuitem", { name: "Settings" })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Log out" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+
+  // Clicking outside closes it too.
+  await trigger.click();
+  await expect(menu).toBeVisible();
+  await page.getByRole("heading", { level: 1 }).click();
+  await expect(menu).toHaveCount(0);
+
+  // Settings goes to the Settings page.
+  await trigger.click();
+  await menu.getByRole("menuitem", { name: "Settings" }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+
+  // Log out ends the session.
+  await trigger.click();
+  await page.getByRole("menuitem", { name: "Log out" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.goto("/classes");
+  await expect(page).toHaveURL(/\/login$/);
+});
+
+// spec-5-1: the Cultivation page stays reachable from the Main nav; there is no Stats page.
+test("Cultivation opens from the Main nav, and there is no Stats page", async ({ page }) => {
+  await register(page);
+  await page.goto("/classes");
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Cultivation" }).click();
   await expect(page).toHaveURL(/\/cultivation$/);
   await expect(page.getByRole("heading", { level: 1, name: "Cultivation" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Today's quests" })).toBeVisible();
-  // There is no Stats page any more.
   const stats = await page.goto("/stats");
   expect(stats?.status()).toBe(404);
 });
@@ -65,8 +100,14 @@ test("a failed realm load hides the badge and leaves the nav working", async ({ 
   const nav = page.getByRole("navigation", { name: "Main" });
   await expect(nav).toBeVisible();
   const aside = page.locator("[data-app-bar]");
-  await expect(aside.getByRole("link", { name: /XP/ })).toHaveCount(0);
+  // The realm figures are gone, but the name and its menu stay, so Log out is still there.
+  await expect(aside.getByRole("button", { name: /XP/ })).toHaveCount(0);
   await expect(page.getByRole("progressbar")).toHaveCount(0);
+  const account = aside.getByRole("button", { name: "Shell Test", exact: true });
+  await expect(account).toBeVisible();
+  await account.click();
+  await expect(page.getByRole("menuitem", { name: "Log out" })).toBeVisible();
+  await page.keyboard.press("Escape");
   await nav.getByRole("link", { name: "Settings" }).click();
   await expect(page).toHaveURL(/\/settings$/);
 });
@@ -77,20 +118,16 @@ test("the badge shows a mid-ladder stage and the final level", async ({ page }) 
 
   await prisma.user.update({ where: { email }, data: { cultivationXp: 715 } });
   await page.goto("/classes");
-  const mid = aside.getByRole("link", { name: "Trúc Cơ · Sơ kỳ, 40 / 100 XP" });
+  const mid = aside.getByRole("button", { name: "Shell Test, Trúc Cơ · Sơ kỳ, 40 / 100 XP" });
   await expect(mid).toBeVisible();
-  await expect(mid.getByText("40 / 100 XP")).toBeVisible();
-  const midBar = mid.getByRole("progressbar", { name: "Trúc Cơ · Sơ kỳ" });
-  await expect(midBar).toHaveAttribute("aria-valuenow", "40");
-  await expect(midBar).toHaveAttribute("aria-valuemax", "100");
+  await expect(mid.getByText("Trúc Cơ · Sơ kỳ", { exact: true })).toBeVisible();
+  await expect(mid).toHaveAttribute("title", "40 / 100 XP");
 
   await prisma.user.update({ where: { email }, data: { cultivationXp: 115_309 } });
   await page.goto("/classes");
-  const final = aside.getByRole("link", { name: "Đạp Thiên Cảnh, 115,309 XP" });
+  const final = aside.getByRole("button", { name: "Shell Test, Đạp Thiên Cảnh, 115,309 XP" });
   await expect(final).toBeVisible();
-  const finalBar = final.getByRole("progressbar", { name: "Đạp Thiên Cảnh" });
-  await expect(finalBar).toHaveAttribute("aria-valuenow", "1");
-  await expect(finalBar).toHaveAttribute("aria-valuemax", "1");
+  await expect(final).toHaveAttribute("title", "115,309 XP");
 });
 
 test("logged-out visitors are redirected to /login from shell routes", async ({
