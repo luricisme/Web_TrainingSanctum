@@ -74,7 +74,7 @@
   - EXPERIENCE.md: information architecture, component patterns, state patterns, interaction primitives, key flows.
   - DESIGN.md: a `components.card-viewer` token and rules; review card, grade buttons, Add cards panel and empty state change.
   - `reconcile-quizlet-flashcard-view.md`.
-  - `mockups/key-screens.html` is **not** updated; DESIGN.md wins on any conflict.
+  - `history/focus-indigo/mockups/key-screens.html` is **not** updated; DESIGN.md wins on any conflict.
 
 ### Technical impact
 - **One Prisma migration:** `SchedulingRecord.firstGradedAt DateTime?`, backfilled from `updatedAt` where `interval > 0`.

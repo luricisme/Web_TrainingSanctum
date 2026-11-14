@@ -23,7 +23,7 @@ The PRD (glossary, FR-5), architecture (data model, AD naming rule), UX docs and
 - Epic 4: "Review this folder" keeps working (all Cards under the Folder); add "Review this flashcard".
 - Epic 5: export, restore and stats include the Flashcard level.
 
-**Artifacts needing edits:** PRD (glossary, FR-3, FR-5, FR-6/7, FR-9, FR-13/14, non-goals, scope list, user journeys), `ARCHITECTURE-SPINE.md` (naming rule, entity diagram, structure, requirement map), `epics.md`, `EXPERIENCE.md`, `DESIGN.md` (hierarchy rule, list-row, nav), and `mockups/key-screens.html` (Folder detail).
+**Artifacts needing edits:** PRD (glossary, FR-3, FR-5, FR-6/7, FR-9, FR-13/14, non-goals, scope list, user journeys), `ARCHITECTURE-SPINE.md` (naming rule, entity diagram, structure, requirement map), `epics.md`, `EXPERIENCE.md`, `DESIGN.md` (hierarchy rule, list-row, nav), and `history/focus-indigo/mockups/key-screens.html` (Folder detail).
 
 **Built code to change.** Prisma schema and a new migration, `apps/web/app/api/folders/[id]` (GET returns Flashcards, not Cards), new `app/api/flashcards/**`, `app/api/cards/**` (batch takes `flashcardId`), `packages/domain` (`FolderCardsResponse`, card schemas, new flashcard schemas), the Folder detail page (becomes a Flashcard list), a new Flashcard detail page (the current Card list, Add cards panel, Edit/Delete card), the folder-delete cascade, class-delete cascade, class counts, and tests.
 

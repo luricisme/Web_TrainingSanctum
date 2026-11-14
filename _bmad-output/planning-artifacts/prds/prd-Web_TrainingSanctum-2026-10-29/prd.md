@@ -131,6 +131,7 @@ A user can create, rename, and delete Classes; create, rename, and delete Folder
 - Deleting a Flashcard requires a confirmation that names the Flashcard and its Card count; deleting removes its Cards and their Scheduling Records.
 - Deleting a Class prompts for how to handle its Folders: move all of them to another existing Class (default when another Class exists), or delete the Class with all its Folders and their Flashcards and Cards. On move, the deleted Class's Unsorted Flashcards merge into the target Class's Unsorted Folder (a Flashcard name that clashes inside that Folder gets a " (2)" suffix); its other Folders keep their names (a name clash in the target Class gets a " (2)" suffix). Deleting everything requires typing the Class name to confirm.
 - Folder delete, Flashcard delete and Class delete each complete atomically — no partial moves or partial deletes.
+- Each Class has one of five colours (lavender, sky, mint, butter, rose). A new Class takes the next colour in order, the user can change it at any time, and the Class's Folders and Flashcards show it. The colour is part of export and restore (FR-13, FR-14). *(Sprint Change 2026-11-14b.)*
 - The hierarchy is fixed: a Folder cannot contain Folders or Cards directly, a Flashcard cannot contain Flashcards, and a Class cannot contain Classes, Flashcards or Cards directly (see §5 Non-Goals).
 
 ---
@@ -329,6 +330,21 @@ A user can view a basic stats screen, outside of active review (per FR-11), show
 - The stats view is reachable from normal (non-review) navigation and reflects the latest graded state without requiring a page reload tied to a specific review session.
 - The view makes SM-4 (observable, correct SM-2 retention curve) checkable by the user directly in the product, not just inferable from raw data — this is the minimum needed to make that success metric falsifiable by the shipped product itself.
 
+### 4.8 Navigation
+
+**Description:** Quick ways to get around once the library grows. *(Added by Sprint Change 2026-11-14b.)*
+
+#### FR-20: Quick search
+
+Pressing Ctrl+K, or "/" when focus is not in a text field, opens a search palette from anywhere outside a Review or Learn session and outside a modal. With nothing typed it offers the four destinations (Review, Classes, Cultivation, Settings) and a suggestion to continue the last-used Flashcard. Typing filters the destinations and searches Class, Folder and Flashcard names and Card terms. Enter opens the highlighted result, Esc closes the palette and returns focus. A Card result opens its Flashcard.
+
+**Consequences (testable):**
+- The palette never opens during a Review or Learn session (FR-11), while a modal is open, or while the user types in a field.
+- Search covers only the signed-in user's data and is read-only.
+- On a phone the same palette opens from the dock's Search button (see the responsive-navigation NFR).
+
+---
+
 ## 5. Non-Goals (Explicit)
 
 - Quizlet-style Test mode or Match game.
@@ -348,13 +364,14 @@ A user can view a basic stats screen, outside of active review (per FR-11), show
 - **Performance (general load).** Opening the app and loading the due queue (outside the review loop itself) must feel fast enough not to introduce its own abandonment friction; the architecture phase sets a concrete page-load budget, but this is named here as a requirement distinct from FR-9's sub-100ms in-session standard, not folded into it.
 - **Testability.** Domain logic (SM-2 engine) is unit-testable in isolation from API/UI layers; the architecture must support unit, API/integration, and E2E (Playwright) test suites running in CI, per the brief's portfolio goals.
 - **Accessibility of input.** Full Unicode/special-character input must work reliably across all Card fields (FR-3) — not just common Latin-1 accented characters.
+- **Responsive navigation.** Every destination in the Main nav, including Settings and Log out, is reachable at every viewport width; below 640px a dock replaces the top bar. *(Sprint Change 2026-11-14b.)*
 - **Live deployment.** The product ships to a live, publicly accessible deployment (not local-only), per the brief's portfolio success criteria — this is a release requirement for v1, independent of the Phase 2 architecture-documentation/case-study work in §8.2.
 
 ## 7. Aesthetic and Tone
 
-- Minimalist, distraction-free visual language — ships dark-mode default with a light-mode toggle, inspired by developer-tool aesthetics (Linear, Raycast) rather than gamified/social layouts (Quizlet).
+- Calm, distraction-free visual language — a dark app frame with a top bar around a light content panel, pastel tint tiles and pill controls ("Pastel Frame"), light by default with a dark-mode toggle. Not gamified or social. *(Sprint Change 2026-11-14b.)*
 - Review Session enforces this most strictly: see FR-11 Focus mode.
-- No sound effects, confetti, or gamification flourishes implied by this direction unless explicitly added later. The cultivation progression (FR-12, FR-19) is the one deliberate exception, added by Sprint Change 2026-11-14; it stays visually quiet (text, a thin XP bar, no animation beyond the bar fill, no modals).
+- No sound effects, confetti, or gamification flourishes implied by this direction unless explicitly added later. The cultivation progression (FR-12, FR-19) is the one deliberate exception, added by Sprint Change 2026-11-14; it stays visually quiet (text, a thin XP bar, no animation beyond the bar fill, no modals). The one illustration is the realm avatar, a cultivator that changes with the realm. *(Sprint Change 2026-11-14b.)*
 
 ## 8. MVP Scope
 
@@ -368,6 +385,7 @@ A user can view a basic stats screen, outside of active review (per FR-11), show
 - Keyboard-driven review session of learned Cards with focus mode (FR-9, FR-11)
 - Flashcard card viewer and Learn session (FR-16, FR-17), with the study-directions setting (FR-18)
 - Cultivation progression and Daily Quests (FR-12, FR-19)
+- Quick search (FR-20): last in build order and droppable *(Sprint Change 2026-11-14b.)*
 - Data export/backup and restore (FR-13, FR-14) — promoted into Phase 1: data loss is a stated dealbreaker risk for a daily-dependency tool, and export without a restore path isn't actually a backup, so both ship with the MVP rather than waiting for Phase 2 polish.
 - Basic progress/stats view (FR-15) — needed so the portfolio success metric SM-4 (retention curve) is observable in the shipped product, not just in raw data.
 - Live, publicly accessible deployment (minimal hosting, no architecture docs/case study required at this stage — see §8.2) — required for the brief's portfolio success criteria to be met at all.

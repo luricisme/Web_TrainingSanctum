@@ -11,7 +11,7 @@ context:
   - '{project-root}/_bmad-output/planning-artifacts/prds/prd-Web_TrainingSanctum-2026-10-29/addendum.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/DESIGN.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/EXPERIENCE.md'
-  - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/.working/design-dna-profile.json'
+  - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/history/focus-indigo/working/design-dna-profile.json'
   - '{project-root}/.claude/skills/design-dna/references/generation-guide.md'
 ---
 

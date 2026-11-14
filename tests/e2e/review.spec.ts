@@ -665,7 +665,7 @@ test("a scoped Review with nothing due names its scope and lists only its Flashc
 });
 
 // Visual check: screenshots land in test-results/screenshots for comparison
-// against DESIGN.md and mockups/key-screens.html.
+// against DESIGN.md and history/focus-indigo/mockups/key-screens.html.
 for (const theme of ["dark", "light"] as const) {
   for (const width of [1280, 390]) {
     test(`focus mode and empty-state screenshots (${theme}, ${width}px)`, async ({ page }) => {

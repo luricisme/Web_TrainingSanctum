@@ -26,7 +26,7 @@ FR-3: Create and edit cards — a user can create/edit a Card with fields: Term,
 
 FR-4: Delete a card — a user can delete a Card, which removes both its Scheduling Records and review history from the due queue immediately.
 
-FR-5: Class, Folder & Flashcard CRUD — fixed hierarchy Class → Folder → Flashcard → Card. A user can create/rename/delete Classes, Folders (always in exactly one Class) and Flashcards (named sets, name only, always in exactly one Folder, name unique per Folder case-insensitively), and move a Flashcard to any Folder, in any Class. Every Card is in exactly one Flashcard. Every Class has one built-in "Unsorted" Folder that cannot be renamed or deleted. Deleting a Folder: move its Flashcards to the Class's Unsorted (default) or delete them with their Cards. Deleting a Flashcard: confirmation names it and its Card count; its Cards and Scheduling Records are removed. Deleting a Class: move all its Folders to another Class (default; Unsorted Flashcards merge into the target's Unsorted, name clashes get " (2)") or delete everything after typing the Class name. All deletes are atomic. No sub-folders, no sub-classes.
+FR-5: Class, Folder & Flashcard CRUD — fixed hierarchy Class → Folder → Flashcard → Card. A user can create/rename/delete Classes, Folders (always in exactly one Class) and Flashcards (named sets, name only, always in exactly one Folder, name unique per Folder case-insensitively), and move a Flashcard to any Folder, in any Class. Every Card is in exactly one Flashcard. Every Class has one built-in "Unsorted" Folder that cannot be renamed or deleted. Deleting a Folder: move its Flashcards to the Class's Unsorted (default) or delete them with their Cards. Deleting a Flashcard: confirmation names it and its Card count; its Cards and Scheduling Records are removed. Deleting a Class: move all its Folders to another Class (default; Unsorted Flashcards merge into the target's Unsorted, name clashes get " (2)") or delete everything after typing the Class name. All deletes are atomic. No sub-folders, no sub-classes. Each Class has one of five colours (new Classes take the next in order; changeable; Folders and Flashcards show it; part of export and restore). *(Sprint Change 2026-11-14b.)*
 
 FR-6: Paste import — inside a Flashcard's Add cards → Import → Paste, a user pastes line-delimited term/definition pairs (delimiter chosen per import) and presses Preview; the lines open in the import review editor (the Manual-mode row editor, rows labelled with source line numbers, no column mapping), where malformed rows show an inline reason and duplicates of the Flashcard's existing Terms (case-insensitive, trimmed) are flagged as "will be skipped". The user edits or removes rows, then Save commits: valid rows are created, still-invalid rows and still-duplicate rows are reported, never silently dropped or duplicated. Under 5 seconds of system time (Preview + Save, excluding editing time). Results: Created / Duplicates skipped / Errors.
 
@@ -56,6 +56,8 @@ FR-18: Study directions setting — per account: Both (default), Term → Defini
 
 FR-19: Daily Quests — each local day the user has two quests sized by their Bộ at the start of the day: Learn Flashcards (fully learn 1 / 2 / 3 / 4 Flashcards in Nhất / Nhị / Tam / Tứ Bộ) and Clear Review (grade at least one learned record and leave the due queue empty). XP per quest 10 / 20 / 40 / 40. A quest's checkbox unlocks only when its condition is met; the user ticks it to claim the XP, once. A quest with no work that day is skipped (no reward, no penalty). At day end each quest neither claimed nor skipped costs 2 × its XP, including done-but-unticked quests and days the app wasn't opened; settled lazily, in order, on the next visit. No penalty before cultivation started or for a restore gap. No rule reads grade values (SM-C1). (Sprint Change 2026-11-14)
 
+FR-20: Quick search — Ctrl+K or "/" (outside a text field, a session or a modal) opens a palette to jump to Review, Classes, Cultivation or Settings and to search Class, Folder and Flashcard names and Card terms; Enter opens, Esc closes. *(Sprint Change 2026-11-14b.)*
+
 ### NonFunctional Requirements
 
 NFR-1: Data durability — Card, Scheduling Record, and cultivation data must survive normal operation with no silent data loss; FR-13/FR-14 are the product-level mitigation on top of infrastructure-level durability (Neon PITR).
@@ -69,6 +71,8 @@ NFR-4: Testability — domain logic (SM-2 engine, import parsing, duplicate dete
 NFR-5: Accessibility of input — full Unicode/special-character input must work reliably across all Card fields, not just common Latin-1 accented characters (Postgres TEXT/UTF-8, no normalization/stripping).
 
 NFR-6: Live deployment — the product ships to a live, publicly accessible deployment (Vercel), independent of Phase 2 architecture-documentation/case-study work.
+
+NFR-7: Responsive navigation — every Main nav destination, including Settings and Log out, is reachable at every viewport width; below 640px a dock replaces the top bar. *(Sprint Change 2026-11-14b.)*
 
 ### Additional Requirements
 
@@ -96,17 +100,17 @@ NFR-6: Live deployment — the product ships to a live, publicly accessible depl
 
 ### UX Design Requirements
 
-UX-DR1: Implement the dual-theme design token set (dark default / light toggle) exactly as specified in DESIGN.md — colors, typography scale, spacing scale, corner radii, elevation levels, motion durations/easings — as CSS variables mapped for Tailwind v4.
+UX-DR1: Implement the dual-theme design token set (light default / dark toggle, "Pastel Frame") exactly as specified in DESIGN.md — colors including the frame and five tint pairs, typography scale (Plus Jakarta Sans), spacing scale, corner radii, elevation levels, motion durations/easings — as CSS variables mapped for Tailwind v4. *(Sprint Change 2026-11-14b.)*
 
 UX-DR2: Build the Review card component: large soft-rounded (`rounded.lg`) surface, center-aligned, fixed bounds that never resize between prompt and revealed states, Quizlet-style 3D Y-axis flip (520ms, ease-out) on click/tap/Space, flipping either way; shared by Review, Learn and the Card viewer; no icon row in v1 (Sprint Change 2026-11-13).
 
-UX-DR3: Build the Grade buttons component (Review and Learn): Again / Hard / Good / Easy, visible after the first flip and staying while the card is flipped back, until the entry is graded, each labeled with its keyboard shortcut; Again styled with the `error` color (never the accent); Hard/Good/Easy equal weight to each other (never implying Hard shortens the next interval, per classical SM-2).
+UX-DR3: Build the Grade buttons component (Review and Learn): Again / Hard / Good / Easy, visible after the first flip and staying while the card is flipped back, until the entry is graded, each labeled with its keyboard shortcut; four equal-size pastel pills (rose, butter, mint, sky), text in `text`, never the accent. The colour order can read as a severity scale; the owner accepted that. *(Sprint Change 2026-11-14b.)*
 
-UX-DR4: Build the Sidebar nav component: fixed 240px width, four flat icon+label items (Review, Classes, Cultivation, Settings — Cultivation replaced Stats, Sprint Change 2026-11-14), active-item styling (`elevated` background + accent text), hidden entirely during review focus mode and on mobile (<640px). There is no Import item — import lives inside a Folder's "Add cards" (UX-DR9).
+UX-DR4: Build the app bar (replaces the sidebar): a dark frame top bar with the brand at the left, four flat icon+label nav items centred (Review, Classes, Cultivation, Settings — Cultivation replaced Stats, Sprint Change 2026-11-14), the current item a raised pill, labels shown from 1024px and icon-only below, and the Realm badge at the right; hidden during review focus mode and below 640px, where the dock (UX-DR20) replaces it. There is no Import item — import lives inside a Flashcard's "Add cards" (UX-DR9). *(Sprint Change 2026-11-14b.)*
 
-UX-DR5: Build the List/folder/flashcard row component: rows grouped under section headers preceded by the small accent-colored square section-bullet marker, hover state (`row-hover`), trailing "..." overflow menu for rename/delete (Flashcard rows: Rename, Move to…, Delete).
+UX-DR5: Build the Class / Folder / Flashcard tile component: tiles in a 1, 2 or 3 column grid under section headers preceded by the small accent-colored dot section-bullet, tinted with the Class's colour (UX-DR22), darker border on hover and focus, trailing "..." overflow menu for rename/delete (Class tiles: Colour as well; Flashcard tiles: Rename, Move to…, Delete). *(Sprint Change 2026-11-14b.)*
 
-UX-DR6: Build the Progress counter (mono-font "X / Y") and the Realm badge (realm · stage + 4px XP bar + mono "40 / 100 XP", no icon) at the sidebar bottom, both visible outside active review only (per FR-11/FR-12).
+UX-DR6: Build the Progress counter (mono-font "X / Y") and the Realm badge at the right end of the app bar — the realm avatar (UX-DR23) inside a 44px XP ring, realm · stage and mono "40 / 100 XP" — both visible outside active review only (per FR-11/FR-12). The 4px XP bar remains on the Empty due-queue state and the Cultivation page. *(Sprint Change 2026-11-14b.)*
 
 UX-DR7: Build the Modal component for: folder-delete confirmation (two explicit buttons — "Move flashcards to Unsorted" primary / "Delete flashcards too" secondary-danger, no checkbox); flashcard-delete confirmation (names the Flashcard and its Card count); move-flashcard modal (Folder picker across Classes); class-delete confirmation ("Move folders to…" with a target-Class picker as primary, "Delete class and everything in it" secondary-danger that only enables after typing the Class name; when no other Class exists only the delete option is shown); and restore-from-backup confirmation (consequence statement + Confirm/Cancel, no type-to-confirm).
 
@@ -116,23 +120,31 @@ UX-DR17: Build the Card viewer on Flashcard detail (Sprint Change 2026-11-13, FR
 
 UX-DR18: Build the Study directions control on Settings (Sprint Change 2026-11-13b, FR-18): the reused `components.mode-switcher` pill with three options, saved on change with a quiet "Saved" status and inline error rollback; stacks vertically below 640px; a radio group operable with arrow keys.
 
-UX-DR19: Build the Cultivation page (Sprint Change 2026-11-14, FR-12/FR-15/FR-19), replacing Stats in the sidebar: realm card with XP bar; Daily quest list (two Quest rows with locked, done-not-ticked, skipped and claimed states; tick claims at once with inline rollback on failure); quiet missed-quests notice (warning left border) and breakthrough notice, no modal or confetti; then the FR-15 stats.
+UX-DR19: Build the Cultivation page (Sprint Change 2026-11-14, FR-12/FR-15/FR-19), replacing Stats in the main nav: realm card with XP bar; Daily quest list (two Quest rows with locked, done-not-ticked, skipped and claimed states; tick claims at once with inline rollback on failure); quiet missed-quests notice (warning left border) and breakthrough notice, no modal or confetti; then the FR-15 stats.
 
 UX-DR9: Build the "Add cards" panel opened from inside a Flashcard, with two modes in a pill switcher: **Manual** (Quizlet-style editor — numbered term/definition rows, optional fields expandable per row, "+ Add row", Tab moves to the next field and Enter on the last field adds a row, one Save creates all valid rows) and **Import** (Paste / Upload-file sub-tabs; Paste → delimiter + "Preview", Upload → column mapping). Import always ends in the **import review editor**: the same row editor as Manual, prefilled with the parsed rows, each labelled with its source line number, with inline errors on malformed rows, a "Already in {Flashcard} — will be skipped" flag on duplicates (cleared when the Term is edited), and a remove (×) button per row; a summary strip above the rows reads "30 rows · 2 need fixing · 1 duplicate". Save commits, then a results view shows exactly 3 groups (Created / Duplicates skipped / Errors, each error with line number + reason). The target Flashcard is fixed to the Flashcard the panel was opened from and shown in the panel header. There is no standalone Import page or nav item.
 
-UX-DR10: Implement responsive breakpoints (mobile <640px, tablet 640–1024px, desktop >1024px): sidebar hidden and grade-button row wraps below 640px; review session stays single-column/centered (card capped at 640px) at all sizes.
+UX-DR10: Implement responsive breakpoints (mobile <640px, tablet 640–1024px, desktop >1024px): the app bar becomes the dock (UX-DR20) and the frame rim goes away below 640px; tiles use 1, 2, 3 columns; the grade-button row wraps below 640px; review session stays single-column/centered (card capped at 640px) at all sizes. *(Sprint Change 2026-11-14b.)*
 
 UX-DR11: Implement full keyboard interaction for the Review and Learn loop: Space flips either way, 1–4 or J/K/L/; grade once the answer has been shown; in the Card viewer, Space flips and ← / → move between Cards; no mouse dependency anywhere in the loop, with sub-100ms perceived transition latency.
 
 UX-DR12: Implement mobile touch interactions for review: tap-to-flip plus 4-directional swipe mapped to the four grades, additive to (not replacing) the grade buttons' own tap targets.
 
-UX-DR13: Verify WCAG AA contrast in both themes before ship against the measured ratios recorded in DESIGN.md ("Focus Indigo" palette); any token added later must be checked against `card` and `bg` in both themes.
+UX-DR13: Verify WCAG AA contrast in both themes before ship against the measured ratios recorded in DESIGN.md ("Pastel Frame", measured 2026-11-14: all text pairs pass; input borders, tile edges and the XP ring track are under the 3:1 non-text ratio, tracked by Story 6.6); any token added later must be checked against `card`, `bg` and the tints in both themes. *(Sprint Change 2026-11-14b.)*
 
 UX-DR14: Implement a visible focus-ring/`:focus-visible` state on every interactive element sufficient for full keyboard navigation of the entire app (not just the review loop), with tab order following reading order on every surface.
 
 UX-DR15: Apply the microcopy voice/tone rules from EXPERIENCE.md across all surfaces (direct, imperative, no cheerleading/emoji/mascot voice) — e.g. import results, empty states, restore warnings.
 
-UX-DR16: Implement the dark/light theme toggle (dark is default) reachable from Settings, applying the full token set from UX-DR1 consistently across every surface.
+UX-DR16: Implement the light/dark theme toggle (light is default) reachable from Settings, applying the full token set from UX-DR1 consistently across every surface. *(Sprint Change 2026-11-14b.)*
+
+UX-DR20: Build the mobile dock (Sprint Change 2026-11-14b, NFR-7): below 640px a floating pill at the bottom on the frame colour with Review, Classes, Cultivation, Settings and Search as round icon buttons, the current destination raised, clear of the device's bottom safe area, hidden in focus mode; the Realm badge is not shown on mobile.
+
+UX-DR21: Build quick search (Sprint Change 2026-11-14b, FR-20): a centred palette over a scrim, opened with Ctrl+K or "/" and from the dock's Search button; **Go to** and **Suggested** groups before typing, results for names and Card terms after; arrow keys move, Enter opens, Esc closes and returns focus; key hints in the footer.
+
+UX-DR22: Build Class colour (Sprint Change 2026-11-14b, FR-5): five swatches in the Class create and rename modals and a Colour item in the Class "..." menu; the tint carries to the Class's Folder and Flashcard tiles; colour is never the only cue.
+
+UX-DR23: Build the realm avatar (Sprint Change 2026-11-14b, FR-12): one cultivator illustration per realm (19), more striking at higher realms, decorative only, shown inside the Realm badge ring; the realm and stage are always also written out.
 
 ### FR Coverage Map
 
@@ -155,6 +167,7 @@ FR-16: Epic 4 - Flashcard card viewer (flip, ← →, non-graded)
 FR-17: Epic 4 - Learn session (graded introduction of Unlearned Cards per Flashcard)
 FR-18: Epic 4 - Study directions setting (per-direction learned model)
 FR-19: Epic 5 - Daily Quests (claim, skip, double penalty, settlement)
+FR-20: Epic 6 - Quick search (palette, Ctrl+K)
 
 ## Epic List
 
@@ -182,6 +195,11 @@ A user can run a daily, keyboard-first review session: due cards are presented o
 A user advances through a tu-tiên cultivation ladder (Ngưng Khí → Đạp Thiên Cảnh) by claiming two daily quests — Learn Flashcards (1–4 by Bộ) and Clear Review — that they tick off themselves once the work is done; unclaimed quests cost double XP and can demote them. They see their realm, quests and basic stats (including the SM-2 retention curve) outside review, and can trust the product with months of history — exporting it on demand and restoring it, with destructive operations always confirmed and atomic.
 **FRs covered:** FR-12, FR-13, FR-14, FR-15, FR-19
 **Implementation notes:** Quest-day attribution and settlement reuse Epic 4's `toLocalCalendarDay` helper so due-dates and quest days share one clock (AD-8); XP ledger, quest snapshots and lazy settlement per AD-15 (`packages/domain/cultivation.ts`, no cron, grade route unchanged); FR-13/FR-14 share one `backupExportSchema` (AD-10) with a `cultivation` section, and restore runs inside one Prisma transaction (AD-11) and marks days through yesterday settled; restore-confirmation modal (UX-DR7), Realm badge (UX-DR6), Empty due-queue realm (UX-DR8) and the Cultivation page (UX-DR19); the Cultivation page surfaces the retention curve per Recall Direction (SM-4). Build order: 5.1 → 5.6 → 5.7 → 5.4 → 5.2 → 5.3 → 5.5 (Sprint Change 2026-11-14). As the final epic, this is also the natural point for a closing pass on cross-cutting UX items that touch every surface built so far: WCAG AA contrast verification in both themes (UX-DR13, with particular attention to the flagged light-mode combination), full keyboard focus-visible states app-wide (UX-DR14), and a microcopy/voice consistency check (UX-DR15).
+
+### Epic 6: Pastel Frame & Navigation
+A user gets the refreshed look (dark frame, top bar, pastel tiles, realm avatar), can reach every destination on a phone through a dock, can give each Class its own colour, and can jump anywhere with quick search. Stories 6.1 and 6.2 record work already built.
+**FRs covered:** FR-20 (and the Class colour part of FR-5)
+**Implementation notes:** Tokens live in `apps/web/app/globals.css` and `DESIGN.md`. Class colour is the only schema change (one additive migration, deployed to Neon with the code) and must land before the backup stories so the backup schema is written once. Quick search is read-only and reuses the existing list endpoints or one new read-only search route.
 
 ## Epic 1: Foundation, Auth & Live Deployment
 
@@ -289,7 +307,9 @@ So that the product already feels like itself before individual features exist.
 
 **Given** the theme toggle
 **When** switched
-**Then** the UI swaps between dark (default) and light theme using the full token set, and the preference persists across reloads
+**Then** the UI swaps between light (default) and dark theme using the full token set, and the preference persists across reloads
+
+*Amended by Sprint Change 2026-11-14b: the sidebar is now the top app bar inside a dark frame (UX-DR4), the theme default is light, and the nav's fourth item has been Cultivation since 2026-11-14. Behavior and routes are unchanged.*
 
 **Given** an unauthenticated visitor
 **When** they try to reach any shell route directly
@@ -315,6 +335,8 @@ So that I can separate my study material by course or goal.
 **Given** I create a Class with a name
 **When** I save
 **Then** it appears in my Class list immediately, already containing one "Unsorted" Folder, both created in one transaction
+
+*Amended by Sprint Change 2026-11-14b: Classes also carry a colour (Story 6.4); the Class list is a grid of tiles (UX-DR5).*
 
 **Given** an existing Class
 **When** I rename it
@@ -651,7 +673,7 @@ So that I can concentrate without distraction.
 
 **Given** I enter a Review or Learn session
 **When** it starts
-**Then** sidebar, realm badge, and other non-essential chrome are hidden — only the card and recall controls are visible
+**Then** the app bar (formerly the sidebar), realm badge, and other non-essential chrome are hidden — only the card and recall controls are visible
 
 **Given** I exit review (queue cleared or I navigate away)
 **When** I leave
@@ -803,7 +825,7 @@ So that I study the recall skill I actually need.
 
 A user advances through a tu-tiên cultivation ladder by claiming two daily quests that grow with their Bộ; unclaimed quests cost double XP and can demote them. They see their realm, quests and basic stats (including the SM-2 retention curve) outside of review, and can trust the product with months of history — exporting it on demand and restoring it, with destructive operations always confirmed and atomic.
 
-*Sprint Change 2026-11-14 replaced the streak with the cultivation progression: 5.1 rewritten, 5.6 and 5.7 added, 5.2–5.4 amended. Build order: 5.1 → 5.6 → 5.7 → 5.4 → 5.2 → 5.3 → 5.5.*
+*Sprint Change 2026-11-14 replaced the streak with the cultivation progression: 5.1 rewritten, 5.6 and 5.7 added, 5.2–5.4 amended. Build order, merged with Epic 6 by Sprint Change 2026-11-14b: 5.1 (done) → 6.3 → 6.6 → 5.6 → 5.7 → 5.4 → 6.4 → 5.2 → 5.3 → 6.5 → 5.5.*
 
 ### Story 5.1: Cultivation Realms & XP Ledger
 
@@ -818,7 +840,7 @@ So that months of study show up as a rank I care about.
 **And** `levelForXp(xp)` returns the Bộ, realm, stage, XP into the stage and XP needed, unit-tested at every realm boundary, at 0, and past Đạp Thiên Cảnh (XP keeps adding up, level stays final)
 
 **Given** my total XP
-**Then** the sidebar shows the Realm badge ("Ngưng Khí · Tầng 3" + XP bar + "5 / 20 XP"), hidden during focus mode (FR-11)
+**Then** the app bar shows the Realm badge ("Ngưng Khí · Tầng 3" + "5 / 20 XP"; originally at the sidebar bottom with an XP bar, now the avatar inside an XP ring, Sprint Change 2026-11-14b), hidden during focus mode (FR-11)
 **And** the Empty due-queue state shows the realm in heading size where the streak was planned (closes the 4.5 deferred item), and the stale streak comment in `empty-due-queue.tsx` is updated
 
 **Given** the schema
@@ -841,6 +863,7 @@ So that I never lose months of study data.
 **And** the payload conforms to the single shared `backupExportSchema` also used by restore
 **And** the export includes `user.studyDirections`
 **And** each Scheduling Record's `firstGradedAt` is exported verbatim
+**And** each Class's `color` is exported (Sprint Change 2026-11-14b; built after Story 6.4)
 
 ### Story 5.3: Restore from Backup
 
@@ -860,6 +883,7 @@ So that I can recover my data if something goes wrong.
 **And** the restore runs inside one transaction: every row changes or none do, even on a partial failure
 **And** each Scheduling Record's `firstGradedAt` is restored verbatim
 **And** `user.studyDirections` is restored
+**And** each Class's `color` is restored; a backup without it restores with colours assigned by creation order (Sprint Change 2026-11-14b)
 
 **Given** a restore completes
 **Then** `cultivationSettledThrough` is set to yesterday, so no penalty is charged for days between the export and the restore
@@ -872,7 +896,7 @@ So that I can observe my progress and trust the scheduling is working correctly.
 
 **Acceptance Criteria:**
 
-**Given** I navigate to Cultivation (outside active review; it replaces Stats in the sidebar, UX-DR19)
+**Given** I navigate to Cultivation (outside active review; it replaces Stats in the main nav, UX-DR19)
 **When** it loads
 **Then** I see my realm and stage with its XP bar, total XP, today's quest list (Story 5.6), an XP-over-time chart from `XpEvent`, total Cards (learned / unlearned, counted over my studied directions), and a visualization of Scheduling Records' distribution by interval (or review-outcome history) per Recall Direction
 
@@ -891,7 +915,7 @@ So that the app feels like one coherent, trustworthy product.
 
 **Given** both themes
 **When** checked against WCAG AA
-**Then** all text/background combinations meet 4.5:1 contrast — matching the measured "Focus Indigo" ratios recorded in DESIGN.md
+**Then** all text/background combinations meet 4.5:1 contrast — matching the measured "Pastel Frame" ratios recorded in DESIGN.md (text on the five tints included), and the non-text 3:1 gaps listed there are closed or accepted in writing (Sprint Change 2026-11-14b)
 
 **Given** any interactive element
 **When** focused via keyboard
@@ -971,3 +995,141 @@ So that skipping study has real weight.
 **Given** a settlement that charged XP
 **Then** the next Cultivation view shows one quiet notice per settled range ("Nov 12: 2 quests missed, −40 XP. Now Ngưng Khí · Tầng 9.")
 **And** `settleDays` is unit-tested for a single missed day, a 30-day absence, demotion across a realm and a Bộ boundary, the 0 floor, a DST day, and skipped quests
+
+## Epic 6: Pastel Frame & Navigation
+
+A user gets the refreshed look (a dark frame with a top bar, pastel tiles and a realm avatar), can reach every destination on a phone, can give each Class its own colour, and can jump anywhere with quick search.
+
+*Added by Sprint Change 2026-11-14b. Stories 6.1 and 6.2 record work already built on `ui/big-ui-update`. Build order: 6.3 → 6.6 → (Epic 5 stories) → 6.4 → (5.2, 5.3) → 6.5 — see Epic 5.*
+
+### Story 6.1: Pastel Frame Shell and Tiles (built)
+
+As a user,
+I want the refreshed look across the whole app,
+So that it feels like one coherent, friendly product.
+
+**Acceptance Criteria:**
+
+**Given** any shell route at 640px or wider
+**Then** I see the dark frame with the top app bar, the inset light panel, and the Realm badge at the bar's right end (UX-DR4, UX-DR6)
+
+**Given** Classes, a Class's Folders, or a Folder's Flashcards
+**Then** they are tiles in a 1, 2 or 3 column grid with a "..." menu (UX-DR5)
+
+**Given** Review or Learn in focus mode
+**Then** the app bar is absent from first paint, with and without JavaScript
+
+**Given** a first visit with no stored theme
+**Then** the theme is light, and a stored dark choice loads dark with no flash (UX-DR16)
+
+**Given** the Review and Learn grade buttons
+**Then** they are the four pastel pills (UX-DR3)
+
+*Status: built and committed (`e8fe617`); spec `spec-restyle-pastel-frame.md`; 138 of 138 e2e tests pass.*
+
+### Story 6.2: Realm Avatar (built)
+
+As a user,
+I want an avatar that changes with my realm,
+So that advancing through the ladder is visible at a glance.
+
+**Acceptance Criteria:**
+
+**Given** my realm
+**When** the Realm badge shows
+**Then** it shows the avatar for that realm (19 looks) inside the XP ring, with the realm, stage and XP written out beside it (UX-DR23)
+
+**Given** I move to a higher realm
+**Then** the avatar gains more detail (aura, core, halo, swords, rays, crown) per DESIGN.md, and a lower realm after a demotion shows the lower look
+
+**Given** reduced motion
+**Then** the slow ray turn at Bộ 3 and up stops
+
+*Status: built and committed (`92167eb`).*
+
+### Story 6.3: Mobile Dock
+
+As a user on a phone,
+I want a way to navigate,
+So that I can reach Settings, Cultivation and Log out below 640px.
+
+**Acceptance Criteria:**
+
+**Given** a viewport under 640px outside focus mode
+**Then** a floating dock shows Review, Classes, Cultivation, Settings and Search, with the current destination raised, clear of the device's bottom safe area (UX-DR20)
+
+**Given** a viewport of 640px or wider
+**Then** the dock is not shown and the app bar is
+
+**Given** a Review or Learn session
+**Then** the dock is hidden, as the app bar is
+
+**Given** the dock
+**Then** every item is reachable and operable by keyboard with a visible focus ring, and the page content is not covered by the dock when scrolled to the end
+**And** the Search button opens quick search once Story 6.5 exists, and is hidden until then
+
+### Story 6.4: Class Colour
+
+As a user,
+I want each Class to have its own colour,
+So that I can tell my material apart at a glance.
+
+**Acceptance Criteria:**
+
+**Given** the Class create modal
+**Then** I can pick one of five colours; the default is the next colour in order (UX-DR22)
+
+**Given** an existing Class
+**When** I choose Colour from its "..." menu or rename it
+**Then** I can change its colour, and its Class tile, Folder tiles and Flashcard tiles show the new colour at once
+
+**Given** Classes that existed before this story
+**Then** the migration gives each a colour by creation order, and nothing else changes
+
+**Given** the colour
+**Then** the Class name and breadcrumb remain the primary cue; colour is never the only one
+**And** the export includes `color` and restore reads it (Stories 5.2 and 5.3), validated by `backupExportSchema`
+**And** `color` is validated by Zod as one of the five values on create and update (AD-6), and the migration is deployed to Neon with the code
+
+### Story 6.5: Quick Search
+
+As a user with a growing library,
+I want to jump anywhere from the keyboard,
+So that I do not have to drill through Classes and Folders.
+
+**Acceptance Criteria:**
+
+**Given** focus is not in a text field and no session or modal is open
+**When** I press Ctrl+K or "/"
+**Then** the palette opens with **Go to** (Review, Classes, Cultivation, Settings) and **Suggested** ("Continue: {last-used Flashcard}") (UX-DR21)
+
+**Given** I type
+**Then** results show matching destinations and Class, Folder and Flashcard names and Card terms, scoped to my account, and a Card result opens its Flashcard
+
+**Given** the palette
+**Then** arrow keys move the highlight, Enter opens it, Esc closes and returns focus to where it was
+
+**Given** a Review or Learn session, a modal, or a text field with focus
+**Then** the shortcut does nothing
+
+**Given** a search request
+**Then** it is read-only and returns only the signed-in user's data
+
+### Story 6.6: Input Border Contrast
+
+As a user,
+I want input fields to have a visible boundary,
+So that I can see where to type.
+
+**Acceptance Criteria:**
+
+**Given** the `border` token on the content panel and on white cards in both themes
+**Then** it reaches at least 3:1 against `bg` and `card`, measured and recorded in DESIGN.md
+
+**Given** inputs, selects and the Add cards fields
+**Then** they use the new border and keep their focus and error states
+
+**Given** the tile edges, card hairlines and XP ring track
+**Then** each is either brought to 3:1 or recorded in DESIGN.md as accepted, with the reason
+**And** the existing e2e suite still passes
+

@@ -9,7 +9,7 @@ baseline_commit: 'c0af1fd818603bef50a25220650934703a76ce82'
 context:
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/DESIGN.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/EXPERIENCE.md'
-  - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/.working/design-dna-profile.json'
+  - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/history/focus-indigo/working/design-dna-profile.json'
   - '{project-root}/.claude/skills/design-dna/references/generation-guide.md'
 ---
 
@@ -134,4 +134,4 @@ Pass 1 (2026-11-08). Layers: blind-hunter, edge-case-hunter, verification-gap, d
 - `npm run test:e2e -- registration` -- expected: all pass (needs a DB in `.env.local`; if one is unavailable, report that explicitly)
 
 **Manual checks:**
-- Screenshot `/register` in dark and light themes at 1280px and 375px wide, including the error state. Compare with DESIGN.md and `mockups/key-screens.html` (surface layering, accent restraint, typography scale).
+- Screenshot `/register` in dark and light themes at 1280px and 375px wide, including the error state. Compare with DESIGN.md and `history/focus-indigo/mockups/key-screens.html` (surface layering, accent restraint, typography scale).
