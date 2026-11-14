@@ -145,3 +145,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-6-daily-quests.md`
   summary: `tests/e2e/cultivation.spec.ts` `seedWork` deletes today's `CultivationDay` right after register, which can race the badge's first GET and recreate it with empty skip flags.
   evidence: Maybe-false: it passed in two full runs; settle it by delaying `/api/cultivation` and re-running, or by awaiting network idle before the delete.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-4-cultivation-stats-page.md`
+  summary: Update DESIGN.md so the realm avatar may repeat on the Cultivation page's Realm Ladder.
+  evidence: DESIGN.md says to show the avatar only in the Realm badge (enlarged on Cultivation at most), but UX-DR24 requires 19 avatars in the Ladder, so the design doc and the shipped screen disagree.
