@@ -42,11 +42,14 @@ const GRADE_LABELS: Record<ReviewGrade, string> = {
 };
 
 const gradeBase =
-  "flex items-center justify-center gap-3 rounded-full border px-6 py-3 text-body font-medium transition-state hover:bg-row-hover focus-ring";
-/** DESIGN.md `grade-button-again`: error border and text, never the accent. */
-const gradeAgain = `${gradeBase} border-error text-error`;
-/** DESIGN.md `grade-button-neutral`: Hard, Good and Easy are identical in weight. */
-const gradeNeutral = `${gradeBase} border-border text-foreground-secondary hover:text-foreground`;
+  "flex items-center justify-center gap-3 rounded-full border px-6 py-3 text-body font-semibold text-foreground transition-state hover:border-foreground focus-ring";
+/** Grade pills: one pastel tint each, equal in weight, never the accent. */
+const GRADE_CLASS: Record<ReviewGrade, string> = {
+  again: `${gradeBase} bg-tint-rose border-tint-rose-border`,
+  hard: `${gradeBase} bg-tint-butter border-tint-butter-border`,
+  good: `${gradeBase} bg-tint-mint border-tint-mint-border`,
+  easy: `${gradeBase} bg-tint-sky border-tint-sky-border`,
+};
 
 export const stageClass = "flex w-full flex-col items-center gap-8";
 
@@ -260,10 +263,10 @@ export function GradingSession({
                     type="button"
                     onClick={() => grade(value)}
                     aria-keyshortcuts={`${i + 1}`}
-                    className={value === "again" ? gradeAgain : gradeNeutral}
+                    className={GRADE_CLASS[value]}
                   >
                     {GRADE_LABELS[value]}
-                    <kbd aria-hidden="true" className="font-mono text-caption text-foreground-tertiary">
+                    <kbd aria-hidden="true" className="font-mono text-caption text-foreground-secondary">
                       {i + 1}
                     </kbd>
                   </button>

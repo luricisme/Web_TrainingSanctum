@@ -143,7 +143,7 @@ test("the options sit in a row at 1280px and stack full-width at 390px", async (
 });
 
 // Visual check: screenshots land in test-results/screenshots for comparison
-// against DESIGN.md and mockups/key-screens.html.
+// against DESIGN.md and history/focus-indigo/mockups/key-screens.html.
 for (const theme of ["dark", "light"] as const) {
   for (const width of [1280, 390] as const) {
     test(`settings screenshot (${theme}, ${width}px)`, async ({ page }) => {

@@ -160,7 +160,7 @@ test("overflow menu is keyboard operable", async ({ page }) => {
 });
 
 // Visual check: screenshots land in test-results/screenshots for comparison
-// against DESIGN.md and mockups/key-screens.html.
+// against DESIGN.md and history/focus-indigo/mockups/key-screens.html.
 for (const theme of ["dark", "light"] as const) {
   test(`classes screenshots (${theme})`, async ({ page }) => {
     mkdirSync("test-results/screenshots", { recursive: true });

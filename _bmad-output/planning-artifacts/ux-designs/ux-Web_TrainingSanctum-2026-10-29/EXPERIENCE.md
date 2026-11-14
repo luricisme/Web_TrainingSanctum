@@ -15,9 +15,12 @@ sources:
 
 Responsive web, no native mobile app (PRD §5 Non-Goals: "Native mobile app (responsive web only)"). Single-user, single-tenant — one real account, though the data model is user-scoped for future-proofing (PRD FR-1).
 
-Training Sanctum's visual identity and app structure are deliberately borrowed from two sources, reconciled in `DESIGN.md`:
-- **Quizlet** contributes the app shell and component shapes — sidebar navigation, the flashcard/review-card anatomy, the progress counter, and list-row structure for class/folder/flashcard browsing, and the Manual card-entry editor (numbered term/definition rows). Explicitly *not* Quizlet's gamification, social features, or promotional surfaces.
-- **spy-family.net** contributes editorial grid rhythm and the section-bullet motif. Color comes from the "Focus Indigo" palette — see `{colors.accent}` in `DESIGN.md`.
+Training Sanctum's visual identity ("Pastel Frame") and app structure come from three sources, reconciled in `DESIGN.md`:
+- **A language-learning app the owner supplied as reference (2026-11-14)** contributes the app shell: a dark frame with a top app bar around an inset light panel, pastel tint tiles, pill controls, a floating dock, and a quick-search palette.
+- **Quizlet** contributes the flashcard/review-card anatomy, the progress counter, the Class → Folder → Flashcard browsing pattern and the Manual card-entry editor (numbered term/definition rows). Explicitly *not* Quizlet's gamification, social features, or promotional surfaces.
+- **spy-family.net** contributes the section-bullet motif.
+
+Surfaces marked *not built* in this spine (mobile dock, quick search, per-Class colour) are decided but not implemented.
 
 This spine describes behavior; visual specs (exact colors, type, radii, shadows) live in `DESIGN.md` and are referenced here only by `{path.to.token}`, never restated as raw values.
 
@@ -27,19 +30,20 @@ Content hierarchy is fixed at four levels: **Class → Folder → Flashcard → 
 
 | Surface | Reached from | Purpose |
 |---|---|---|
-| Review | Sidebar / app open (default landing when cards are due) | Daily due-queue review of learned Cards across all Classes (focus mode); never introduces new Cards |
-| Classes | Sidebar | List of Classes with Folder, Flashcard and Card counts; create / rename / delete Class (FR-5) |
+| Review | App bar / app open (default landing when cards are due) | Daily due-queue review of learned Cards across all Classes (focus mode); never introduces new Cards |
+| Classes | App bar | Grid of Class tiles, each in its own colour, with Folder, Flashcard and Card counts; create / rename / recolour / delete Class (FR-5) |
 | Class detail | Classes → a Class | That Class's Folders (Unsorted first); create / rename / delete Folder; "Review this class" |
 | Folder detail | Class detail → a Folder | That Folder's Flashcards as rows (Card counts); create Flashcard; per-row "..." menu with Rename, Move to…, Delete; "Review this folder" |
 | Flashcard detail | Folder detail → a Flashcard | Card viewer (flip, ← →) on top; **"Learn"** button below it; then that Flashcard's Cards list; "Add cards" (Manual / Import); Edit and Delete on each Card (no Move) |
 | Learn | Flashcard detail → "Learn" | Graded session for one Flashcard: its unlearned directions (in the studied directions, FR-18), then its due Cards; same session screen and focus mode as Review (FR-17). An entry graded Again comes back at the end of the session until graded Hard/Good/Easy (practice repeats are not saved; the first grade sets the schedule). When it ends, "Study all cards again" runs every Card as unsaved practice (FR-17). |
 | Add cards panel | Flashcard detail → "Add cards", or "+ Add card" on the Empty due-queue state | Manual mode (Quizlet-style row editor, FR-3) or Import mode (Paste / Upload file, FR-6, FR-7), always into one target Flashcard |
-| Cultivation | Sidebar (replaces Stats, Sprint Change 2026-11-14) | Realm and stage with XP bar, today's Daily Quests, missed-day and breakthrough notices, then card totals, SM-2 retention-curve visualization and XP history (FR-12, FR-15, FR-19) |
-| Settings | Sidebar | Theme toggle, Study directions (FR-18), export, restore, logout |
+| Cultivation | App bar (replaces Stats, Sprint Change 2026-11-14) | Realm and stage with XP bar, today's Daily Quests, missed-day and breakthrough notices, then card totals, SM-2 retention-curve visualization and XP history (FR-12, FR-15, FR-19) |
+| Settings | App bar | Theme toggle (Light default), Study directions (FR-18), export, restore, logout |
+| Quick search | Ctrl+K or "/" anywhere; the dock's Search button on mobile — *not built* | Palette to jump to a destination or search Classes, Folders, Flashcards and Cards |
 
-Four-item flat sidebar nav (`{components.sidebar}` in `DESIGN.md`): Review, Classes, Cultivation, Settings — no secondary nav level. The Realm badge sits at the bottom of the sidebar. **There is no Import item or Import page**: import is the second mode of a Flashcard's "Add cards", so the target Flashcard is always known. Class detail, Folder detail and Flashcard detail are reached by drilling in from Classes and show a breadcrumb ("Classes / IELTS / Speaking" on a Folder, "Classes / IELTS / Speaking / Weather idioms" on a Flashcard); the Classes sidebar item stays active on all of them. During an active Review Session, the sidebar and all other chrome are hidden entirely (focus mode, FR-11); exiting review (queue cleared or user navigates away) restores it. When the due queue is empty, Review shows the Empty due-queue state instead of the sidebar-less review card.
+Four-item flat nav in the **app bar** (`{components.app-bar}` in `DESIGN.md`): Review, Classes, Cultivation, Settings — no secondary nav level. The brand sits at the left of the bar and the Realm badge (avatar, label, XP) at the right. Below 640px the bar is replaced by the **dock** (see the Mobile dock pattern). **There is no Import item or Import page**: import is the second mode of a Flashcard's "Add cards", so the target Flashcard is always known. Class detail, Folder detail and Flashcard detail are reached by drilling in from Classes and show a breadcrumb ("Classes / IELTS / Speaking" on a Folder, "Classes / IELTS / Speaking / Weather idioms" on a Flashcard); the Classes nav item stays active on all of them. During an active Review or Learn session, the app bar and dock are hidden entirely (focus mode, FR-11) and only the card, an Exit link and the frame remain; exiting (queue cleared, Exit, Esc, or the user navigates away) restores them. When the due queue is empty, Review shows the Empty due-queue state, with the app bar, instead of a review card.
 
-→ Composition reference: [`mockups/key-screens.html`](./mockups/key-screens.html) (Review Session, Classes, Folder detail, Flashcard detail with Add cards, Empty Queue, theme toggle, all live/interactive). Spine wins on conflict with the mockup.
+→ Composition reference: there are no mockups of Pastel Frame; current screenshots are produced by the e2e suite in `test-results/screenshots/`. The earlier Focus Indigo / sidebar design is kept in [`history/focus-indigo/`](./history/focus-indigo/README.md) for reference only. This spine and `DESIGN.md` win over it.
 
 ## Voice and Tone
 
@@ -63,7 +67,7 @@ Behavioral. Visual specs live in `DESIGN.md.components`.
 | Component | Use | Behavioral rules |
 |---|---|---|
 | Flip-card | Review, Learn, Card viewer | Click/tap anywhere on the card, or press Space, flips it either way (Quizlet-style 3D Y-axis). Card bounds stay fixed before and after flip — no resize, no content-swap-without-motion. Grading (Review/Learn) or ← → (Card viewer) shows the next Card on its unflipped prompt side. |
-| Grade buttons | Review and Learn; appear after the first flip and stay while the user flips back, until the entry is graded | Again / Hard / Good / Easy, keyboard-mapped 1–4 (or J/K/L/; per PRD FR-9). Again is visually distinct (error-toned, never the accent); Hard/Good/Easy are equal in weight to each other — this is intentional, since classical SM-2 (FR-8) makes Hard/Good/Easy produce an identical next interval; a UI implying otherwise would misrepresent the algorithm. |
+| Grade buttons | Review and Learn; appear after the first flip and stay while the user flips back, until the entry is graded | Again / Hard / Good / Easy, keyboard-mapped 1–4 (or J/K/L/; per PRD FR-9), each a pastel pill (rose, butter, mint, sky). All four are equal in size and weight. Classical SM-2 (FR-8) makes Hard/Good/Easy produce an identical next interval, so the UI must not imply otherwise. The pastel colour order (rose, butter, mint, sky) can read as a severity scale; the owner accepted that on 2026-11-14 (see DESIGN.md). |
 | Add cards panel | Flashcard detail → "Add cards" | Opens over the Flashcard with the target Flashcard named in its header ("Add cards to Weather idioms") and a two-option pill switcher: **Manual** (default) and **Import**. Switching modes keeps the target Flashcard. Closing with unsaved Manual rows asks before discarding them. |
 | Manual mode | Add cards panel | Quizlet-style editor: numbered rows, each with Term and Definition side by side; a "More fields" toggle per row reveals Example Sentence, Context/Collocation, Part of Speech. Starts with 3 empty rows. Tab moves field to field; Enter in the last field of the last row adds a row; "+ Add row" button below. One "Save" creates every row with Term + Definition filled; fully empty rows are ignored; half-filled rows get inline field errors and are not created, while valid rows still save. |
 | Import mode | Add cards panel | Paste / Upload-file sub-tabs. Paste: delimiter picker + text box + "Preview" (no column mapping). Upload: file → column-mapping step → "Preview". Both end in the import review editor — no divergent flows per source type, and nothing is saved before Save (FR-6, FR-7). |
@@ -74,14 +78,18 @@ Behavioral. Visual specs live in `DESIGN.md.components`.
 | Move-flashcard modal | Folder detail, Flashcard "..." → Move to… | Class → Folder picker (any Folder in any Class); a name clash in the target Folder is resolved by adding " (2)", " (3)" to the moved Flashcard's name. |
 | Class-delete modal | Classes, Class "..." → Delete | States what the Class contains ("3 folders · 9 flashcards · 84 cards"). Primary: "Move folders to…" with a Class picker; Unsorted Flashcards merge into the target's Unsorted, clashing Folder and Flashcard names get " (2)". Secondary, danger-styled: "Delete class and everything in it", enabled only after typing the Class name. If no other Class exists, only the delete option is shown. |
 | Restore-from-backup modal | Settings, restore action | Simple warning modal stating the consequence ("This will replace all current data") with Confirm/Cancel. No type-to-confirm text input. |
-| Class/Folder/Flashcard list row | Classes, Class detail, Folder detail | Rows grouped under section headers (e.g. "Recently studied", "All folders", "All flashcards"), hover-highlight, trailing overflow ("...") menu. Click a row to drill in; overflow holds rename/delete (Unsorted shows neither); Flashcard rows hold Rename, Move to…, Delete. Class rows show Folder, Flashcard and Card counts; Folder rows show Flashcard + Card counts; Flashcard rows show Card count. |
+| Class/Folder/Flashcard tile | Classes, Class detail, Folder detail | Tiles in a grid (1 column on mobile, 2 on tablet, 3 on desktop) under a section header ("All classes", "All folders", "All flashcards"), with a trailing overflow ("...") menu. The tile's tint is its Class's colour; Folders and Flashcards inherit it. Click the name to drill in; hover and keyboard focus draw a darker border. Overflow holds Rename and Delete (Unsorted shows neither); Class tiles also hold Colour; Flashcard tiles hold Rename, Move to…, Delete. Class tiles show Folder, Flashcard and Card counts; Folder tiles show Flashcard + Card counts; Flashcard tiles show Card count. |
+| Class colour | Class create and rename modals; Class "..." → Colour — *not built; needs a colour field on Class* | Five swatches (lavender, sky, mint, butter, rose). A new Class defaults to the next tint in order. Changing it recolours that Class's Folders and Flashcards at once. Colour is never the only cue: the name and breadcrumb always say where you are. |
 | Card row | Flashcard detail | Term and Definition, hover-highlight, overflow menu with Edit and Delete only — no Move (Cards are moved only by moving their Flashcard). |
 | Empty due-queue state | Review, when nothing is due | Shows the realm and stage with its XP bar, "Today's quests 1 / 2" linking to Cultivation, a calm line, and — when any Flashcard still has Unlearned Cards — a short list of up to 3 such Flashcards ("Weather idioms · 12 new") linking to their page; otherwise a prominent "+ Add card" shortcut that opens Manual mode for the last-used Flashcard (with a Flashcard picker to change it). Never a bare message, never a fallthrough to Classes. |
 | Card viewer | Flashcard detail, top | One flip-card (Term side first; Definition side first when only Definition → Term is studied, FR-18) over all of the Flashcard's Cards in list order; ← → buttons flanking a mono "X / N" counter beneath it; ← disabled on the first Card, → on the last; no grading, no shuffle, no autoplay; viewing never changes scheduling (FR-16). Hidden when the Flashcard is empty (its empty state shows instead). |
 | Learn button | Flashcard detail, directly under the Card viewer | The page's one primary (accent) action. Label carries what is waiting: "Learn · 12 new · 3 due"; just "Learn" when nothing waits (FR-17). "Add cards" becomes secondary while the viewer is shown. |
-| Study directions | Settings, its own section below Theme | One choice of three: "Both directions" (default), "Term → Definition", "Definition → Term" (FR-18). Saves on change, no Save button; a quiet "Saved" status confirms it and an inline error rolls the choice back. Helper line: "Which way cards are asked in Learn and Review. Turning a direction off keeps its progress." Keyboard: arrow keys move between the three options (radio group). |
+| Study directions | Settings, its own card below Theme | One choice of three: "Both directions" (default), "Term → Definition", "Definition → Term" (FR-18). Saves on change, no Save button; a quiet "Saved" status confirms it and an inline error rolls the choice back. Helper line: "Which way cards are asked in Learn and Review. Turning a direction off keeps its progress." Keyboard: arrow keys move between the three options (radio group). |
 | Daily quest list | Cultivation page, top | Two checkbox rows, Learn Flashcards and Clear Review (FR-19), sized by the user's Bộ. Each row: label ("Learn 1 Flashcard", "Clear Review"), mono progress ("0 / 1 Flashcards", "12 due left"), and "+10 XP" on the right. **Locked** (condition not met): checkbox disabled, the reason as helper text. **Done, not ticked:** checkbox enabled, helper "Done. Tick to claim before the day ends." (an unticked quest is penalized at day end). **Skipped:** greyed out, "Nothing to do today.", no checkbox. **Claimed:** checked, not interactive. Ticking claims at once (no confirm); on failure the tick rolls back with an inline error. Space toggles a focused checkbox. |
-| Realm badge | Sidebar bottom; outside review only | Text "{realm} · {stage}" (realm names in Vietnamese) above a thin XP bar with mono "40 / 100 XP". Links to Cultivation. Hidden during focus mode (FR-11) and with the sidebar on mobile. |
+| Realm badge | App bar, right end; outside review only | The realm avatar inside a ring that fills with the stage's XP, then "{realm} · {stage}" (realm names in Vietnamese) over mono "40 / 100 XP". Links to Cultivation. Hidden during focus mode (FR-11) and below 640px. Renders nothing until the realm loads, and on error. |
+| Realm avatar | Realm badge | A cultivator illustration with one look per realm (19), more striking at higher realms (see `DESIGN.md`). Changes when the user enters a new realm, not on every stage. Decorative: never the only carrier of the realm, which is always also written out. No animation except the slow ray turn at Bộ 3 and up, which stops under reduced motion. |
+| Mobile dock | Below 640px, every screen except focus mode — *not built* | A floating pill at the bottom with Review, Classes, Cultivation, Settings and Search; the current destination is raised. Replaces the app bar so Settings and Log out are reachable on a phone. The Realm badge is not shown on mobile; Cultivation is one tap away. Stays clear of the device's bottom safe area. |
+| Quick search | Ctrl+K or "/" outside a text field; the dock's Search button — *not built* | Centred palette over a scrim. One input, then **Go to** (the four destinations) and **Suggested** ("Continue: Weather idioms") before typing; typing filters destinations and searches Class, Folder, Flashcard and Card names, and Card terms. Arrow keys move, Enter opens, Esc closes and returns focus. Opening a Card result goes to its Flashcard. Disabled while a session or modal is open. |
 
 ## State Patterns
 
@@ -110,10 +118,12 @@ Behavioral. Visual specs live in `DESIGN.md.components`.
 
 ## Accessibility Floor
 
-Behavioral. Visual contrast lives in `DESIGN.md` ("Focus Indigo" palette; measured AA ratios for both themes are recorded there).
+Behavioral. Visual contrast lives in `DESIGN.md` (Pastel Frame; ratios measured 2026-11-14 for both themes are recorded there, including the known gap: input borders and the XP ring track are under 3:1).
 
-- WCAG AA contrast ratios required in **both** themes (dark default and light toggle).
-- Clearly visible focus-ring / `:focus-visible` state on every interactive element, sufficient for full keyboard navigation of the entire app, not just the review loop.
+- WCAG AA contrast ratios required in **both** themes (light default and dark toggle).
+- Clearly visible focus-ring / `:focus-visible` state on every interactive element, sufficient for full keyboard navigation of the entire app, not just the review loop. On the dark frame the ring is white (`{colors.on-frame}`); elsewhere it is the accent.
+- Colour is never the only cue: a tile's tint, a grade's tint and the realm avatar each have a text equivalent beside them.
+- Motion respects `prefers-reduced-motion`.
 - Tab order follows reading order on every surface.
 - **Explicitly out of scope:** deep ARIA/screen-reader optimization. This is a single-user product (the builder); accessibility work here targets the WCAG AA contrast + full-keyboard-nav floor, not comprehensive assistive-technology support.
 
@@ -131,7 +141,7 @@ Failure: he saves with the Definition empty — that row shows an inline field e
 
 ### Flow 2 — The daily review session (Luric, every day, no exceptions)
 
-1. Luric opens the app. Due cards exist, so Review loads directly into focus mode — no sidebar, no realm badge, no nav competing for attention (FR-11).
+1. Luric opens the app. Due cards exist, so Review loads directly into focus mode — no app bar, no realm badge, no nav competing for attention, only the card inside the frame (FR-11).
 2. The first due Scheduling Record shows its prompt side. He presses Space; the card performs its 3D flip to reveal the answer. Only learned Cards appear; new Cards wait in their Flashcard (Flow 4).
 3. He grades with a single keystroke (1–4 or J/K/L/;). The card resets and the next due entry appears immediately — no perceptible lag (FR-9).
 4. He repeats through the queue. A Card due in both directions appears as two independent, separately-gradable entries.
@@ -164,16 +174,17 @@ Failure: he stops halfway — every direction he graded is learned and comes bac
 
 | Breakpoint | Behavior |
 |---|---|
-| Desktop (`>1024px`) | Full sidebar (240px) + content area in browsing screens; review session centered, single-column, card capped at 640px. Keyboard-first interaction is primary. |
-| Tablet (`640–1024px`) | Same structure as desktop; sidebar and content both remain visible, review session unaffected. |
-| Mobile (`<640px`) | Sidebar hidden; browsing screens single-column. Review session: tap-to-flip plus swipe-to-grade, layered on top of the grade buttons' own tap targets — see Interaction Primitives for the full mapping. Grade-button row wraps when needed. |
+| Desktop (`>1024px`) | Frame, app bar with labelled nav items, and a 3-column tile grid; review session centred, single-column, card capped at 640px. Keyboard-first interaction is primary. |
+| Tablet (`640–1024px`) | Same structure; the nav items collapse to icons (the current one keeps its label) and tiles use 2 columns. Review session unaffected. |
+| Mobile (`<640px`) | No frame rim; the panel fills the screen. The app bar is replaced by the dock (*not built*; until then there is no navigation below 640px). Browsing screens use a single-column tile list. Review session: tap-to-flip plus swipe-to-grade, layered on top of the grade buttons' own tap targets — see Interaction Primitives for the full mapping. Grade-button row wraps when needed. |
 
 Training Sanctum is responsive web only — no native mobile app ships in v1 (PRD §5). The mobile review experience is the one surface where interaction diverges meaningfully from desktop (swipe added as a layer), because the review loop is the product's single highest-frequency interaction and must stay fast on whichever device Luric has in hand at the moment of study.
 
 ## Inspiration & Anti-patterns
 
-- **Lifted from Quizlet:** sidebar icon-nav structure; flashcard/review-card anatomy and 3D flip interaction; progress counter ("X / Y"); list-row + overflow-menu pattern for class/folder/flashcard browsing; the numbered-row Manual card editor.
-- **Lifted from spy-family.net:** editorial grid rhythm; small square bullet as a section-header marker (now accent-colored). Its sage/charcoal/red palette was replaced by "Focus Indigo" on 2026-11-08.
+- **Lifted from the owner's reference app (2026-11-14):** the dark frame with top app bar and inset panel; pastel tint tiles; pill controls; the floating dock and the quick-search palette. Its language-specific screens (kana and kanji tables, a roadmap) are not part of this product.
+- **Lifted from Quizlet:** flashcard/review-card anatomy and 3D flip interaction; progress counter ("X / Y"); list-row + overflow-menu pattern for class/folder/flashcard browsing; the numbered-row Manual card editor.
+- **Lifted from spy-family.net:** editorial grid rhythm; the section-header marker, now a dot. Its palette is no longer used.
 - **Rejected — Quizlet's Match/Blocks/Charms games, Study-with-Friends, social Test mode:** gamified and social features are explicitly out of this product's model (PRD §2.2 Non-Users, §5 Non-Goals) — this is a solitary study tool, not a competitive or social one.
 - **Rejected — Quizlet's "Ask Quizlet" AI chat bubble and promo/upsell banners:** no AI-assistant surface and no monetization chrome belong in a personal, zero-paywall tool.
 - **Rejected — grading-tied gamification (badges, confetti on grading, accuracy quests):** PRD's counter-metric SM-C1 warns against grade distribution skewing toward "Easy"/"Good" under progression pressure. The cultivation system (FR-12, FR-19) is the one accepted progression mechanic (Sprint Change 2026-11-14): its quests read only whether work was done, never grade values, and it stays visually quiet.

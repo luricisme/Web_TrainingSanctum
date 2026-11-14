@@ -10,7 +10,7 @@ context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Web_TrainingSanctum-2026-11-01/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/DESIGN.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/EXPERIENCE.md'
-  - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/.working/design-dna-profile.json'
+  - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/history/focus-indigo/working/design-dna-profile.json'
   - '{project-root}/.claude/skills/design-dna/references/generation-guide.md'
 ---
 
@@ -86,6 +86,8 @@ context:
 Result: all tasks done. Verified against the disposable `postgres:16-alpine` on port 5433: typecheck and lint clean, Vitest 20/20, Playwright 35/35 (api + e2e). Screenshots of Settings (dark/light, desktop/mobile) were written to `test-results/screenshots/`. Review patches applied: proxy matcher escaping and boundaries, removed repeated page-header eyebrow, 1200px cap and 16-24px gutters, calmer placeholder copy, logout button no longer waits on `useSession`. Mobile navigation below 640px is deferred.
 
 ## Spec Change Log
+
+- 2026-11-14: partly superseded by [spec-restyle-pastel-frame](./spec-restyle-pastel-frame.md). The 240px sidebar is now a top app bar inside a dark frame (`sidebar.tsx` became `app-bar.tsx`), and light is the default theme. Routes, the Main nav name and the theme toggle behavior are unchanged.
 
 ## Review Triage Log
 

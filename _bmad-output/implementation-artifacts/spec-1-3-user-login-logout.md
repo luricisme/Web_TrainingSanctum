@@ -10,7 +10,7 @@ context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Web_TrainingSanctum-2026-11-01/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/DESIGN.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/EXPERIENCE.md'
-  - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/.working/design-dna-profile.json'
+  - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/history/focus-indigo/working/design-dna-profile.json'
   - '{project-root}/.claude/skills/design-dna/references/generation-guide.md'
 ---
 
@@ -90,7 +90,7 @@ context:
 
 - Better Auth rate-limits sign-in/sign-up (3 per 10s per IP) when `NODE_ENV=production`, which `next start` (the Playwright webServer) is. With ~10 sign-ups per run, parallel tests got 429s, which also broke two spec-1-2 registration tests. Added optional env `AUTH_RATE_LIMIT` (`on` default, `off` only in `playwright.config.ts`) wired into `apps/web/lib/auth.ts`; production behavior is unchanged. Touches `env.ts`, `auth.ts` and `playwright.config.ts`, which the spec's task list did not name.
 - Verified against a throwaway `postgres:16-alpine` (Podman, port 5433): typecheck and lint clean, Vitest 18/18, Playwright 17/17 (api + e2e). Dark/light login screenshots in `test-results/screenshots/` (gitignored).
-- Not done: no screenshot of the `/` logout button; `mockups/key-screens.html` comparison covered only the login layout.
+- Not done: no screenshot of the `/` logout button; `history/focus-indigo/mockups/key-screens.html` comparison covered only the login layout.
 
 ## Spec Change Log
 

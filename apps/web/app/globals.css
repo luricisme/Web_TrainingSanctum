@@ -1,57 +1,98 @@
 @import "tailwindcss";
 
 /*
- * Dual-theme design tokens from DESIGN.md
- * (_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/DESIGN.md).
- * Palette: "Focus Indigo". Dark is the default canvas; data-theme="light"
- * switches to the indigo paper theme. The accent changes per theme to keep
- * AA contrast, so text on an accent fill must use `on-accent`.
- * Consumed by Tailwind v4's @theme inline so Story 1.5 (sidebar nav / review
- * UI) can use `bg-background`, `text-accent`, etc. without rework.
+ * Dual-theme design tokens. Visual refresh 2026-11-14 ("Pastel Frame"): a
+ * near-black app frame around a soft light panel, pastel tint cards, pill
+ * controls and a rounded geometric sans. Light is the default canvas; removing
+ * `data-theme` (stored theme "dark") switches to the dark counterpart.
+ * The accent is monochrome (ink on light, paper on dark), so text on an accent
+ * fill must use `on-accent`. Colour comes from the five `tint-*` surfaces.
  */
 :root {
-  --color-bg: #101120;
-  --color-card: #181a2e;
-  --color-elevated: #21243c;
-  --color-text: #e6e7f2;
-  --color-text-secondary: #b1b3c9;
-  --color-text-tertiary: #868aa3;
-  --color-border: #30344f;
-  --color-divider: #252840;
-  --color-row-hover: #21243c;
+  --color-backdrop: #07080b;
+  --color-bg: #15161d;
+  --color-card: #1d1f29;
+  --color-elevated: #272a36;
+  --color-text: #eceef4;
+  --color-text-secondary: #b5b9c7;
+  --color-text-tertiary: #8a8fa0;
+  --color-border: #363a48;
+  --color-divider: #2a2d39;
+  --color-row-hover: #252833;
 
-  --color-accent: #959aff;
-  --color-accent-hover: #aeb1ff;
-  --color-on-accent: #0d0f2a;
+  --color-accent: #f1f2f6;
+  --color-accent-hover: #ffffff;
+  --color-on-accent: #14151a;
   --color-success: #5ec79a;
   --color-warning: #e2a94b;
   --color-error: #ef6b6b;
   --color-info: #6bb6e0;
 
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  /* The app frame (top bar and the border around the panel): dark in both themes. */
+  --color-frame: #0c0d11;
+  --color-frame-raised: #23252e;
+  --color-on-frame: #ffffff;
+  --color-on-frame-muted: #a3a7b6;
+
+  /* Pastel tint surfaces and their borders; text on them is `foreground`. */
+  --color-tint-lavender: #2f2848;
+  --color-tint-lavender-border: #4a3f70;
+  --color-tint-sky: #1d3344;
+  --color-tint-sky-border: #2f5068;
+  --color-tint-mint: #1d3727;
+  --color-tint-mint-border: #2f5a40;
+  --color-tint-butter: #393217;
+  --color-tint-butter-border: #5e5226;
+  --color-tint-rose: #41222c;
+  --color-tint-rose-border: #683644;
+
+  --shadow-low-value: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-medium-value: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-high-value: 0 24px 60px rgba(0, 0, 0, 0.5);
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
   --radius-full: 999px;
 }
 
 :root[data-theme="light"] {
-  --color-bg: #f5f5fa;
+  --color-backdrop: #dde5ed;
+  --color-bg: #f3f5f8;
   --color-card: #ffffff;
-  --color-elevated: #ececf6;
-  --color-text: #14152a;
-  --color-text-secondary: #464a66;
-  --color-text-tertiary: #686c8c;
-  --color-border: #d8dae9;
-  --color-divider: #e6e7f1;
-  --color-row-hover: #ececf6;
+  --color-elevated: #e8ecf1;
+  --color-text: #14151a;
+  --color-text-secondary: #484c59;
+  --color-text-tertiary: #666b79;
+  --color-border: #d3d9e1;
+  --color-divider: #e3e7ed;
+  --color-row-hover: #eaeef3;
 
-  --color-accent: #4a4ed4;
-  --color-accent-hover: #3a3eb8;
+  --color-accent: #15161c;
+  --color-accent-hover: #353741;
   --color-on-accent: #ffffff;
   --color-success: #2f7d52;
   --color-warning: #b45309;
   --color-error: #c62f3a;
   --color-info: #2a6aa0;
+
+  --color-frame: #121318;
+  --color-frame-raised: #272931;
+
+  --color-tint-lavender: #e4d7fb;
+  --color-tint-lavender-border: #cdb9f2;
+  --color-tint-sky: #d0e7f7;
+  --color-tint-sky-border: #b0d3ea;
+  --color-tint-mint: #d3f0d7;
+  --color-tint-mint-border: #b0ddb8;
+  --color-tint-butter: #fbefb4;
+  --color-tint-butter-border: #ead77b;
+  --color-tint-rose: #fbd5dd;
+  --color-tint-rose-border: #efb3c1;
+
+  --shadow-low-value: 0 1px 2px rgba(20, 22, 30, 0.06);
+  --shadow-medium-value: 0 8px 24px rgba(20, 22, 30, 0.08);
+  --shadow-high-value: 0 24px 60px rgba(20, 22, 30, 0.2);
 }
 
 @theme inline {
@@ -65,6 +106,22 @@
   --color-divider: var(--color-divider);
   --color-row-hover: var(--color-row-hover);
 
+  --color-backdrop: var(--color-backdrop);
+  --color-frame: var(--color-frame);
+  --color-frame-raised: var(--color-frame-raised);
+  --color-on-frame: var(--color-on-frame);
+  --color-on-frame-muted: var(--color-on-frame-muted);
+  --color-tint-lavender: var(--color-tint-lavender);
+  --color-tint-lavender-border: var(--color-tint-lavender-border);
+  --color-tint-sky: var(--color-tint-sky);
+  --color-tint-sky-border: var(--color-tint-sky-border);
+  --color-tint-mint: var(--color-tint-mint);
+  --color-tint-mint-border: var(--color-tint-mint-border);
+  --color-tint-butter: var(--color-tint-butter);
+  --color-tint-butter-border: var(--color-tint-butter-border);
+  --color-tint-rose: var(--color-tint-rose);
+  --color-tint-rose-border: var(--color-tint-rose-border);
+
   --color-accent: var(--color-accent);
   --color-accent-hover: var(--color-accent-hover);
   --color-on-accent: var(--color-on-accent);
@@ -77,8 +134,11 @@
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
   --radius-full: var(--radius-full);
+  /* The app frame and the content panel inside it. */
+  --radius-frame: 28px;
+  --radius-panel: 22px;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  --font-sans: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
   --font-mono: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
 
@@ -87,18 +147,18 @@
      line-height, tracking and (where the DNA fixes one) weight come together. */
   --text-display: 2.5rem;
   --text-display--line-height: 1.15;
-  --text-display--letter-spacing: -0.01em;
-  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 800;
   --text-heading-1: 2rem;
   --text-heading-1--line-height: 1.2;
-  --text-heading-1--letter-spacing: -0.01em;
-  --text-heading-1--font-weight: 700;
+  --text-heading-1--letter-spacing: -0.02em;
+  --text-heading-1--font-weight: 800;
   --text-heading-2: 1.5rem;
   --text-heading-2--line-height: 1.25;
-  --text-heading-2--font-weight: 600;
+  --text-heading-2--font-weight: 700;
   --text-heading-3: 1.25rem;
   --text-heading-3--line-height: 1.3;
-  --text-heading-3--font-weight: 600;
+  --text-heading-3--font-weight: 700;
   --text-body: 1rem;
   --text-body--line-height: 1.5;
   --text-body-sm: 0.875rem;
@@ -112,20 +172,17 @@
   --text-overline--letter-spacing: 0.08em;
   --text-overline--font-weight: 600;
 
-  /* Elevation (DESIGN.md elevation). Depth comes mostly from surface layering;
-     `shadow-medium` is the review card's resting shadow and the heaviest
-     elevation in the product. */
-  --shadow-low: 0 1px 2px rgba(0, 0, 0, 0.15);
-  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.25);
-  --shadow-high: 0 8px 24px rgba(0, 0, 0, 0.35);
+  /* Elevation: soft, wide shadows; values are per theme (see :root). */
+  --shadow-low: var(--shadow-low-value);
+  --shadow-medium: var(--shadow-medium-value);
+  --shadow-high: var(--shadow-high-value);
 
-  /* Layout (DESIGN.md spacing): `max-w-content`, `w-sidebar`, `max-w-review-card`. */
+  /* Layout (DESIGN.md spacing): `max-w-content`, `max-w-review-card`. */
   --container-content: 1200px;
   --container-review-card: 640px;
   --container-panel: 880px; /* add-cards-panel max-width */
-  --spacing-sidebar: 240px;
   --spacing-bullet: 7px; /* section-bullet size */
-  --radius-bullet: 1px;
+  --radius-bullet: 999px;
 
   --ease-state: ease-in-out;
 
@@ -166,6 +223,14 @@
   }
 }
 
+/* Focus ring for controls on the dark app frame, where the accent is invisible. */
+@utility focus-ring-frame {
+  &:focus-visible {
+    outline: 2px solid var(--color-on-frame);
+    outline-offset: 2px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -177,13 +242,14 @@
 }
 
 body {
-  background: var(--color-bg);
+  background: var(--color-backdrop);
   color: var(--color-text);
-  font-family: var(--font-sans);
+  font-family: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
 }
 
 /* spec-4-5 focus mode, before hydration: a server-rendered session stage
-   hides the sidebar from first paint. The client flag takes over after. */
-:root:has([data-focus-session]) [data-sidebar] {
+   hides the app bar from first paint. The client flag takes over after. */
+:root:has([data-focus-session]) [data-app-bar] {
   display: none;
 }

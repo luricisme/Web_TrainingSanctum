@@ -53,8 +53,8 @@ export function Modal({
       }}
       className={
         size === "wide"
-          ? "m-auto max-h-dvh w-full max-w-none overflow-y-auto rounded-none border border-divider bg-card p-0 text-foreground shadow-high backdrop:bg-black/50 sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)] sm:max-w-panel sm:rounded-lg"
-          : "m-auto w-[calc(100%-2rem)] max-w-lg rounded-lg border border-divider bg-card p-0 text-foreground backdrop:bg-black/50"
+          ? "m-auto max-h-dvh w-full max-w-none overflow-y-auto rounded-none border border-divider bg-card p-0 text-foreground shadow-high backdrop:bg-black/40 backdrop:backdrop-blur-sm sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)] sm:max-w-panel sm:rounded-lg"
+          : "m-auto w-[calc(100%-2rem)] max-w-lg rounded-lg border border-divider bg-card p-0 text-foreground shadow-high backdrop:bg-black/40 backdrop:backdrop-blur-sm"
       }
     >
       <div className="p-6 sm:p-8">

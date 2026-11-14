@@ -11,7 +11,16 @@ import { ApiError, apiFetch } from "@/lib/api-client";
 import { SectionMarker } from "@/app/components/section-marker";
 import { PageHeader } from "../../page-header";
 import { RowMenu } from "../../classes/row-menu";
-import { buttonPrimary, buttonSecondary, pluralize } from "../../classes/ui";
+import {
+  buttonPrimary,
+  buttonSecondary,
+  pluralize,
+  tileClass,
+  tileGridClass,
+  tileIconClass,
+  tileSkeletonClass,
+  tintAt,
+} from "../../classes/ui";
 import { DeleteFlashcardModal } from "./delete-flashcard-modal";
 import { FlashcardFormModal } from "./flashcard-form-modal";
 import { MoveFlashcardModal } from "./move-flashcard-modal";
@@ -34,7 +43,7 @@ function Breadcrumb({
   folder?: string;
 }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-3 text-body-sm text-foreground-secondary">
+    <nav aria-label="Breadcrumb" className="mb-4 text-body-sm font-medium text-foreground-secondary">
       <Link href="/classes" className={crumbLink}>
         Classes
       </Link>
@@ -78,12 +87,9 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
     return (
       <>
         <Breadcrumb />
-        <ul aria-label="Loading flashcards" className="flex flex-col gap-1">
+        <ul aria-label="Loading flashcards" className={`mt-6 ${tileGridClass}`}>
           {[0, 1, 2].map((i) => (
-            <li
-              key={i}
-              className="h-16 animate-pulse rounded-sm bg-elevated motion-reduce:animate-none"
-            />
+            <li key={i} className={tileSkeletonClass} />
           ))}
         </ul>
       </>
@@ -124,7 +130,7 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
       </PageHeader>
 
       <section aria-labelledby="all-flashcards" className="mt-8">
-        <div className="mb-3 flex items-center justify-between gap-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
           <SectionMarker as="h2" id="all-flashcards">
             All flashcards
           </SectionMarker>
@@ -157,11 +163,12 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
             </button>
           </div>
         ) : (
-          <ul>
-            {flashcards.map((flashcard) => (
+          <ul className={tileGridClass}>
+            {flashcards.map((flashcard, index) => (
               <FlashcardRow
                 key={flashcard.id}
                 flashcard={flashcard}
+                index={index}
                 onRename={() => setDialog({ kind: "rename", id: flashcard.id })}
                 onMove={() => setDialog({ kind: "move", id: flashcard.id })}
                 onDelete={() => setDialog({ kind: "delete", id: flashcard.id })}
@@ -204,27 +211,30 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
   );
 }
 
-/** One Flashcard row, linking to the Flashcard page, with a Rename / Delete menu. */
+/** One Flashcard tile, linking to the Flashcard page, with a Rename / Delete menu. */
 function FlashcardRow({
   flashcard,
+  index,
   onRename,
   onMove,
   onDelete,
 }: {
   flashcard: FlashcardSummary;
+  /** Position in the list; picks the tile's tint. */
+  index: number;
   onRename: () => void;
   onMove: () => void;
   onDelete: () => void;
 }) {
   return (
-    <li className="flex min-h-16 items-center gap-3 rounded-sm border-b border-divider p-3 transition-state last:border-b-0 hover:bg-row-hover">
+    <li className={`${tileClass} ${tintAt(index)}`}>
       <Link
         href={`/flashcards/${flashcard.id}`}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-sm focus-ring"
+        className="flex min-w-0 flex-1 items-start gap-3 rounded-sm focus-ring"
       >
         <span
           aria-hidden="true"
-          className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-card text-foreground-secondary"
+          className={tileIconClass}
         >
           <svg
             width="20"
@@ -241,10 +251,10 @@ function FlashcardRow({
           </svg>
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-body font-semibold text-foreground">
+          <p className="truncate text-body font-bold text-foreground">
             {flashcard.name}
           </p>
-          <p className="text-caption text-foreground-tertiary">
+          <p className="mt-1 text-caption text-foreground-secondary">
             {pluralize(flashcard.cardCount, "card")}
           </p>
         </div>

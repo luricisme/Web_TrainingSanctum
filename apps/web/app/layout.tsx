@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -6,9 +7,17 @@ export const metadata: Metadata = {
   description: "Personal flashcard / spaced-repetition app.",
 };
 
-// Runs before first paint so the stored theme never flashes. Dark is the
-// default; only "light" is ever applied. localStorage may throw (blocked).
-const themeInitScript = `try{if(localStorage.getItem("theme")==="light")document.documentElement.setAttribute("data-theme","light")}catch(e){}`;
+// Rounded geometric sans for the whole product; Vietnamese covers the realm names.
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-jakarta",
+  display: "swap",
+});
+
+// Runs before first paint so the stored theme never flashes. Light is the
+// default and is server-rendered on <html>; only a stored "dark" removes it.
+// localStorage may throw (blocked).
+const themeInitScript = `try{if(localStorage.getItem("theme")==="dark")document.documentElement.removeAttribute("data-theme")}catch(e){}`;
 
 export default function RootLayout({
   children,
@@ -16,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-theme="light" className={jakarta.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

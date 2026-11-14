@@ -10,7 +10,7 @@ context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-4-context.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/DESIGN.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/EXPERIENCE.md'
-  - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/.working/design-dna-profile.json'
+  - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Web_TrainingSanctum-2026-10-29/history/focus-indigo/working/design-dna-profile.json'
   - '{project-root}/.claude/skills/design-dna/references/generation-guide.md'
 ---
 
@@ -136,6 +136,8 @@ context:
 - The calm line keeps the old "all caught up" wording, so the existing assertions still hold. "Ready to learn" uses `SectionMarker`. Its bullet is the sanctioned non-actionable accent, so "+ Add card" stays the only accent action.
 
 ## Spec Change Log
+
+- 2026-11-14: the chrome that focus mode hides is now the app bar (`[data-app-bar]`), not the sidebar (`aside[data-sidebar]`), per [spec-restyle-pastel-frame](./spec-restyle-pastel-frame.md). Behavior is unchanged: hidden from first paint with or without JS, and brought back on finish, Exit or Esc.
 
 ## Review Triage Log
 

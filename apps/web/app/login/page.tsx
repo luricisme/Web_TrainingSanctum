@@ -81,22 +81,21 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen bg-background px-4 py-12 lg:items-center lg:py-16">
+    <main className="flex min-h-screen bg-backdrop px-4 py-12 lg:items-center lg:py-16">
       <div className="mx-auto grid w-full max-w-content content-start gap-8 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] lg:gap-16">
         <header className="mx-auto w-full max-w-md lg:mx-0 lg:justify-self-end">
           <SectionMarker>Training Sanctum</SectionMarker>
           <h1 className="mt-6 text-heading-1 text-foreground">
             Welcome back
           </h1>
-          <hr aria-hidden="true" className="mt-6 border-0 border-t border-divider" />
           <p className="mt-6 text-body text-foreground-secondary">
             Pick up your daily review where you left off.
           </p>
         </header>
 
-        <div aria-hidden="true" className="hidden bg-divider lg:block" />
+        <div aria-hidden="true" className="hidden lg:block" />
 
-        <div className="mx-auto w-full max-w-md self-start rounded-lg border border-divider bg-card p-6 lg:mx-0 lg:justify-self-start lg:p-8">
+        <div className="mx-auto w-full max-w-md self-start rounded-lg border border-divider bg-card p-6 shadow-medium lg:mx-0 lg:justify-self-start lg:p-8">
           <form className="flex flex-col gap-6" onSubmit={handleSubmit} noValidate>
             <div className="flex flex-col gap-2">
               <label htmlFor="email" className={labelClass}>

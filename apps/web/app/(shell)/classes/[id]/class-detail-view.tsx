@@ -8,7 +8,16 @@ import { ApiError, apiFetch } from "@/lib/api-client";
 import { SectionMarker } from "@/app/components/section-marker";
 import { PageHeader } from "../../page-header";
 import { RowMenu } from "../row-menu";
-import { buttonPrimary, buttonSecondary, pluralize } from "../ui";
+import {
+  buttonPrimary,
+  buttonSecondary,
+  pluralize,
+  tileClass,
+  tileGridClass,
+  tileIconClass,
+  tileSkeletonClass,
+  tintAt,
+} from "../ui";
 import { DeleteFolderModal } from "./delete-folder-modal";
 import { FolderFormModal } from "./folder-form-modal";
 
@@ -20,7 +29,7 @@ type Dialog =
 
 function Breadcrumb({ name }: { name?: string }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-3 text-body-sm text-foreground-secondary">
+    <nav aria-label="Breadcrumb" className="mb-4 text-body-sm font-medium text-foreground-secondary">
       <Link
         href="/classes"
         className="rounded-sm underline-offset-2 hover:text-foreground hover:underline focus-ring"
@@ -58,12 +67,9 @@ export function ClassDetailView({ classId }: { classId: string }) {
     return (
       <>
         <Breadcrumb />
-        <ul aria-label="Loading folders" className="flex flex-col gap-1">
+        <ul aria-label="Loading folders" className={`mt-6 ${tileGridClass}`}>
           {[0, 1, 2].map((i) => (
-            <li
-              key={i}
-              className="h-16 animate-pulse rounded-sm bg-elevated motion-reduce:animate-none"
-            />
+            <li key={i} className={tileSkeletonClass} />
           ))}
         </ul>
       </>
@@ -106,7 +112,7 @@ export function ClassDetailView({ classId }: { classId: string }) {
       </PageHeader>
 
       <section aria-labelledby="all-folders" className="mt-8">
-        <div className="mb-3 flex items-center justify-between gap-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
           <SectionMarker as="h2" id="all-folders">
             All folders
           </SectionMarker>
@@ -123,11 +129,12 @@ export function ClassDetailView({ classId }: { classId: string }) {
             </button>
           </div>
         </div>
-        <ul>
-          {folders.map((folder) => (
+        <ul className={tileGridClass}>
+          {folders.map((folder, index) => (
             <FolderRow
               key={folder.id}
               folder={folder}
+              index={index}
               onRename={() => setDialog({ kind: "rename", id: folder.id })}
               onDelete={() => setDialog({ kind: "delete", id: folder.id })}
             />
@@ -164,25 +171,28 @@ export function ClassDetailView({ classId }: { classId: string }) {
   );
 }
 
-/** One Folder row, linking to the Folder page; Unsorted has no overflow menu. */
+/** One Folder tile, linking to the Folder page; Unsorted has no overflow menu. */
 function FolderRow({
   folder,
+  index,
   onRename,
   onDelete,
 }: {
   folder: FolderSummary;
+  /** Position in the list; picks the tile's tint. */
+  index: number;
   onRename: () => void;
   onDelete: () => void;
 }) {
   return (
-    <li className="flex min-h-16 items-center gap-3 rounded-sm border-b border-divider p-3 transition-state last:border-b-0 hover:bg-row-hover">
+    <li className={`${tileClass} ${tintAt(index)}`}>
       <Link
         href={`/folders/${folder.id}`}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-sm focus-ring"
+        className="flex min-w-0 flex-1 items-start gap-3 rounded-sm focus-ring"
       >
         <span
           aria-hidden="true"
-          className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-card text-foreground-secondary"
+          className={tileIconClass}
         >
           <svg
             width="20"
@@ -198,8 +208,8 @@ function FolderRow({
           </svg>
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-body font-semibold text-foreground">{folder.name}</p>
-          <p className="text-caption text-foreground-tertiary">
+          <p className="truncate text-body font-bold text-foreground">{folder.name}</p>
+          <p className="mt-1 text-caption text-foreground-secondary">
             {pluralize(folder.flashcardCount, "flashcard")} · {pluralize(folder.cardCount, "card")}
           </p>
         </div>

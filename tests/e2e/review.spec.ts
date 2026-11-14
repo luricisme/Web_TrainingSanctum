@@ -424,7 +424,7 @@ test("the server-rendered session hides the sidebar before any script runs", asy
   const raw = await noJs.newPage();
   await raw.goto("/review");
   await expect(raw.locator("[data-focus-session]")).toHaveCount(1);
-  await expect(raw.locator("aside[data-sidebar]")).toHaveCount(1);
+  await expect(raw.locator("[data-app-bar]")).toHaveCount(1);
   await expect(raw.getByRole("navigation", { name: "Main" })).toBeHidden();
   await noJs.close();
 });
@@ -665,7 +665,7 @@ test("a scoped Review with nothing due names its scope and lists only its Flashc
 });
 
 // Visual check: screenshots land in test-results/screenshots for comparison
-// against DESIGN.md and mockups/key-screens.html.
+// against DESIGN.md and history/focus-indigo/mockups/key-screens.html.
 for (const theme of ["dark", "light"] as const) {
   for (const width of [1280, 390]) {
     test(`focus mode and empty-state screenshots (${theme}, ${width}px)`, async ({ page }) => {

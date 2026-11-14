@@ -9,7 +9,13 @@ import { PageHeader } from "../page-header";
 import { ClassFormModal } from "./class-form-modal";
 import { ClassRow } from "./class-row";
 import { DeleteClassModal } from "./delete-class-modal";
-import { buttonPrimary, buttonSecondary, pluralize } from "./ui";
+import {
+  buttonPrimary,
+  buttonSecondary,
+  pluralize,
+  tileGridClass,
+  tileSkeletonClass,
+} from "./ui";
 
 type Dialog =
   | { kind: "create" }
@@ -48,12 +54,9 @@ export function ClassesView() {
 
       <div className="mt-8">
         {isPending ? (
-          <ul aria-label="Loading classes" className="flex flex-col gap-1">
+          <ul aria-label="Loading classes" className={tileGridClass}>
             {[0, 1, 2].map((i) => (
-              <li
-                key={i}
-                className="h-16 animate-pulse rounded-sm bg-elevated motion-reduce:animate-none"
-              />
+              <li key={i} className={tileSkeletonClass} />
             ))}
           </ul>
         ) : isError && !data ? (
@@ -80,7 +83,7 @@ export function ClassesView() {
           </div>
         ) : (
           <section aria-labelledby="all-classes">
-            <div className="mb-3 flex items-center justify-between gap-4">
+            <div className="mb-4 flex items-center justify-between gap-4">
               <SectionMarker as="h2" id="all-classes">
                 All classes
               </SectionMarker>
@@ -92,11 +95,12 @@ export function ClassesView() {
                 Create class
               </button>
             </div>
-            <ul>
-              {classes.map((item) => (
+            <ul className={tileGridClass}>
+              {classes.map((item, index) => (
                 <ClassRow
                   key={item.id}
                   item={item}
+                  index={index}
                   onRename={() => setDialog({ kind: "rename", id: item.id })}
                   onDelete={() => setDialog({ kind: "delete", id: item.id })}
                 />

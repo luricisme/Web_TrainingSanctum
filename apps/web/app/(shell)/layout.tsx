@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/session";
 import { QueryProvider } from "@/lib/query-provider";
+import { AppBar } from "./app-bar";
 import { FocusModeProvider } from "./focus-mode";
-import { Sidebar } from "./sidebar";
 
 export default async function ShellLayout({
   children,
@@ -10,17 +10,21 @@ export default async function ShellLayout({
   if (!(await getServerSession())) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-background sm:flex">
-      {/* spec-5-1: the query client wraps the sidebar too, for the Realm badge. */}
-      <QueryProvider>
-        {/* spec-4-5: Review and Learn turn focus mode on to hide the sidebar. */}
-        <FocusModeProvider>
-          <Sidebar />
-          <main className="min-w-0 flex-1 px-4 py-12 sm:px-6">
-            <div className="mx-auto w-full max-w-content">{children}</div>
-          </main>
-        </FocusModeProvider>
-      </QueryProvider>
+    <div className="min-h-screen bg-backdrop sm:p-3">
+      {/* The app frame: a dark shell holding the app bar, with the light
+          content panel inset in it. Below 640px the panel is the whole screen. */}
+      <div className="flex min-h-screen flex-col bg-frame sm:min-h-[calc(100vh-1.5rem)] sm:rounded-frame sm:p-1.5">
+        {/* spec-5-1: the query client wraps the app bar too, for the Realm badge. */}
+        <QueryProvider>
+          {/* spec-4-5: Review and Learn turn focus mode on to hide the app bar. */}
+          <FocusModeProvider>
+            <AppBar />
+            <main className="min-w-0 flex-1 bg-background px-4 py-10 sm:rounded-panel sm:px-8">
+              <div className="mx-auto w-full max-w-content">{children}</div>
+            </main>
+          </FocusModeProvider>
+        </QueryProvider>
+      </div>
     </div>
   );
 }

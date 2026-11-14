@@ -31,7 +31,7 @@ test("sidebar links open each placeholder page", async ({ page }) => {
 test("the sidebar shows the Realm badge, linking to Cultivation", async ({ page }) => {
   await register(page);
   await page.goto("/classes");
-  const badge = page.locator("aside[data-sidebar]").getByRole("link", {
+  const badge = page.locator("[data-app-bar]").getByRole("link", {
     name: "Ngưng Khí · Tầng 1, 0 / 10 XP",
   });
   await expect(badge).toBeVisible();
@@ -64,7 +64,7 @@ test("a failed realm load hides the badge and leaves the nav working", async ({ 
   await failed;
   const nav = page.getByRole("navigation", { name: "Main" });
   await expect(nav).toBeVisible();
-  const aside = page.locator("aside[data-sidebar]");
+  const aside = page.locator("[data-app-bar]");
   await expect(aside.getByRole("link", { name: /XP/ })).toHaveCount(0);
   await expect(page.getByRole("progressbar")).toHaveCount(0);
   await nav.getByRole("link", { name: "Settings" }).click();
@@ -73,7 +73,7 @@ test("a failed realm load hides the badge and leaves the nav working", async ({ 
 
 test("the badge shows a mid-ladder stage and the final level", async ({ page }) => {
   const email = await register(page);
-  const aside = page.locator("aside[data-sidebar]");
+  const aside = page.locator("[data-app-bar]");
 
   await prisma.user.update({ where: { email }, data: { cultivationXp: 715 } });
   await page.goto("/classes");
@@ -132,25 +132,27 @@ test("theme choice persists across reloads", async ({ page }) => {
   await register(page);
   await page.goto("/settings");
   const html = page.locator("html");
-  await expect(html).not.toHaveAttribute("data-theme", "light");
-
-  await page.getByRole("radio", { name: "Light" }).click();
-  await expect(html).toHaveAttribute("data-theme", "light");
-
-  await page.reload();
+  // Light is the default.
   await expect(html).toHaveAttribute("data-theme", "light");
   await expect(page.getByRole("radio", { name: "Light" })).toBeChecked();
 
   await page.getByRole("radio", { name: "Dark" }).click();
+  await expect(html).not.toHaveAttribute("data-theme", "light");
+
   await page.reload();
   await expect(html).not.toHaveAttribute("data-theme", "light");
+  await expect(page.getByRole("radio", { name: "Dark" })).toBeChecked();
+
+  await page.getByRole("radio", { name: "Light" }).click();
+  await page.reload();
+  await expect(html).toHaveAttribute("data-theme", "light");
 });
 
 test("sidebar is hidden below 640px", async ({ page }) => {
   await register(page);
   await page.setViewportSize({ width: 600, height: 800 });
   await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden();
-  await expect(page.locator("aside[data-sidebar]").getByRole("progressbar")).toBeHidden();
+  await expect(page.locator("[data-app-bar]").getByRole("progressbar")).toBeHidden();
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 

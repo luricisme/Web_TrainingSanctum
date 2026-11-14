@@ -6,113 +6,127 @@ sources:
   - ../../prds/prd-Web_TrainingSanctum-2026-10-29/prd.md
   - ../../briefs/brief-Web_TrainingSanctum-2026-10-29/brief.md
 name: Training Sanctum
-description: Personal flashcard / spaced-repetition app. "Focus Indigo" palette (deep indigo neutrals, soft periwinkle accent); editorial grid rhythm from spy-family.net; app structure and component shapes from Quizlet's library and flashcard-study surfaces, without Quizlet's gamification or social layer. Dual-theme, dark-mode default.
+description: Personal flashcard / spaced-repetition app. "Pastel Frame": a near-black app frame with a top app bar around an inset light panel, pastel tint tiles (one colour per Class), monochrome ink accent, pill controls and Plus Jakarta Sans. A cultivator avatar per realm is the only illustration. Dual-theme, light by default.
 colors:
-  bg: '#101120'
-  card: '#181a2e'
-  elevated: '#21243c'
-  text: '#e6e7f2'
-  text-secondary: '#b1b3c9'
-  text-tertiary: '#868aa3'
-  border: '#30344f'
-  divider: '#252840'
-  row-hover: '#21243c'
-  accent: '#959aff'
-  accent-hover: '#aeb1ff'
-  on-accent: '#0d0f2a'
-  success: '#5ec79a'
-  warning: '#e2a94b'
-  error: '#ef6b6b'
-  info: '#6bb6e0'
-  bg-dark: '#101120'
-  card-dark: '#181a2e'
-  elevated-dark: '#21243c'
-  text-dark: '#e6e7f2'
-  text-secondary-dark: '#b1b3c9'
-  text-tertiary-dark: '#868aa3'
-  border-dark: '#30344f'
-  divider-dark: '#252840'
-  row-hover-dark: '#21243c'
-  accent-dark: '#959aff'
-  accent-hover-dark: '#aeb1ff'
-  on-accent-dark: '#0d0f2a'
+  backdrop: '#dde5ed'
+  bg: '#f3f5f8'
+  card: '#ffffff'
+  elevated: '#e8ecf1'
+  text: '#14151a'
+  text-secondary: '#484c59'
+  text-tertiary: '#666b79'
+  border: '#d3d9e1'
+  divider: '#e3e7ed'
+  row-hover: '#eaeef3'
+  accent: '#15161c'
+  accent-hover: '#353741'
+  on-accent: '#ffffff'
+  success: '#2f7d52'
+  warning: '#b45309'
+  error: '#c62f3a'
+  info: '#2a6aa0'
+  frame: '#121318'
+  frame-raised: '#272931'
+  on-frame: '#ffffff'
+  on-frame-muted: '#a3a7b6'
+  tint-lavender: '#e4d7fb'
+  tint-lavender-border: '#cdb9f2'
+  tint-sky: '#d0e7f7'
+  tint-sky-border: '#b0d3ea'
+  tint-mint: '#d3f0d7'
+  tint-mint-border: '#b0ddb8'
+  tint-butter: '#fbefb4'
+  tint-butter-border: '#ead77b'
+  tint-rose: '#fbd5dd'
+  tint-rose-border: '#efb3c1'
+  backdrop-dark: '#07080b'
+  bg-dark: '#15161d'
+  card-dark: '#1d1f29'
+  elevated-dark: '#272a36'
+  text-dark: '#eceef4'
+  text-secondary-dark: '#b5b9c7'
+  text-tertiary-dark: '#8a8fa0'
+  border-dark: '#363a48'
+  divider-dark: '#2a2d39'
+  row-hover-dark: '#252833'
+  accent-dark: '#f1f2f6'
+  accent-hover-dark: '#ffffff'
+  on-accent-dark: '#14151a'
   success-dark: '#5ec79a'
   warning-dark: '#e2a94b'
   error-dark: '#ef6b6b'
   info-dark: '#6bb6e0'
-  bg-light: '#f5f5fa'
-  card-light: '#ffffff'
-  elevated-light: '#ececf6'
-  text-light: '#14152a'
-  text-secondary-light: '#464a66'
-  text-tertiary-light: '#686c8c'
-  border-light: '#d8dae9'
-  divider-light: '#e6e7f1'
-  row-hover-light: '#ececf6'
-  accent-light: '#4a4ed4'
-  accent-hover-light: '#3a3eb8'
-  on-accent-light: '#ffffff'
-  success-light: '#2f7d52'
-  warning-light: '#b45309'
-  error-light: '#c62f3a'
-  info-light: '#2a6aa0'
+  frame-dark: '#0c0d11'
+  frame-raised-dark: '#23252e'
+  tint-lavender-dark: '#2f2848'
+  tint-lavender-border-dark: '#4a3f70'
+  tint-sky-dark: '#1d3344'
+  tint-sky-border-dark: '#2f5068'
+  tint-mint-dark: '#1d3727'
+  tint-mint-border-dark: '#2f5a40'
+  tint-butter-dark: '#393217'
+  tint-butter-border-dark: '#5e5226'
+  tint-rose-dark: '#41222c'
+  tint-rose-border-dark: '#683644'
 typography:
   display:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     fontSize: 2.5rem
-    fontWeight: '700'
+    fontWeight: '800'
     lineHeight: '1.15'
-    letterSpacing: -0.01em
+    letterSpacing: -0.02em
   heading-1:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     fontSize: 2rem
-    fontWeight: '700'
+    fontWeight: '800'
     lineHeight: '1.2'
-    letterSpacing: -0.01em
+    letterSpacing: -0.02em
   heading-2:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     fontSize: 1.5rem
-    fontWeight: '600'
+    fontWeight: '700'
     lineHeight: '1.25'
     letterSpacing: normal
   heading-3:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     fontSize: 1.25rem
-    fontWeight: '600'
+    fontWeight: '700'
     lineHeight: '1.3'
     letterSpacing: normal
   body:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     fontSize: 1rem
     fontWeight: '400'
     lineHeight: '1.5'
     letterSpacing: normal
   body-small:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     fontSize: 0.875rem
     fontWeight: '400'
     lineHeight: '1.45'
     letterSpacing: normal
   caption:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     fontSize: 0.75rem
     fontWeight: '500'
     lineHeight: '1.4'
     letterSpacing: 0.01em
   overline:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     fontSize: 0.6875rem
     fontWeight: '600'
     lineHeight: '1.3'
     letterSpacing: 0.08em
   mono:
     fontFamily: "SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace"
-    note: 'Reserved for numeric displays — review progress counter, XP figures and quest progress, stats figures.'
+    note: 'Reserved for numeric displays — review progress counter, XP figures and quest progress, stats figures, keyboard hints.'
 rounded:
-  sm: 6px
-  md: 12px
-  lg: 20px
+  sm: 10px
+  md: 16px
+  lg: 24px
   full: 999px
+  frame: 28px
+  panel: 22px
 spacing:
   '1': 4px
   '2': 8px
@@ -122,40 +136,61 @@ spacing:
   '6': 32px
   '7': 48px
   '8': 64px
-  gutter: 16-24px
+  gutter: 16-32px
   max-content-width: 1200px
   review-card-max-width: 640px
-  sidebar-width: 240px
+  app-bar-height: 56px
+  frame-inset: 6px
+  backdrop-inset: 12px
 elevation:
-  low: '0 1px 2px rgba(0,0,0,0.15)'
-  medium: '0 4px 12px rgba(0,0,0,0.25)'
-  high: '0 8px 24px rgba(0,0,0,0.35)'
+  low: '0 1px 2px rgba(20,22,30,0.06)'
+  medium: '0 8px 24px rgba(20,22,30,0.08)'
+  high: '0 24px 60px rgba(20,22,30,0.2)'
+  low-dark: '0 1px 2px rgba(0,0,0,0.3)'
+  medium-dark: '0 8px 24px rgba(0,0,0,0.35)'
+  high-dark: '0 24px 60px rgba(0,0,0,0.5)'
 motion:
   micro: 100-120ms
-  normal: 150-200ms
+  normal: 150ms
   macro: 250-300ms
   flip-duration: 520ms
-  easing-entrance: ease-out
+  easing-entrance: cubic-bezier(0.16, 1, 0.3, 1)
   easing-state: ease-in-out
+  ambient: 'rays turn once per 40s (realm avatar, Bộ 3 and up only)'
 components:
+  app-frame:
+    background: '{colors.frame}'
+    radius: '{rounded.frame}'
+    inset: '{spacing.frame-inset}'
+    backdrop: '{colors.backdrop}'
+  app-bar:
+    height: '{spacing.app-bar-height}'
+    foreground: '{colors.on-frame}'
+    muted-foreground: '{colors.on-frame-muted}'
+    active-background: '{colors.frame-raised}'
+    item-radius: '{rounded.full}'
+  content-panel:
+    background: '{colors.bg}'
+    radius: '{rounded.panel}'
   button-primary:
     background: '{colors.accent}'
     foreground: '{colors.on-accent}'
     radius: '{rounded.full}'
     hover-background: '{colors.accent-hover}'
+    shadow: '{elevation.low}'
   button-secondary:
-    background: transparent
+    background: '{colors.card}'
     border: '{colors.border}'
-    foreground: '{colors.text-secondary}'
+    foreground: '{colors.text}'
     radius: '{rounded.full}'
-  grade-button-again:
-    border: '{colors.error}'
-    foreground: '{colors.error}'
+    shadow: '{elevation.low}'
+  grade-button:
     radius: '{rounded.full}'
-  grade-button-neutral:
-    border: '{colors.border}'
-    foreground: '{colors.text-secondary}'
-    radius: '{rounded.full}'
+    foreground: '{colors.text}'
+    again: '{colors.tint-rose}'
+    hard: '{colors.tint-butter}'
+    good: '{colors.tint-mint}'
+    easy: '{colors.tint-sky}'
   review-card:
     background: '{colors.card}'
     radius: '{rounded.lg}'
@@ -164,25 +199,38 @@ components:
     max-width: '{spacing.review-card-max-width}'
   card-viewer:
     card: '{components.review-card}'
+    nav-button-background: '{colors.card}'
     nav-button-border: '{colors.border}'
     nav-button-radius: '{rounded.full}'
     nav-button-disabled-opacity: 0.4
-  folder-tile:
+  tint-tile:
+    background: '{colors.tint-*}'
+    border: '{colors.tint-*-border}'
+    radius: '{rounded.lg}'
+    hover-border: '{colors.text}'
+    icon-chip: 'card at 70%, rounded.full, 40px'
+  surface-card:
     background: '{colors.card}'
-    radius: '{rounded.sm}'
-    hover-background: '{colors.row-hover}'
+    border: '{colors.divider}'
+    radius: '{rounded.lg}'
+    shadow: '{elevation.low}'
   modal:
     background: '{colors.card}'
     radius: '{rounded.lg}'
-    scrim: 'rgba(0,0,0,0.5)'
-  sidebar:
-    background: '{colors.card}'
-    width: '{spacing.sidebar-width}'
-    active-foreground: '{colors.accent}'
-    active-background: '{colors.elevated}'
+    shadow: '{elevation.high}'
+    scrim: 'rgba(0,0,0,0.4) + 4px blur'
+  realm-badge:
+    avatar: '{components.realm-avatar}'
+    ring-size: 44px
+    ring-width: 2.5px
+    ring-fill: '{colors.on-frame}'
+    ring-track: '{colors.on-frame-muted} at 40%'
+  realm-avatar:
+    size: 34px (badge), scalable
+    shape: circle
   section-bullet:
     background: '{colors.accent}'
-    shape: 'square, 1px radius, 7x7px'
+    shape: 'dot, 7x7px'
   add-cards-panel:
     background: '{colors.card}'
     radius: '{rounded.lg}'
@@ -200,103 +248,147 @@ components:
     radius: '{rounded.full}'
     active-background: '{colors.accent}'
     active-foreground: '{colors.on-accent}'
+  dock:
+    status: 'not built'
+    background: '{colors.frame}'
+    foreground: '{colors.on-frame}'
+    active-background: '{colors.frame-raised}'
+    radius: '{rounded.full}'
+  quick-search:
+    status: 'not built'
+    background: '{colors.card}'
+    radius: '{rounded.lg}'
+    shadow: '{elevation.high}'
 ---
 
-> Design DNA source: `.working/design-dna-profile.json` (measured color extraction + synthesized tokens). Live interactive reference: [`mockups/key-screens.html`](./mockups/key-screens.html). Original visual references: [`imports/spy-family-net-portal.png`](./imports/spy-family-net-portal.png), [`imports/quizlet-library-view.png`](./imports/quizlet-library-view.png), [`imports/quizlet-flashcard-view.png`](./imports/quizlet-flashcard-view.png) — note: on any conflict between this spec and those source images, **this DESIGN.md wins** (per this workflow's spines-win rule).
+> Source of truth for token values in code: `apps/web/app/globals.css`. Visual references: the four screenshots of a Vietnamese language-learning app supplied on 2026-11-14 (not stored in `imports/`), plus the older [`imports/`](./imports/) set. On any conflict between this spec and those images, **this DESIGN.md wins** (per this workflow's spines-win rule). The earlier Focus Indigo design (spines, mockups, Design DNA profile) is kept in [`history/focus-indigo/`](./history/focus-indigo/README.md) for reference only; there are no mockups of Pastel Frame, current screenshots come from the e2e suite (`test-results/screenshots/`).
 
 ## Brand & Style
 
-Training Sanctum is a personal spaced-repetition tool for advanced English vocabulary, built for one daily user. Its aesthetic deliberately pivots away from the PRD's original Linear/Raycast dark-minimalist-only direction (PRD §7) toward a two-source blend: **spy-family.net** (the official Spy x Family anime portal) contributes the **editorial grid layout** — bold sans-serif headers and small square section markers. Its sage/red color palette was the original source but was replaced on 2026-11-08 by the **"Focus Indigo"** palette (deep indigo neutrals, soft periwinkle accent), because the brick-red accent doubled as the error color and failed AA contrast on the dark card, and the sage light canvas read as drab. The indigo palette brings the color back toward the PRD's Linear/Raycast register. **Quizlet** contributes **app structure only** — sidebar nav, flashcard component shape, progress counter, list-row pattern — explicitly *not* Quizlet's gamification (no Match/Blocks/Charms games, no social Study-with-Friends mode, no AI chat bubble) or its promotional density.
+Training Sanctum is a personal spaced-repetition tool for advanced English vocabulary, built for one daily user. Its look is **"Pastel Frame"** (2026-11-14), taken from a reference language-learning app: a near-black **app frame** holds a slim top **app bar**, and inside it a soft light **content panel** carries the work. Pastel tint cards, pill controls and a rounded geometric sans give it a friendly, study-notebook feel. It replaces "Focus Indigo" (dark, sidebar, periwinkle accent; 2026-11-08), which in turn replaced spy-family.net's sage/red palette.
 
-The result reads as a well-kept study journal crossed with a focused reading app: calm, disciplined, quietly confident — not a gamified habit app. A single accent color marks the one actionable thing per screen; everything else recedes. No illustration, no character art, no decorative pattern — this is a utilitarian tool that borrows layout rhythm from a promotional portal, not its visual richness.
+Structure still follows **Quizlet** (the hierarchy browsing, flashcard anatomy, progress counter, list-and-menu patterns) without its gamification or social layer, and the **section bullet** from spy-family.net survives as a small dot. The cultivation system (FR-12) is the one accepted progression mechanic and stays visually quiet.
 
-Dark mode is the default surface (near-black deep indigo), consistent with the PRD's original dark-first direction even after the aesthetic pivot. Light mode is a toggle, not an equal first-class default.
+Colour is used in two ways, and only these two. The **accent** is monochrome ink (paper in dark mode) and marks the one actionable thing per screen. **Pastel tints** carry identity: each Class has one of five tints, and its Folders and Flashcards inherit it, so a tile's colour tells you where you are. The grade pills reuse the tints by role.
+
+The only illustration in the product is the **realm avatar**, a cultivator that gets more striking with every realm. Everything else stays free of illustration, character art and decorative pattern. Light is the default theme; dark is a toggle.
 
 ## Colors
 
-Palette: **"Focus Indigo"** (chosen 2026-11-08 from the comparison in [`mockups/palette-lab.html`](./mockups/palette-lab.html)). Both themes share one hue family — indigo-tinted neutrals with a periwinkle/indigo accent — so light mode reads as the same product, not an inversion. All neutrals carry a slight blue-violet bias toward the accent; there is no pure grey anywhere.
+All values are in the frontmatter, light first (default), `-dark` variants beside them.
 
-- **Background — dark `{colors.bg}` (#101120) / light `{colors.bg-light}` (#f5f5fa).** Dark is the default app canvas: near-black deep indigo. Light is a cool, faintly violet paper white.
-- **Card surface — dark `{colors.card}` (#181a2e) / light `{colors.card-light}` (#ffffff).** Used for the review card, folder tiles, sidebar, modals. One clear step lighter than the background in dark mode; pure white on paper in light mode.
-- **Elevated surface — dark `{colors.elevated}` (#21243c) / light `{colors.elevated-light}` (#ececf6).** One step up from card, used for hover/active states, icon chips and `{colors.row-hover}`.
-- **Text — dark `{colors.text}` (#e6e7f2) / light `{colors.text-light}` (#14152a).** Primary reading color. `{colors.text-secondary}` (#b1b3c9 / #464a66) for supporting copy, `{colors.text-tertiary}` (#868aa3 / #686c8c) for metadata and hints — both still meet 4.5:1 on the card.
-- **Accent — dark `{colors.accent}` (#959aff, soft periwinkle) / light `{colors.accent-light}` (#4a4ed4, indigo).** The accent shifts between themes so it keeps AA contrast as text on each card surface. Hover: `{colors.accent-hover}` (#aeb1ff / #3a3eb8). Used for primary buttons, the active nav item, section-marker bullets and the progress bar. Never used decoratively or spread evenly across multiple elements on one screen — it marks the one actionable thing.
-- **On-accent — dark `{colors.on-accent}` (#0d0f2a) / light `{colors.on-accent-light}` (#ffffff).** Text and icons on an accent fill. Dark mode needs dark text because the periwinkle fill is light; never put white text on the dark-mode accent.
-- **Semantic colors** — success (#5ec79a / #2f7d52), warning (#e2a94b / #b45309), error (#ef6b6b / #c62f3a), info (#6bb6e0 / #2a6aa0), dark / light. Error is a distinct red hue, **separate from the accent** — the "Again" grade button and danger actions use `{colors.error}`, never the accent. Semantic colors are status signals, not a second accent; use them only on the element whose state they describe.
-- **Borders/dividers** — `{colors.border}` (#30344f / #d8dae9) / `{colors.divider}` (#252840 / #e6e7f1) — subtle 1px hairlines; most surface separation comes from color-layering (surface vs. background), not borders or heavy shadow.
+- **Backdrop** (`{colors.backdrop}`) — the page behind the app frame, visible as a 12px gutter around it on desktop. Cool blue-grey in light, near-black in dark.
+- **Frame** (`{colors.frame}`, `{colors.frame-raised}`) — the app frame and the app bar on it. Near-black **in both themes**; `{colors.on-frame}` and `{colors.on-frame-muted}` are the text on it, `{colors.frame-raised}` is the active and hover pill. The accent is invisible on the frame, so frame controls use `on-frame` for focus rings and fills.
+- **Content panel** (`{colors.bg}`) — the inset light panel all screens render in. **Card** (`{colors.card}`) is white (light) or one step lifted (dark): review card, modals, Settings cards, secondary buttons. **Elevated** (`{colors.elevated}`) is the switcher track, manual rows, hover chips and loading skeletons.
+- **Text** — `{colors.text}` for reading, `{colors.text-secondary}` for supporting copy, `{colors.text-tertiary}` for metadata and hints.
+- **Accent** — `{colors.accent}` is ink (#15161c) in light and paper (#f1f2f6) in dark; `{colors.on-accent}` is the text on it. Hover is `{colors.accent-hover}`. Primary buttons, the selected option of a switcher, the section bullet, the XP bar fill, a claimed quest's checkbox, the input focus border and the revealed answer on the review card (text) use it. Because the accent is now ink or paper, the answer text reads almost the same as `{colors.text}`; it is kept as an accent role so the answer stays the one emphasised line.
+- **Tints** — five pastel surfaces, each with a border: lavender, sky, mint, butter, rose. Text on a tint is `{colors.text}` or `{colors.text-secondary}`, never an accent. In dark mode the tints are deep, desaturated versions of the same hues. Tints are assigned to Classes (see Components, tint tile) and to the four grades; they have no other use.
+- **Semantic** — success, warning, error, info. Error is for destructive actions and form errors. The "Again" grade is **no longer error-coloured**; it is the rose tint.
+- **Borders** — `{colors.border}` for inputs and outlines, `{colors.divider}` for hairlines on cards.
 
-**Accessibility (measured 2026-11-08, WCAG 2.x):** every text pair meets AA (4.5:1) in both themes. Dark: text/bg 15.2, text-secondary/card 8.3, text-tertiary/card 5.0, accent/card 6.8, on-accent/accent 7.5, error/card 5.7. Light: text/bg 16.5, text-secondary/card 8.6, text-tertiary/card 5.1, accent/card 6.3, on-accent/accent 6.3, error/card 5.4. Any new token must be checked against `{colors.card}` and `{colors.bg}` before it ships.
+**Accessibility (measured 2026-11-14, WCAG 2.x, from `globals.css`).**
+
+*Text — every pair meets AA 4.5:1 in both themes.* Light: text/bg 16.7, text/card 18.2, text-secondary/card 8.6, text-tertiary/card 5.3 (4.9 on bg), error/card 5.4 (5.0 on bg), on-accent/accent 18.1, on-frame/frame 18.6, on-frame-muted/frame 7.7. Dark: text/bg 15.6, text-secondary/card 8.4, text-tertiary/card 5.1 (5.6 on bg), error/card 5.5, on-accent/accent 16.3, on-frame/frame 19.4, on-frame-muted/frame 8.1. Text on tints: text 11.0–15.7 and text-secondary 6.3–7.4, both themes (lowest: dark butter 11.0 and 6.5; light lavender 13.4 and 6.3).
+
+*Non-text 3:1 (UI boundaries) — these do not meet it, and that is a known gap:*
+- Input border `{colors.border}` on the panel: 1.30 (light), 1.59 (dark).
+- Tile and card edges (`{colors.divider}`, tint borders) on the panel: 1.14–1.92 in light and 1.28–2.33 in dark. Tiles stay identifiable by their text and icon, and a tint fill is not the only cue, so this is judged acceptable for tiles.
+- XP ring track on the frame: 2.2 in both themes. The XP value is also shown as text, so the information is not lost.
+- The input border is the real gap: an empty input has no other boundary. Fix when next touched: darken `{colors.border}` to at least 3:1 against `{colors.bg}`.
+
+Any new token must be checked against `{colors.card}`, `{colors.bg}` and, where it sits on one, a tint.
 
 ## Typography
 
-System font stack only, no custom webfonts (`{typography.body.fontFamily}` = `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`) — deliberate restraint matching the Linear/Raycast/Quizlet-app register the product still draws interaction conventions from, even after the visual pivot.
+**Plus Jakarta Sans** (Google Fonts via `next/font`, subsets latin and vietnamese for the realm names), with the system stack as fallback. This reverses the earlier "system fonts only" rule.
 
-- `{typography.display}` (2.5rem/700) — the review card's prompt/term text; the single largest text on any screen, reserved for that one moment.
-- `{typography.heading-1}` / `{typography.heading-2}` / `{typography.heading-3}` — page titles, section titles, modal titles, in descending weight.
-- `{typography.body}` / `{typography.body-small}` — all reading text and UI labels.
-- `{typography.caption}` — folder card counts, hints, secondary metadata.
-- `{typography.overline}` (0.6875rem, 600 weight, 0.08em tracking, uppercase) — section-group eyebrows (e.g. "RECENTLY STUDIED"), sidebar section title, card context line (e.g. "English Idioms · Term → Definition"). Echoes spy-family.net's bold masthead confidence at small scale.
-- `{typography.mono}` — reserved strictly for numeric displays: the review progress counter ("7 / 20"), XP figures and quest progress ("40 / 100 XP", "0 / 1 Flashcards"), and stats-view figures. Never used for prose.
-
-Headers lean bold/black-weight; body stays regular-weight for readability across long review sessions.
+- `{typography.display}` (2.5rem/800) — the review card's prompt; the largest text on any screen.
+- `{typography.heading-1}` (2rem/800) — page titles; `{typography.heading-2}` and `{typography.heading-3}` (700) — section and modal titles.
+- `{typography.body}` / `{typography.body-small}` — reading text and labels. Form labels and primary actions are set one step heavier (500–600).
+- `{typography.caption}` — counts, hints, secondary metadata.
+- `{typography.overline}` — section eyebrows and the card context line, uppercase.
+- `{typography.mono}` — numeric displays only: the "7 / 20" counter, XP figures, quest progress, keyboard hints (the grade numbers).
 
 ## Layout & Spacing
 
-Base unit 4px, scale `{spacing.1}`–`{spacing.8}` (4/8/12/16/24/32/48/64). Generous gaps (`{spacing.6}`–`{spacing.7}`, 32–48px) separate major page sections and surround the review card; tighter, list-like rhythm (`{spacing.2}`–`{spacing.3}`, 8–12px) governs rows within folder/library browsing screens, matching Quizlet's library density.
+Base unit 4px, scale `{spacing.1}`–`{spacing.8}`.
 
-Two layout modes coexist by screen type:
-- **Browsing screens** (Classes, Class detail, Folder detail, Flashcard detail, Cultivation, Settings): 12-column responsive grid, fixed `{spacing.sidebar-width}` (240px) sidebar + fluid content area on desktop, `{spacing.max-content-width}` (1200px) content cap, `{spacing.gutter}` (16–24px) gutters.
-- **Review session**: single-column, centered focal layout; the card is constrained to `{spacing.review-card-max-width}` (640px) regardless of viewport, and all chrome (sidebar, nav) is hidden entirely (focus mode, PRD FR-11) — negative space itself is what signals focus mode, not a minimized version of chrome.
+**Shell (desktop, 640px and up).** A `{spacing.backdrop-inset}` (12px) gutter of `{colors.backdrop}` surrounds the **app frame** (`{rounded.frame}`, 28px). Inside it, a `{spacing.frame-inset}` (6px) rim, the **app bar** (`{spacing.app-bar-height}`, 56px) on top, then the **content panel** (`{rounded.panel}`, 22px) filling the rest. The panel's content is capped at `{spacing.max-content-width}` (1200px), centred, with 32px side padding.
 
-Breakpoints: mobile <640px, tablet 640–1024px, desktop >1024px. Below 640px the sidebar is hidden (see `mockups/key-screens.html`'s `@media (max-width: 640px)` rule) and the grade-button row wraps.
+**Below 640px** the backdrop and frame rim go away and the panel is the whole screen, with 16px side padding. The app bar is replaced by the **dock** (see Components).
+
+Two layout modes by screen type:
+- **Browsing screens** (Classes, Class detail, Folder detail, Flashcard detail, Cultivation, Settings): page title and a one-line summary at the top (no divider rule), a section marker row with the actions, then tile grids of 1, 2 or 3 columns at the mobile, tablet and desktop breakpoints.
+- **Review and Learn sessions**: single-column, centred, the card capped at `{spacing.review-card-max-width}` (640px). All chrome is hidden except the frame and panel (focus mode, FR-11): the app bar and dock go, leaving only an Exit link and the card. The frame stays, so the session still reads as inside the app.
+
+Breakpoints: mobile <640px, tablet 640–1024px, desktop >1024px.
 
 ## Elevation & Depth
 
-Soft, diffused, low elevation only — `{elevation.low}`, `{elevation.medium}`, `{elevation.high}`. Depth comes primarily from surface-color layering (card is a lighter step than background) rather than heavy shadow; `{elevation.medium}` is the review card's resting shadow, the heaviest elevation used anywhere in the product. No glassmorphism, no neumorphism, no gradient surfaces.
+Soft, wide, low-opacity shadows: `{elevation.low}` on buttons, cards and Settings cards, `{elevation.medium}` on the review card, `{elevation.high}` on modals, the Add cards panel and the quick-search palette. Dark mode uses the `-dark` values, which are heavier because the surfaces are dark. Depth otherwise comes from layering: backdrop, frame, panel, card. Modals dim the page with a 40% scrim and a 4px blur. No glassmorphism on surfaces, no neumorphism, no gradient surfaces (the avatar's own background gradient is part of the illustration).
 
 ## Shapes
 
-Soft, generous corner radius throughout — Quizlet-like friendliness, not sharp/editorial, despite the editorial-grid layout influence:
+Round and generous throughout.
 
-- `{rounded.sm}` (6px) — inputs, list rows, nav items, folder icon chips.
-- `{rounded.md}` (12px) — cards within browsing grids, manual rows, summary strips, popup menus.
-- `{rounded.lg}` (20px) — the review card itself, modals.
-- `{rounded.full}` (999px) — all buttons (primary, secondary, danger, grade; revised 2026-11-08 after 12px and then 20px still read as hard against the soft indigo surfaces), plus tab switchers, tag chips and screen-selector pills. Buttons and switchers are told apart by role and fill (a switcher is a grouped track, a button stands alone), not by radius.
+- `{rounded.sm}` (10px) — small controls, menu items, skeletons in lists.
+- `{rounded.md}` (16px) — inputs, manual rows, popup menus, summary strips.
+- `{rounded.lg}` (24px) — tint tiles, the review card, Settings cards, modals, panels.
+- `{rounded.panel}` (22px) and `{rounded.frame}` (28px) — the content panel and the app frame.
+- `{rounded.full}` — every button, switcher, nav pill, grade pill, icon chip and avatar.
 
-Subtle 1px borders (`{colors.border}` / `{colors.divider}`) outline inputs and card edges; most separation still relies on surface-color contrast.
+Hover on a tile or card draws a darker border; nothing scales or lifts.
 
 ## Components
 
-Live interactive reference for all components below: [`mockups/key-screens.html`](./mockups/key-screens.html) (Review Session with working 3D flip, Classes list, Folder detail listing Flashcards, Flashcard detail with the Add cards panel in Manual and Import modes, Empty due-queue state, theme toggle).
+- **App frame, app bar, content panel.** See Layout. The app bar is a three-part grid: **brand** at the left (a white circular gate mark with the name "Training Sanctum" from 768px up), the **Main nav** centred, the **Realm badge** at the right. Nav items are pills: the current page is raised (`{colors.frame-raised}`, `{colors.on-frame}`); the others are `{colors.on-frame-muted}` and show their label from 1024px (icon-only below that, with the label kept for assistive tech). Hidden in focus mode and below 640px. Frame controls use a white focus ring.
+- **Tint tile** (`components.tint-tile`). Class, Folder and Flashcard entries in grids. A tint fill and border, a 40px round icon chip (card at 70%) at the start, the name in `{typography.body}` 700, a counts line in `{typography.caption}` `{colors.text-secondary}`, and a "…" overflow menu at the end. The name is the link. Hover and keyboard focus draw a `{colors.text}` border. **The tint is the Class's colour**; its Folders and Flashcards inherit it. **Decision (2026-11-14):** each Class has a colour, chosen when creating or renaming it from five swatches, defaulting to the next tint in order. Folders and Flashcards inherit it and the Class's name stays the primary cue. This needs a colour field on Class that the data model does not have yet. *Not built:* until it is, tiles cycle the five tints by position and the colour carries no meaning.
+- **Review card** (`components.review-card`). White (card) surface, `{rounded.lg}`, hairline border, `{elevation.medium}`, fixed bounds that never resize between prompt and answer. Prompt in `{typography.display}` and `{colors.text}`; the answer in `{typography.heading-1}` and `{colors.accent}` (ink in light, paper in dark). Click, tap or Space flips it (520ms Y-axis). No icon row.
+- **Grade buttons** (`components.grade-button`). Below the card, after the first flip: four pills, each a tint with its border and `{colors.text}` label, plus the keyboard number in mono. **Again** rose, **Hard** butter, **Good** mint, **Easy** sky. All four are the same size and weight. **Decision (2026-11-14): keep these colours.** The order reads as a severity scale (rose, yellow, green, blue), while classical SM-2 gives Hard, Good and Easy the same next interval (FR-8). The owner accepted that trade-off; sizes, weights and labels stay identical so the pills differ by tint only.
+- **Buttons.** Primary: accent fill, `{colors.on-accent}`, `{rounded.full}`, `{elevation.low}`; one per screen. Secondary: card fill, border, `{colors.text}`. Danger: card fill, error border and text. Quiet: text only, hover fill.
+- **Card viewer** (`components.card-viewer`). The review card at the top of Flashcard detail. Beneath it, outline circular ← and → buttons (card fill, border, `{elevation.low}`) flank a mono "X / N" counter; a disabled arrow drops to 0.4 opacity. The primary "Learn" button follows.
+- **Realm badge** (`components.realm-badge`). Right end of the app bar, on the frame: the realm avatar inside a 44px XP ring (a 2.5px circle: `{colors.on-frame}` fill showing progress, a 40% `{colors.on-frame-muted}` track), then the realm and stage in `{typography.body-small}` 700 `{colors.on-frame}` over the mono XP figure in `{typography.caption}`. Links to Cultivation. The fill is full at the final level. The 4px bar (track `{colors.elevated}` or `{colors.border}`, fill `{colors.accent}`) is still used on the Empty due-queue state and Cultivation page.
+- **Realm avatar** (`components.realm-avatar`). A seated cultivator drawn in SVG on a circular, radially shaded background, one **look per realm** (19 realms, Ngưng Khí to Đạp Thiên Cảnh). The look changes with the realm, not the stage. Each realm has its own palette (background, figure, aura), and layers are added at fixed realms so a higher realm always reads as stronger:
 
-- **Review card (`components.review-card`)** — Large, soft-rounded (`{rounded.lg}`) surface, center-aligned content, fixed bounds that never resize between prompt and revealed states. Used by Review, Learn and the Card viewer. Clicking/tapping the card (or pressing Space) triggers a Quizlet-style 3D Y-axis flip (520ms, ease-out) either way between prompt and answer — not a content swap. No icon row in v1 (none of pin/audio/star has a feature behind it; audio is a PRD §5 non-goal).
-- **Grade buttons (`components.grade-button-again` / `grade-button-neutral`)** — Live **outside** the card, below it, appearing after the first flip and staying while the card is flipped back, until the entry is graded. Used by Review and Learn. Four buttons: Again / Hard / Good / Easy, each labeled with its keyboard shortcut. Flat/outline style, `{rounded.full}`. Again is styled with the error color (`{colors.error}` border+text), not the accent; Hard/Good/Easy are neutral/outline with equal weight to each other — deliberately non-symmetric with Again, since classical SM-2 (PRD FR-8) makes Hard/Good/Easy produce the same next interval, so the UI must not visually imply Hard is "between" Again and Good in severity.
-- **Sidebar nav (`components.sidebar`)** — Fixed 240px, four flat icon+label items: Review, Classes, Cultivation, Settings (Cultivation replaced Stats, Sprint Change 2026-11-14), with the Realm badge pinned to the sidebar bottom. No Import item — import is a mode of a Flashcard's Add cards panel. Classes stays active while drilled into a Class, Folder or Flashcard. Active item gets `{colors.elevated}` background + `{colors.accent}` text. Hidden entirely during review (focus mode) and on mobile (<640px).
-- **List row — class, folder, flashcard, card (`components.folder-tile`)** — Used for Class rows (Folder, Flashcard + Card counts), Folder rows (Flashcard + Card counts; the Unsorted Folder is pinned first and has no rename/delete), Flashcard rows (Card count; "..." menu with Rename, Move to…, Delete) and Card rows (term + definition; "..." menu with Edit and Delete only, no Move). Rows grouped under section headers (e.g. "Recently studied", "All folders", "All flashcards"), each header preceded by a small accent-colored square bullet (`components.section-bullet`, lifted from spy-family.net's marker motif). Hover lightens to `{colors.row-hover}`; trailing "..." overflow menu per row.
-- **Progress counter** — Mono-font "X / Y" display beneath the review card.
-- **Realm badge** — Sidebar bottom, outside review only (FR-11/FR-12). Realm · stage in `{typography.body-small}` 600 weight, `{colors.text}` (realm names in Vietnamese), above a 4px `{rounded.full}` XP bar: track `{colors.elevated}`, fill `{colors.accent}`, with mono "40 / 100 XP" in `{typography.caption}`, `{colors.text-tertiary}`. The track steps to `{colors.border}` on row hover and on the page background (the Empty due-queue bar), where `{colors.elevated}` does not separate. No icon, no flame, no glow. *(Sprint Change 2026-11-14.)*
-- **Modal (`components.modal`)** — Centered, `{rounded.lg}`, scrim overlay, used sparingly: folder-delete confirmation (two explicit buttons — "Move flashcards to Unsorted" primary, "Delete flashcards too" secondary/danger-styled, no checkbox), flashcard-delete confirmation (names the Flashcard and its Card count; danger-styled confirm), move-flashcard picker (Class → Folder), class-delete confirmation ("Move folders to…" with a Class picker as primary; "Delete class and everything in it" danger-styled, enabled only after typing the Class name) and restore-from-backup confirmation (consequence statement + Confirm/Cancel, no type-to-confirm).
-- **Empty due-queue state** — Centered, shows the realm · stage prominently (`{typography.heading-1}`) with its XP bar beneath and "Today's quests 1 / 2" (mono) linking to Cultivation, a calm line, then either a short list of Flashcards with Unlearned Cards (list rows, "Weather idioms · 12 new") or, when none exist, a primary "+ Add card" button (`components.button-primary`) — never a bare "nothing to do" message.
-- **Card viewer (`components.card-viewer`)** — Top of Flashcard detail, below the page title. One `components.review-card` (same 640px max-width, `{rounded.lg}`, `{elevation.medium}`, 520ms Y-axis flip, no icon row), Term side first. Beneath it a centered control row: outline circular ← and → buttons (`{rounded.full}`, `{colors.border}`, neutral, never the accent) flanking the mono "X / N" counter; a disabled arrow drops to 0.4 opacity. Directly below that row, the primary "Learn" button (`components.button-primary`) — the one accent element on the page while the viewer is shown.
-- **Breadcrumb** — On Class detail, Folder detail and Flashcard detail, above the page title: "Classes / IELTS / Speaking / Weather idioms" in `{typography.body-small}`, `{colors.text-secondary}`, each ancestor a link.
-- **Add cards panel (`components.add-cards-panel`)** — Opens from a Flashcard's "Add cards" button — primary on an empty Flashcard, secondary (`components.button-secondary`) once the Card viewer and its "Learn" button are shown. Large centered panel, `{rounded.lg}`, `{elevation.high}`, max 880px wide; full-screen sheet below 640px. Header: "Add cards to {Flashcard}" plus the `components.mode-switcher` pill (Manual | Import, `{rounded.full}`); the active option is the accent fill with `{colors.on-accent}` text. Footer: secondary "Cancel", primary "Save" (Manual) or "Import" (Import).
-- **Study directions control (`components.mode-switcher`, reused)** — On Settings (FR-18), the same pill segmented control as Add cards' Manual | Import, `{rounded.full}`, with three options: "Both directions", "Term → Definition", "Definition → Term". The selected option is the accent fill with `{colors.on-accent}` text — the one accent element on Settings. Below 640px the three options stack vertically, full width. Helper text in `{typography.body-small}`, `{colors.text-secondary}`. *(Sprint Change 2026-11-13b.)*
-- **Quest row (Cultivation page, reuses `components.folder-tile` row geometry)** — Checkbox, label, mono progress, and a right-aligned "+10 XP" in `{typography.caption}`. Locked: checkbox at 0.4 opacity, helper text `{colors.text-tertiary}`. Done-not-ticked: enabled checkbox with `{colors.border}` outline, helper "Done. Tick to claim before the day ends." in `{colors.text-secondary}`. Claimed: checkbox filled `{colors.accent}` with `{colors.on-accent}` check — the accent element on the page while a quest is claimed. Skipped: whole row `{colors.text-tertiary}`, no checkbox. Missed-quests and breakthrough notices are a `{colors.elevated}`, `{rounded.md}` strip above the quest list, `{typography.body-small}`; the missed-quests strip uses a 2px `{colors.warning}` left border, never the error color. Checkbox and notice contrast must be verified in both themes (UX-DR13). *(Sprint Change 2026-11-14.)*
-- **Manual rows (`components.manual-row`)** — Quizlet-style: each row is an `{colors.elevated}` block, `{rounded.md}`, with a `{typography.mono}` row number in `{colors.text-tertiary}`, then Term and Definition inputs side by side (stacked below 640px) styled as underlined fields with tiny overline labels ("TERM", "DEFINITION"); the underline turns `{colors.accent}` on focus. A "More fields" text toggle per row reveals Example Sentence, Context/Collocation and Part of Speech. A full-width dashed "+ Add row" button closes the list. Row errors show inline in `{colors.error}` under the offending field.
-- **Import mode** — Inside the same panel: Paste / Upload file sub-tabs as a smaller pill switcher (`{rounded.full}`, neutral, not accent-filled, so only one accent pill shows), Paste shows a delimiter select + monospace text box; Upload shows a dashed drop zone, then the column-mapping step. Both end in the **import review editor**: the same `components.manual-row` list, with the row index replaced by the source line number ("L14", `{typography.mono}`), a remove (×) icon button at the row's right edge, and problem rows marked by a 2px left border plus inline message — `{colors.error}` for malformed rows, `{colors.warning}` for duplicates ("Already in Weather idioms — will be skipped"). A summary strip above the rows (`{colors.elevated}`, `{rounded.md}`, `{typography.body-small}`) counts rows / need fixing / duplicates. After Save, the 3-group results view.
+  | Realm (position) | Layer added |
+  |---|---|
+  | Ngưng Khí (1) | plain figure, slate background |
+  | Trúc Cơ (2) | aura behind the body |
+  | Kết Đan (3) | the core, a pill in the belly |
+  | Nguyên Anh (4) | ring around the core |
+  | Hóa Thần (5) | halo behind the head, rim on the avatar |
+  | Âm Hư (8) | two flying swords |
+  | Khuy Niết (10, Nhị Bộ) | four swords |
+  | Tịnh Niết (11) | second halo ring |
+  | Không Niết (14, Tam Bộ) | slow-turning rays, third eye, six swords, heavier rim |
+  | Không Kiếp (17) | crown, eight swords |
+  | Đạp Thiên Cảnh (19, Tứ Bộ) | gold figure on black, full radiance, heaviest rim |
+
+  Purely decorative (`aria-hidden`); it never carries information the realm label does not. Rays turn once per 40s and stop under reduced motion. At the 34px badge size the swords and third eye are hard to see; palette, rim and halo carry the difference.
+- **Section bullet.** A 7px dot in `{colors.accent}` before a section overline.
+- **Modal** (`components.modal`). Centred, `{rounded.lg}`, `{elevation.high}`, 40% scrim with blur. Used for deletions, move-flashcard and restore (see EXPERIENCE.md for the wording).
+- **Settings card** (`components.surface-card`). From 640px, each Settings section is a white card with the title (and help) at the start and the control at the end. Below 640px the sections are plain rows with a divider, so a stacked control can span the column.
+- **Switchers** (`components.mode-switcher`). Pill tracks on `{colors.elevated}`. Study directions and the Add cards Manual | Import switcher select with the accent fill; the Theme toggle and the Import Paste | Upload tabs are neutral (a card chip), so at most one accent pill shows.
+- **Inputs.** `{rounded.md}`, `{colors.border}` outline, `{colors.bg}` fill so they read on white cards and modals; the border turns `{colors.accent}` with a 2px offset outline on focus. Errors turn the border `{colors.error}`.
+- **Empty due-queue state, Cultivation notices, quest row, Breadcrumb, Add cards panel, Manual rows, Import mode.** Behave as before (EXPERIENCE.md). Visual changes only: ready-to-learn rows are a white list with a lavender round chip, the notice strips are `{colors.elevated}` with `{rounded.md}`, and the panel and rows take the new radii and shadows.
+- **Dock** (`components.dock`) — *not built.* The mobile navigation: a pill-shaped bar floating at the bottom of the screen on the frame colour, holding Review, Classes, Cultivation, Settings and Search as round icon buttons. The current destination is a raised pill (`{colors.frame-raised}`). Respects the device's bottom safe area. Hidden in focus mode. **Decision (2026-11-14):** a floating dock, as in the owner's reference screenshots, rather than a full-width bottom bar.
+- **Quick search** (`components.quick-search`) — *not built.* A centred palette (`{rounded.lg}`, `{elevation.high}`, scrim) opened with Ctrl+K or "/" from anywhere outside a text field, and from the dock's Search button. One input ("Search classes, folders, flashcards, cards…"), then results grouped as **Go to** (Review, Classes, Cultivation, Settings) and **Suggested** ("Continue: Weather idioms"). Arrow keys move, Enter opens, Esc closes. Footer shows the key hints.
 
 ## Do's and Don'ts
 
 | Do | Don't |
 |---|---|
 | Use `{colors.accent}` for exactly one actionable thing per screen | Spread the accent across multiple simultaneous elements |
-| Keep Hard/Good/Easy visually equal to each other, distinct only from Again | Give Hard a "lesser" visual weight implying a shorter next interval |
+| Use a tint only for a Class's identity (and its descendants) and for the four grades | Use tints as decoration or as status colours |
+| Put `{colors.text}` or `{colors.text-secondary}` on tints | Put accent or tint-coloured text on a tint |
+| Keep the four grade pills the same size and weight | Size the grades so one looks "lesser" |
 | Keep the review card's bounds fixed before and after flip | Resize or reflow the card on reveal |
-| Hide all chrome during review (focus mode) | Minimize chrome to a thin bar during review |
-| Use the small accent square bullet only as a section-header marker | Use it as decoration or repeat it within a row |
-| Reach import only through a Flashcard's Add cards panel, with the target Flashcard named | Add a standalone Import page or sidebar item |
+| Hide the app bar and dock during review (focus mode) | Minimise chrome to a thin bar during review |
+| Use the section bullet only as a section marker | Use it as decoration or repeat it within a row |
+| Show the realm avatar only in the Realm badge (and on Cultivation, if it is enlarged there) | Add other illustration, mascot or character art |
+| Use `{colors.on-frame}` for focus rings and text on the frame | Use the accent on the frame, where it is invisible |
+| Reach import only through a Flashcard's Add cards panel, with the target named | Add a standalone Import page or nav item |
 | Keep the hierarchy at Class → Folder → Flashcard → Card | Add sub-folders, sub-classes, or Cards directly in a Class or Folder |
-| Use `{colors.error}` for Again and danger actions | Reuse the accent for errors or destructive states |
-| Use `{colors.on-accent}` for text on any accent fill | Put white text on the dark-mode periwinkle accent |
-| Use system fonts only | Introduce a custom/webfont for any role, including display |
-| Reserve mono type for numeric displays only | Use mono for prose or labels |
+| Use `{colors.error}` for destructive actions and form errors | Reuse the accent for errors or destructive states |
+| Check any new colour against `{colors.card}`, `{colors.bg}` and the tints | Ship a text pair under 4.5:1 |
+| Reserve mono type for numeric displays and key hints | Use mono for prose or labels |

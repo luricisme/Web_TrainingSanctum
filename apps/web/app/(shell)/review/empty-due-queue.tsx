@@ -124,16 +124,16 @@ function UnlearnedList({ flashcards }: { flashcards: UnlearnedFlashcard[] }) {
           Ready to learn
         </SectionMarker>
       </div>
-      <ul className="border-t border-divider">
+      <ul className="overflow-hidden rounded-lg border border-divider bg-card shadow-low">
         {flashcards.map((flashcard) => (
-          <li key={flashcard.id}>
+          <li key={flashcard.id} className="border-b border-divider last:border-b-0">
             <Link
               href={`/flashcards/${flashcard.id}`}
-              className="flex min-h-16 items-center gap-3 rounded-sm border-b border-divider p-3 transition-state hover:bg-row-hover focus-ring"
+              className="flex min-h-16 items-center gap-3 p-3 transition-state hover:bg-row-hover focus-ring"
             >
               <span
                 aria-hidden="true"
-                className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-card text-foreground-secondary"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-tint-lavender text-foreground"
               >
                 <svg
                   width="20"

@@ -511,7 +511,7 @@ test("an unknown Flashcard's Learn link offers a way back", async ({ page }) => 
 });
 
 // Visual check: screenshots land in test-results/screenshots for comparison
-// against DESIGN.md and mockups/key-screens.html.
+// against DESIGN.md and history/focus-indigo/mockups/key-screens.html.
 for (const theme of ["dark", "light"] as const) {
   for (const width of [1280, 390]) {
     test(`learn screenshots (${theme}, ${width}px)`, async ({ page }) => {

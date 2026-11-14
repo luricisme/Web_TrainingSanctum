@@ -115,7 +115,7 @@ export function StudyDirectionsControl() {
               disabled={!data}
               onClick={() => choose(value)}
               onKeyDown={(event) => onKeyDown(event, index)}
-              // mockups/key-screens.html .mode-switch: 6px 16px, weight 600; taller rows when stacked for touch.
+              // history/focus-indigo/mockups/key-screens.html .mode-switch: 6px 16px, weight 600; taller rows when stacked for touch.
               className={`rounded-full px-4 py-3 text-body-sm font-semibold transition-state focus-ring sm:py-1.5 ${
                 active
                   ? "bg-accent text-on-accent"

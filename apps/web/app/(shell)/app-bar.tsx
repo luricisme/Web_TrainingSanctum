@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { SectionMarker } from "@/app/components/section-marker";
 import { useIsFocused } from "./focus-mode";
 import { RealmBadge } from "./realm-badge";
 
 const iconProps = {
-  width: 20,
-  height: 20,
+  width: 18,
+  height: 18,
   viewBox: "0 0 24 24",
   fill: "none",
   stroke: "currentColor",
@@ -61,19 +60,42 @@ const items: { href: string; label: string; icon: ReactNode }[] = [
   },
 ];
 
-export function Sidebar() {
+/**
+ * The app bar: the top of the dark app frame. Brand on the left, the Main nav
+ * centred (the current page is a raised pill; the others show their label
+ * from 1024px), and the Realm badge on the right, outside the nav.
+ */
+export function AppBar() {
   const pathname = usePathname();
   // spec-4-5 focus mode: a running session hides all chrome (FR-11).
   const focused = useIsFocused();
   if (focused) return null;
 
   return (
-    <aside data-sidebar="" className="sticky top-0 hidden h-screen w-sidebar shrink-0 flex-col border-r border-divider bg-card px-3 py-8 sm:flex">
-      <div className="px-3">
-        <SectionMarker>Training Sanctum</SectionMarker>
-      </div>
-      <nav aria-label="Main" className="mt-8">
-        <ul className="flex flex-col gap-1">
+    <header
+      data-app-bar=""
+      className="hidden h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 px-3 text-on-frame sm:grid"
+    >
+      <Link
+        href="/review"
+        aria-label="Training Sanctum"
+        className="flex items-center gap-2.5 justify-self-start rounded-full pr-3 text-body font-bold focus-ring-frame"
+      >
+        <span
+          aria-hidden="true"
+          className="flex size-8 items-center justify-center rounded-full bg-on-frame text-frame"
+        >
+          <svg {...iconProps} strokeWidth={2}>
+            <path d="M3 5c3 1.5 15 1.5 18 0M4 9h16M7 9v11M17 9v11M10 13h4" />
+          </svg>
+        </span>
+        <span aria-hidden="true" className="hidden md:inline">
+          Training Sanctum
+        </span>
+      </Link>
+
+      <nav aria-label="Main">
+        <ul className="flex items-center gap-1">
           {items.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -82,24 +104,25 @@ export function Sidebar() {
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-3 rounded-sm px-3 py-2 text-body transition-state focus-ring ${
+                  className={`flex items-center gap-2 rounded-full px-3 py-2 text-body-sm font-semibold transition-state focus-ring-frame ${
                     active
-                      ? "bg-elevated font-semibold text-accent"
-                      : "text-foreground-secondary hover:bg-row-hover hover:text-foreground"
+                      ? "bg-frame-raised text-on-frame"
+                      : "text-on-frame-muted hover:bg-frame-raised hover:text-on-frame"
                   }`}
                 >
                   {item.icon}
-                  {item.label}
+                  <span className={active ? "" : "sr-only lg:not-sr-only"}>{item.label}</span>
                 </Link>
               </li>
             );
           })}
         </ul>
       </nav>
-      {/* spec-5-1: the Realm badge, pinned to the sidebar bottom. */}
-      <div className="mt-auto pt-6">
+
+      {/* spec-5-1: the Realm badge, at the right end of the app bar. */}
+      <div className="justify-self-end">
         <RealmBadge />
       </div>
-    </aside>
+    </header>
   );
 }

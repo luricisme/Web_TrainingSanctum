@@ -8,7 +8,7 @@ import { isTextField } from "@/lib/keyboard";
 
 /** DESIGN.md `components.card-viewer` nav button: outline circle, neutral, 0.4 when disabled. */
 const navButton =
-  "flex size-11 items-center justify-center rounded-full border border-border text-foreground-secondary transition-state hover:bg-row-hover hover:text-foreground focus-ring disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-foreground-secondary";
+  "flex size-11 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-low transition-state hover:border-foreground-tertiary hover:bg-row-hover focus-ring disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-card";
 
 const arrowProps = {
   width: 20,

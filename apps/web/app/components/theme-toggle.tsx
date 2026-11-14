@@ -17,7 +17,8 @@ const getSnapshot = (): Theme =>
   document.documentElement.getAttribute("data-theme") === "light"
     ? "light"
     : "dark";
-const getServerSnapshot = (): Theme => "dark";
+// Light is the server-rendered default (see app/layout.tsx).
+const getServerSnapshot = (): Theme => "light";
 
 function apply(theme: Theme) {
   if (theme === "light") {
