@@ -50,7 +50,10 @@ export function XpBar({
       aria-valuetext={xpText(realm)}
       className={`h-1 w-full overflow-hidden rounded-full ${track} ${className}`}
     >
-      <div className="h-full rounded-full bg-accent" style={{ width: `${(now / max) * 100}%` }} />
+      <div
+        className="h-full rounded-full bg-accent transition-[width] duration-300 ease-in-out motion-reduce:transition-none"
+        style={{ width: `${(now / max) * 100}%` }}
+      />
     </div>
   );
 }

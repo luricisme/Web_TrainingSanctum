@@ -48,7 +48,7 @@ test("the sidebar shows the Realm badge, linking to Cultivation", async ({ page 
   await badge.click();
   await expect(page).toHaveURL(/\/cultivation$/);
   await expect(page.getByRole("heading", { level: 1, name: "Cultivation" })).toBeVisible();
-  await expect(page.getByText("Your quests and progress will show here.")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Today's quests" })).toBeVisible();
   // There is no Stats page any more.
   const stats = await page.goto("/stats");
   expect(stats?.status()).toBe(404);
