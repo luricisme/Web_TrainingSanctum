@@ -77,7 +77,7 @@ export function RowMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex rounded-sm p-2 text-foreground-tertiary transition-state hover:bg-card hover:text-foreground focus-ring"
+        className="flex rounded-full p-2 text-foreground-secondary transition-state hover:bg-card/70 hover:text-foreground focus-ring"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <circle cx="5" cy="12" r="2" />
@@ -89,7 +89,7 @@ export function RowMenu({
         <div
           role="menu"
           aria-label={`${name} options`}
-          className="absolute right-0 top-full z-10 mt-1 w-40 rounded-md border border-border bg-card p-1"
+          className="absolute right-0 top-full z-10 mt-1 w-40 rounded-md border border-divider bg-card p-1 shadow-medium"
         >
           {items.map((item) => (
             <button

@@ -204,6 +204,18 @@ components:
 
 > Design DNA source: `.working/design-dna-profile.json` (measured color extraction + synthesized tokens). Live interactive reference: [`mockups/key-screens.html`](./mockups/key-screens.html). Original visual references: [`imports/spy-family-net-portal.png`](./imports/spy-family-net-portal.png), [`imports/quizlet-library-view.png`](./imports/quizlet-library-view.png), [`imports/quizlet-flashcard-view.png`](./imports/quizlet-flashcard-view.png) — note: on any conflict between this spec and those source images, **this DESIGN.md wins** (per this workflow's spines-win rule).
 
+## Visual refresh 2026-11-14: "Pastel Frame" (supersedes the tokens below)
+
+The implemented look changed on 2026-11-14; `apps/web/app/globals.css` is the source of truth for token values. Where this section and the rest of the document disagree, this section wins. The frontmatter and the sections below still describe "Focus Indigo" and have not been rewritten.
+
+- **Shell.** The sidebar is replaced by an app bar at the top of a near-black app frame (`frame`, 28px radius). The content panel (`bg`, 22px radius) sits inside the frame. Brand left, Main nav centred (current page is a raised pill), Realm badge right as an XP ring with label and XP figure. Hidden below 640px and in focus mode, as before.
+- **Theme.** Light is the default; a stored "dark" switches to the dark counterpart.
+- **Accent.** Monochrome: ink (#15161c) on light, paper (#f1f2f6) on dark. Still the one actionable thing per screen.
+- **Tints.** Five pastel surfaces (`tint-sky`, `tint-lavender`, `tint-butter`, `tint-mint`, `tint-rose`), each with a border token. Library lists (Classes, Folders, Flashcards) are grids of tint tiles, cycling by position; the tint carries no meaning. Grade buttons are tint pills: Again rose, Hard butter, Good mint, Easy sky.
+- **Type.** Plus Jakarta Sans (latin + vietnamese); display and heading-1 at weight 800, heading-2 and heading-3 at 700.
+- **Shape and depth.** Radii: sm 10px, md 16px, lg 24px. Shadows are soft and wide; modals blur the scrim.
+- **Page header.** Title and summary line, no divider rule. Settings sections are white surface cards from 640px.
+
 ## Brand & Style
 
 Training Sanctum is a personal spaced-repetition tool for advanced English vocabulary, built for one daily user. Its aesthetic deliberately pivots away from the PRD's original Linear/Raycast dark-minimalist-only direction (PRD §7) toward a two-source blend: **spy-family.net** (the official Spy x Family anime portal) contributes the **editorial grid layout** — bold sans-serif headers and small square section markers. Its sage/red color palette was the original source but was replaced on 2026-11-08 by the **"Focus Indigo"** palette (deep indigo neutrals, soft periwinkle accent), because the brick-red accent doubled as the error color and failed AA contrast on the dark card, and the sage light canvas read as drab. The indigo palette brings the color back toward the PRD's Linear/Raycast register. **Quizlet** contributes **app structure only** — sidebar nav, flashcard component shape, progress counter, list-row pattern — explicitly *not* Quizlet's gamification (no Match/Blocks/Charms games, no social Study-with-Friends mode, no AI chat bubble) or its promotional density.

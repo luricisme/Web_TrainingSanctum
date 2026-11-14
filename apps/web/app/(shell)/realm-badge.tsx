@@ -23,7 +23,7 @@ export function xpText(realm: RealmSummary): string {
 }
 
 /**
- * DESIGN.md Realm badge XP bar: 4px, `rounded.full`, track `elevated`, fill
+ * The XP bar of the Empty due-queue state: 4px, `rounded.full`, track `elevated`, fill
  * `accent`. Full at the final level. No animation, glow or gradient. On the
  * page background, where `elevated` barely separates from `bg` in the light
  * theme, pass `track="bg-border"`.
@@ -54,26 +54,57 @@ export function XpBar({
   );
 }
 
+const RING_RADIUS = 11;
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+
 /**
- * spec-5-1: the Realm badge at the sidebar bottom (DESIGN.md `Realm badge`).
- * Renders nothing while loading or on error, so the nav never waits on it.
- * The sidebar itself hides it in focus mode and below 640px.
+ * spec-5-1: the Realm badge at the right end of the app bar: an XP ring, the
+ * realm label and the mono XP figure, on the dark frame. Renders nothing
+ * while loading or on error, so the nav never waits on it. The app bar itself
+ * hides it in focus mode and below 640px.
  */
 export function RealmBadge() {
   const { data } = useCultivation();
   if (!data) return null;
 
+  const max = data.xpForStage ?? 1;
+  const now = data.xpForStage === null ? 1 : data.xpIntoStage;
+
   return (
     <Link
       href="/cultivation"
       aria-label={`${data.label}, ${xpText(data)}`}
-      className="group flex flex-col gap-2 rounded-sm px-3 py-3 transition-state hover:bg-row-hover focus-ring"
+      className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-3 transition-state hover:bg-frame-raised focus-ring-frame"
     >
-      <span className="text-body-sm font-semibold text-foreground">{data.label}</span>
-      {/* The track steps up to `border` on hover, where the row turns `elevated`. */}
-      <XpBar realm={data} className="transition-state group-hover:bg-border" />
-      <span className="font-mono text-caption text-foreground-tertiary tabular-nums">
-        {xpText(data)}
+      <span
+        role="progressbar"
+        aria-label={data.label}
+        aria-valuemin={0}
+        aria-valuemax={max}
+        aria-valuenow={now}
+        aria-valuetext={xpText(data)}
+        className="flex shrink-0"
+      >
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <circle cx="14" cy="14" r={RING_RADIUS} strokeWidth="3" className="stroke-on-frame-muted/40" />
+          <circle
+            cx="14"
+            cy="14"
+            r={RING_RADIUS}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray={RING_LENGTH}
+            strokeDashoffset={RING_LENGTH * (1 - now / max)}
+            transform="rotate(-90 14 14)"
+            className="stroke-on-frame"
+          />
+        </svg>
+      </span>
+      <span className="flex flex-col text-left leading-tight">
+        <span className="text-body-sm font-bold text-on-frame">{data.label}</span>
+        <span className="font-mono text-caption text-on-frame-muted tabular-nums">
+          {xpText(data)}
+        </span>
       </span>
     </Link>
   );

@@ -137,6 +137,8 @@ context:
 
 ## Spec Change Log
 
+- 2026-11-14: the chrome that focus mode hides is now the app bar (`[data-app-bar]`), not the sidebar (`aside[data-sidebar]`), per [spec-restyle-pastel-frame](./spec-restyle-pastel-frame.md). Behavior is unchanged: hidden from first paint with or without JS, and brought back on finish, Exit or Esc.
+
 ## Review Triage Log
 
 Pass 1. Layers: blind, edge, verification-gap and design-fidelity.

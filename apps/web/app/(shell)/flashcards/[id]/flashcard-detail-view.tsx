@@ -33,7 +33,7 @@ function Breadcrumb({
   flashcard?: string;
 }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-3 text-body-sm text-foreground-secondary">
+    <nav aria-label="Breadcrumb" className="mb-4 text-body-sm font-medium text-foreground-secondary">
       <Link href="/classes" className={crumbLink}>
         Classes
       </Link>
@@ -120,11 +120,11 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
     return (
       <>
         <Breadcrumb />
-        <ul aria-label="Loading cards" className="flex flex-col gap-1">
+        <ul aria-label="Loading cards" className="mt-6 flex flex-col gap-3">
           {[0, 1, 2].map((i) => (
             <li
               key={i}
-              className="h-16 animate-pulse rounded-sm bg-elevated motion-reduce:animate-none"
+              className="h-20 animate-pulse rounded-lg bg-elevated motion-reduce:animate-none"
             />
           ))}
         </ul>
@@ -278,7 +278,7 @@ function CardRow({
   onDelete: () => void;
 }) {
   return (
-    <li className="overflow-hidden rounded-md border border-border bg-card shadow-low transition-state hover:bg-row-hover">
+    <li className="overflow-hidden rounded-lg border border-divider bg-card shadow-low transition-state hover:border-foreground-tertiary">
       <div className="flex items-center justify-between border-b border-divider px-5 py-2 text-caption text-foreground-tertiary">
         <span>
           {index} / {total}

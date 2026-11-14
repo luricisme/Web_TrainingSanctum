@@ -87,6 +87,8 @@ Result: all tasks done. Verified against the disposable `postgres:16-alpine` on 
 
 ## Spec Change Log
 
+- 2026-11-14: partly superseded by [spec-restyle-pastel-frame](./spec-restyle-pastel-frame.md). The 240px sidebar is now a top app bar inside a dark frame (`sidebar.tsx` became `app-bar.tsx`), and light is the default theme. Routes, the Main nav name and the theme toggle behavior are unchanged.
+
 ## Review Triage Log
 
 - **low, patch** — Proxy matcher is a plain JS string, so `\.` collapses to `.` and `login|register|api|_next` has no boundary (Blind, Edge, Gap): confirmed in `proxy.ts`; fails open only for odd paths and the shell layout still validates, but the fix is a direct escape.

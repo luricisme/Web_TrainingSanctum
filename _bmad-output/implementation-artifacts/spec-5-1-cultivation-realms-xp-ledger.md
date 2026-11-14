@@ -99,6 +99,8 @@ context:
 
 ## Spec Change Log
 
+- 2026-11-14: presentation superseded by [spec-restyle-pastel-frame](./spec-restyle-pastel-frame.md). The Realm badge now sits at the right end of the app bar as an XP ring with the label and XP figure, not at the sidebar bottom with a 4px bar. Its link name and `progressbar` attributes are unchanged. The 4px `XpBar` remains on the Empty due-queue state.
+
 ## Review Triage Log
 
 Pass 1 (blind, edge-case, verification-gap, design-fidelity):
