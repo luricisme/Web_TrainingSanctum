@@ -38,7 +38,7 @@ test.describe("firstGradedAt backfill migration", () => {
         timezone: "UTC",
       },
     });
-    const cls = await prisma.class.create({ data: { name: "C", userId: user.id } });
+    const cls = await prisma.class.create({ data: { color: "LAVENDER", name: "C", userId: user.id } });
     const folder = await prisma.folder.create({
       data: { name: "F", classId: cls.id, userId: user.id },
     });

@@ -30,6 +30,7 @@ async function createClass(s: Session, base: string, name: string) {
   return (await res.json()).data as {
     id: string;
     name: string;
+    color: string;
     folderCount: number;
     flashcardCount: number;
     cardCount: number;
@@ -217,6 +218,56 @@ test.describe("/api/classes", () => {
     });
     expect(foreign.status()).toBe(404);
     expect((await prisma.class.findUniqueOrThrow({ where: { id: mine.id } })).name).toBe("New");
+  });
+
+  test("class colour: default order, explicit, change, invalid, empty patch, foreign", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const a = await newUser(playwright, base);
+    const b = await newUser(playwright, base);
+    const c1 = await createClass(a, base, "One");
+    const c2 = await createClass(a, base, "Two");
+    const c3 = await createClass(a, base, "Three");
+    expect([c1, c2, c3].map((c) => (c as { color?: string }).color)).toEqual([
+      "LAVENDER",
+      "SKY",
+      "MINT",
+    ]);
+
+    const explicit = await a.request.post(`${base}/api/classes`, {
+      data: { name: "Four", color: "ROSE" },
+    });
+    expect((await explicit.json()).data.color).toBe("ROSE");
+
+    const renamed = await a.request.patch(`${base}/api/classes/${c1.id}`, {
+      data: { name: "Uno" },
+    });
+    expect((await renamed.json()).data).toMatchObject({ name: "Uno", color: "LAVENDER" });
+
+    const recolour = await a.request.patch(`${base}/api/classes/${c1.id}`, {
+      data: { color: "BUTTER" },
+    });
+    expect((await recolour.json()).data).toMatchObject({ name: "Uno", color: "BUTTER" });
+
+    const folders = (await (await a.request.get(`${base}/api/classes/${c1.id}/folders`)).json()).data;
+    expect(folders.class.color).toBe("BUTTER");
+
+    const invalid = await a.request.patch(`${base}/api/classes/${c1.id}`, {
+      data: { color: "RED" },
+    });
+    expect(invalid.status()).toBe(400);
+    expect((await invalid.json()).error.fields.color).toBeTruthy();
+
+    const empty = await a.request.patch(`${base}/api/classes/${c1.id}`, { data: {} });
+    expect(empty.status()).toBe(400);
+
+    const foreign = await b.request.patch(`${base}/api/classes/${c1.id}`, {
+      data: { color: "SKY" },
+    });
+    expect(foreign.status()).toBe(404);
+    expect((await prisma.class.findUniqueOrThrow({ where: { id: c1.id } })).color).toBe("BUTTER");
   });
 
   test("another user's classes never appear in the list", async ({ playwright, baseURL }) => {

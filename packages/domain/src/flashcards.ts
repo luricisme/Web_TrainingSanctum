@@ -7,6 +7,7 @@
  */
 import { z } from "zod";
 import type { CardSummary } from "./cards";
+import type { ClassColor } from "./classes";
 import type { LearnCounts } from "./review";
 import type { StudyDirections } from "./settings";
 
@@ -89,7 +90,7 @@ export interface FlashcardSummary {
 /** Shape returned by `GET /api/folders/:id` and `GET /api/folders/:id/flashcards`. */
 export interface FolderFlashcardsResponse {
   folder: { id: string; name: string; isUnsorted: boolean };
-  class: { id: string; name: string };
+  class: { id: string; name: string; color: ClassColor };
   flashcards: FlashcardSummary[];
 }
 

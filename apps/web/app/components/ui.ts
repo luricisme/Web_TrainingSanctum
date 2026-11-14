@@ -1,3 +1,5 @@
+import type { ClassColor } from "@training-sanctum/domain";
+
 /**
  * Shared class names for forms, buttons, tiles and text roles. Every value
  * comes from the token layer in globals.css: type roles (`text-body`,
@@ -56,9 +58,31 @@ export function tintAt(index: number): string {
   return TINTS[index % TINTS.length];
 }
 
+const CLASS_TINTS: Record<ClassColor, string> = {
+  LAVENDER: "bg-tint-lavender border-tint-lavender-border",
+  SKY: "bg-tint-sky border-tint-sky-border",
+  MINT: "bg-tint-mint border-tint-mint-border",
+  BUTTER: "bg-tint-butter border-tint-butter-border",
+  ROSE: "bg-tint-rose border-tint-rose-border",
+};
+
+/** Story 6.4: a Class's colour drives its own tile and its Folder and Flashcard tiles. */
+export function tintFor(color: ClassColor): string {
+  return CLASS_TINTS[color];
+}
+
+/** Display names for the colour picker and menu (a name is never colour alone). */
+export const CLASS_COLOR_LABELS: Record<ClassColor, string> = {
+  LAVENDER: "Lavender",
+  SKY: "Sky",
+  MINT: "Mint",
+  BUTTER: "Butter",
+  ROSE: "Rose",
+};
+
 export const tileGridClass = "grid gap-3 sm:grid-cols-2 lg:grid-cols-3";
 
-/** Pair with `tintAt(index)`. The hover state is an ink border, no transform. */
+/** Pair with `tintFor(color)`. The hover state is an ink border, no transform. */
 export const tileClass =
   "flex min-h-24 items-start gap-3 rounded-lg border p-4 transition-state hover:border-foreground focus-within:border-foreground";
 

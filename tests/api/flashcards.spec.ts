@@ -92,9 +92,11 @@ test.describe("/api/folders/:id/flashcards and /api/flashcards/:id", () => {
 
     const list = await s.request.get(`${base}/api/folders/${folder.id}/flashcards`);
     expect(list.status()).toBe(200);
-    expect((await list.json()).data.flashcards).toEqual([
+    const listed = (await list.json()).data;
+    expect(listed.flashcards).toEqual([
       { id: flashcard.id, name: "Weather idioms", cardCount: 0 },
     ]);
+    expect(listed.class.color).toBe("LAVENDER");
   });
 
   test("create rejects blank, long and clashing names with fields.name", async ({
@@ -148,7 +150,7 @@ test.describe("/api/folders/:id/flashcards and /api/flashcards/:id", () => {
     const data = (await res.json()).data;
     expect(data.flashcard).toEqual({ id: flashcard.id, name: "Idioms" });
     expect(data.folder).toEqual({ id: folder.id, name: "Speaking", isUnsorted: false });
-    expect(data.class).toEqual({ id: folder.classId, name: "IELTS" });
+    expect(data.class).toMatchObject({ id: folder.classId, name: "IELTS" });
     expect(data.cards).toHaveLength(2);
     expect(Object.keys(data.cards[0]).sort()).toEqual(
       ["context", "definition", "example", "id", "partOfSpeech", "term"].sort()
@@ -439,7 +441,7 @@ test("racing moves with the same name end as 200 or 409 and leave unique names",
   const base = baseURL ?? FALLBACK_BASE;
   const s = await newUser(playwright, base);
   // Seeded straight into the DB: sequential API setup against a remote DB is slow.
-  const cls = await prisma.class.create({ data: { name: "Race", userId: s.userId } });
+  const cls = await prisma.class.create({ data: { color: "LAVENDER", name: "Race", userId: s.userId } });
   const target = await prisma.folder.create({
     data: { name: "Target folder", classId: cls.id, userId: s.userId },
   });

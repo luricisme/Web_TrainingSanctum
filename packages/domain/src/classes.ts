@@ -16,8 +16,34 @@ export const classNameSchema = z
   .min(1, "Enter a class name.")
   .max(CLASS_NAME_MAX_LENGTH, `Use ${CLASS_NAME_MAX_LENGTH} characters or fewer.`);
 
-export const createClassSchema = z.object({ name: classNameSchema });
-export const renameClassSchema = z.object({ name: classNameSchema });
+/** Story 6.4: the five tile colours, in default-assignment order. */
+export const CLASS_COLORS = ["LAVENDER", "SKY", "MINT", "BUTTER", "ROSE"] as const;
+export type ClassColor = (typeof CLASS_COLORS)[number];
+
+export const classColorSchema = z.enum(CLASS_COLORS, {
+  error: "Choose one of the five colours.",
+});
+
+/** The default colour for a new Class: the next in order by existing count. */
+export function nextClassColor(existingCount: number): ClassColor {
+  return CLASS_COLORS[existingCount % CLASS_COLORS.length];
+}
+
+export const createClassSchema = z.object({
+  name: classNameSchema,
+  color: classColorSchema.optional(),
+});
+
+/** Rename and/or recolour: at least one of `name` and `color`. */
+export const renameClassSchema = z
+  .object({
+    name: classNameSchema.optional(),
+    color: classColorSchema.optional(),
+  })
+  .refine((v) => v.name !== undefined || v.color !== undefined, {
+    message: "Provide a name or a colour.",
+  });
+export const updateClassSchema = renameClassSchema;
 
 export const deleteClassSchema = z.discriminatedUnion("mode", [
   z.object({
@@ -57,6 +83,7 @@ export function uniqueFolderName(
 export interface ClassSummary {
   id: string;
   name: string;
+  color: ClassColor;
   folderCount: number;
   flashcardCount: number;
   cardCount: number;

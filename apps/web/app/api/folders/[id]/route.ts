@@ -40,7 +40,7 @@ export async function GET(
       id: true,
       name: true,
       isUnsorted: true,
-      class: { select: { id: true, name: true } },
+      class: { select: { id: true, name: true, color: true } },
       flashcards: {
         select: {
           id: true,

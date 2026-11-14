@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type {
+  ClassColor,
   FlashcardSummary,
   FolderFlashcardsResponse,
 } from "@training-sanctum/domain";
@@ -19,7 +20,7 @@ import {
   tileGridClass,
   tileIconClass,
   tileSkeletonClass,
-  tintAt,
+  tintFor,
 } from "../../classes/ui";
 import { DeleteFlashcardModal } from "./delete-flashcard-modal";
 import { FlashcardFormModal } from "./flashcard-form-modal";
@@ -164,11 +165,11 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
           </div>
         ) : (
           <ul className={tileGridClass}>
-            {flashcards.map((flashcard, index) => (
+            {flashcards.map((flashcard) => (
               <FlashcardRow
                 key={flashcard.id}
                 flashcard={flashcard}
-                index={index}
+                color={data.class.color}
                 onRename={() => setDialog({ kind: "rename", id: flashcard.id })}
                 onMove={() => setDialog({ kind: "move", id: flashcard.id })}
                 onDelete={() => setDialog({ kind: "delete", id: flashcard.id })}
@@ -214,20 +215,20 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
 /** One Flashcard tile, linking to the Flashcard page, with a Rename / Delete menu. */
 function FlashcardRow({
   flashcard,
-  index,
+  color,
   onRename,
   onMove,
   onDelete,
 }: {
   flashcard: FlashcardSummary;
-  /** Position in the list; picks the tile's tint. */
-  index: number;
+  /** The Class's colour; picks the tile's tint. */
+  color: ClassColor;
   onRename: () => void;
   onMove: () => void;
   onDelete: () => void;
 }) {
   return (
-    <li className={`${tileClass} ${tintAt(index)}`}>
+    <li className={`${tileClass} ${tintFor(color)}`}>
       <Link
         href={`/flashcards/${flashcard.id}`}
         className="flex min-w-0 flex-1 items-start gap-3 rounded-sm focus-ring"

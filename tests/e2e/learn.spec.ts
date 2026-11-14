@@ -32,7 +32,7 @@ interface SeedCard {
 async function seed(email: string, cards: SeedCard[]) {
   const user = await prisma.user.findUniqueOrThrow({ where: { email } });
   const cls = await prisma.class.create({
-    data: {
+    data: { color: "LAVENDER",
       name: "IELTS",
       userId: user.id,
       folders: {

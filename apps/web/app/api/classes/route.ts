@@ -3,6 +3,7 @@ import {
   type ClassSummary,
   UNSORTED_FOLDER_NAME,
   createClassSchema,
+  nextClassColor,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
 import { fail, ok, readJson, validationFailure } from "@/lib/api-response";
@@ -16,7 +17,7 @@ export async function GET(request: Request): Promise<Response> {
     prisma.class.findMany({
       where: { userId },
       orderBy: { createdAt: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, color: true },
     }),
     prisma.folder.findMany({
       where: { userId },
@@ -47,6 +48,7 @@ export async function GET(request: Request): Promise<Response> {
     .map((c) => ({
       id: c.id,
       name: c.name,
+      color: c.color,
       folderCount: counts.get(c.id)?.folders ?? 0,
       flashcardCount: counts.get(c.id)?.flashcards ?? 0,
       cardCount: counts.get(c.id)?.cards ?? 0,
@@ -70,8 +72,11 @@ export async function POST(request: Request): Promise<Response> {
 
   // The Class and its single Unsorted Folder are created together or not at all.
   const created = await prisma.$transaction(async (tx) => {
+    const color =
+      parsed.data.color ??
+      nextClassColor(await tx.class.count({ where: { userId } }));
     const cls = await tx.class.create({
-      data: { name: parsed.data.name, userId },
+      data: { name: parsed.data.name, color, userId },
     });
     await tx.folder.create({
       data: {
@@ -87,6 +92,7 @@ export async function POST(request: Request): Promise<Response> {
   const data: ClassSummary = {
     id: created.id,
     name: created.name,
+    color: created.color,
     folderCount: 1,
     flashcardCount: 0,
     cardCount: 0,

@@ -19,7 +19,7 @@ async function register(page: Page): Promise<string> {
 async function seedFolder(email: string) {
   const user = await prisma.user.findUniqueOrThrow({ where: { email } });
   const cls = await prisma.class.create({
-    data: {
+    data: { color: "LAVENDER",
       name: "IELTS",
       userId: user.id,
       folders: {
@@ -212,7 +212,7 @@ test("open a Flashcard and add, edit and delete Cards in it", async ({ page }) =
 async function seedMoveWorld(email: string) {
   const { user, cls, folder } = await seedFolder(email);
   const other = await prisma.class.create({
-    data: {
+    data: { color: "LAVENDER",
       name: "Work",
       userId: user.id,
       folders: {
@@ -291,7 +291,7 @@ test("Move modal handles a Class with no other Folder, 5xx and both 404 branches
   const email = await register(page);
   const { user, folder, flashcard } = await seedMoveWorld(email);
   const empty = await prisma.class.create({
-    data: {
+    data: { color: "LAVENDER",
       name: "Empty",
       userId: user.id,
       folders: { create: [{ name: "Unsorted", isUnsorted: true, userId: user.id }] },

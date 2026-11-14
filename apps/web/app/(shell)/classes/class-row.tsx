@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ClassSummary } from "@training-sanctum/domain";
 import { RowMenu } from "./row-menu";
-import { pluralize, tileClass, tileIconClass, tintAt } from "./ui";
+import { pluralize, tileClass, tileIconClass, tintFor } from "./ui";
 
 /**
  * One Class tile: icon chip, name (a link to the Class detail page), counts
@@ -12,18 +12,17 @@ import { pluralize, tileClass, tileIconClass, tintAt } from "./ui";
  */
 export function ClassRow({
   item,
-  index,
   onRename,
+  onColour,
   onDelete,
 }: {
   item: ClassSummary;
-  /** Position in the list; picks the tile's tint. */
-  index: number;
   onRename: () => void;
+  onColour: () => void;
   onDelete: () => void;
 }) {
   return (
-    <li className={`${tileClass} ${tintAt(index)}`}>
+    <li className={`${tileClass} ${tintFor(item.color)}`}>
       <span aria-hidden="true" className={tileIconClass}>
         <svg
           width="20"
@@ -57,6 +56,7 @@ export function ClassRow({
         name={item.name}
         items={[
           { label: "Rename", onSelect: onRename },
+          { label: "Colour", onSelect: onColour },
           { label: "Delete", onSelect: onDelete, danger: true },
         ]}
       />

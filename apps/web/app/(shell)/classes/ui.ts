@@ -12,6 +12,8 @@ export {
   tileIconClass,
   tileSkeletonClass,
   tintAt,
+  tintFor,
+  CLASS_COLOR_LABELS,
 } from "@/app/components/ui";
 
 export function pluralize(count: number, noun: string): string {

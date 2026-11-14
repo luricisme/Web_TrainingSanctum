@@ -23,7 +23,7 @@ async function createClass(page: Page, name: string) {
   await expect(page.getByText(name, { exact: true })).toBeVisible();
 }
 
-async function openMenu(page: Page, className: string, item: "Rename" | "Delete") {
+async function openMenu(page: Page, className: string, item: "Rename" | "Colour" | "Delete") {
   await page.getByRole("button", { name: `Options for ${className}` }).click();
   await page.getByRole("menuitem", { name: item }).click();
 }
@@ -153,6 +153,8 @@ test("overflow menu is keyboard operable", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(page.getByRole("menuitem", { name: "Rename" })).toBeFocused();
   await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menuitem", { name: "Colour" })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("menuitem", { name: "Delete" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toBeHidden();
@@ -189,6 +191,15 @@ for (const theme of ["dark", "light"] as const) {
     await page.getByRole("button", { name: "Options for IELTS Academic" }).hover();
     await shot("populated");
 
+    await page.getByRole("button", { name: "Create class" }).first().click();
+    await shot("create-modal");
+    await page.keyboard.press("Escape");
+    await page.getByRole("link", { name: "English Idioms" }).click();
+    await page.waitForURL(/\/classes\/.+/);
+    await expect(page.getByText("Unsorted").first()).toBeVisible();
+    await shot("detail");
+    await page.goBack();
+
     await page.getByRole("button", { name: "Options for IELTS Academic" }).click();
     await shot("menu");
     await page.getByRole("menuitem", { name: "Delete" }).click();
@@ -199,3 +210,41 @@ for (const theme of ["dark", "light"] as const) {
     await shot("delete-modal-mobile");
   });
 }
+
+test("create modal preselects the next colour; Colour menu changes the tile", async ({ page }) => {
+  const email = await register(page);
+  await page.getByRole("button", { name: "Create class" }).click();
+  const radios = page.getByRole("dialog").getByRole("radio");
+  await expect(radios).toHaveCount(5);
+  await expect(page.getByRole("dialog").getByRole("radio", { name: "Lavender" })).toBeChecked();
+  await page.getByLabel("Class name").fill("Tinted");
+  await page.getByRole("dialog").getByText("Rose", { exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Create class" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  const tile = page.getByRole("listitem").filter({ hasText: "Tinted" });
+  await expect(tile).toHaveClass(/bg-tint-rose/);
+
+  const owner = await prisma.user.findUniqueOrThrow({ where: { email } });
+  const folder = await prisma.folder.findFirstOrThrow({
+    where: { userId: owner.id, isUnsorted: true },
+  });
+  await prisma.flashcard.create({
+    data: { name: "Tinted set", folderId: folder.id, userId: owner.id },
+  });
+  await page.goto(`/folders/${folder.id}`);
+  const flashcardTile = page.getByRole("listitem").filter({ hasText: "Tinted set" });
+  await expect(flashcardTile).toHaveClass(/bg-tint-rose/);
+  await page.getByRole("link", { name: "Classes", exact: true }).first().click();
+  await page.waitForURL("/classes");
+
+  await openMenu(page, "Tinted", "Colour");
+  await page.getByRole("dialog").getByText("Sky", { exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(tile).toHaveClass(/bg-tint-sky/);
+  await page.getByRole("link", { name: "Tinted" }).click();
+  const unsortedTile = page.getByRole("listitem").filter({ hasText: "Unsorted" });
+  await expect(unsortedTile).toHaveClass(/bg-tint-sky/);
+  await unsortedTile.getByRole("link").click();
+  await expect(flashcardTile).toHaveClass(/bg-tint-sky/);
+});

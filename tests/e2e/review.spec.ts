@@ -22,7 +22,7 @@ async function register(page: Page): Promise<string> {
 async function seedCard(email: string, extra = 0) {
   const user = await prisma.user.findUniqueOrThrow({ where: { email } });
   const cls = await prisma.class.create({
-    data: {
+    data: { color: "LAVENDER",
       name: "IELTS",
       userId: user.id,
       folders: {
@@ -647,7 +647,7 @@ test("a scoped Review with nothing due names its scope and lists only its Flashc
   await addNewCards(email, flashcard.id, 1);
   const user = await prisma.user.findUniqueOrThrow({ where: { email } });
   const other = await prisma.class.create({
-    data: {
+    data: { color: "LAVENDER",
       name: "TOEFL",
       userId: user.id,
       folders: { create: [{ name: "Reading", userId: user.id }] },
