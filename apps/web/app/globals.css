@@ -250,6 +250,7 @@ body {
 
 /* spec-4-5 focus mode, before hydration: a server-rendered session stage
    hides the app bar from first paint. The client flag takes over after. */
-:root:has([data-focus-session]) [data-app-bar] {
+:root:has([data-focus-session]) [data-app-bar],
+:root:has([data-focus-session]) [data-dock] {
   display: none;
 }

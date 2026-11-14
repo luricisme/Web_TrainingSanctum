@@ -249,7 +249,7 @@ components:
     active-background: '{colors.accent}'
     active-foreground: '{colors.on-accent}'
   dock:
-    status: 'not built'
+    status: 'built (Story 6.3), no Search button until Story 6.5'
     background: '{colors.frame}'
     foreground: '{colors.on-frame}'
     active-background: '{colors.frame-raised}'
@@ -371,7 +371,7 @@ Hover on a tile or card draws a darker border; nothing scales or lifts.
 - **Switchers** (`components.mode-switcher`). Pill tracks on `{colors.elevated}`. Study directions and the Add cards Manual | Import switcher select with the accent fill; the Theme toggle and the Import Paste | Upload tabs are neutral (a card chip), so at most one accent pill shows.
 - **Inputs.** `{rounded.md}`, `{colors.border}` outline, `{colors.bg}` fill so they read on white cards and modals; the border turns `{colors.accent}` with a 2px offset outline on focus. Errors turn the border `{colors.error}`.
 - **Empty due-queue state, Cultivation notices, quest row, Breadcrumb, Add cards panel, Manual rows, Import mode.** Behave as before (EXPERIENCE.md). Visual changes only: ready-to-learn rows are a white list with a lavender round chip, the notice strips are `{colors.elevated}` with `{rounded.md}`, and the panel and rows take the new radii and shadows.
-- **Dock** (`components.dock`) — *not built.* The mobile navigation: a pill-shaped bar floating at the bottom of the screen on the frame colour, holding Review, Classes, Cultivation, Settings and Search as round icon buttons. The current destination is a raised pill (`{colors.frame-raised}`). Respects the device's bottom safe area. Hidden in focus mode. **Decision (2026-11-14):** a floating dock, as in the owner's reference screenshots, rather than a full-width bottom bar.
+- **Dock** (`components.dock`) — *built (Story 6.3); the Search button waits for Story 6.5.* The mobile navigation: a pill-shaped bar floating at the bottom of the screen on the frame colour, holding Review, Classes, Cultivation, Settings and Search as round icon buttons. The current destination is a raised pill (`{colors.frame-raised}`). Respects the device's bottom safe area. Hidden in focus mode. **Decision (2026-11-14):** a floating dock, as in the owner's reference screenshots, rather than a full-width bottom bar.
 - **Quick search** (`components.quick-search`) — *not built.* A centred palette (`{rounded.lg}`, `{elevation.high}`, scrim) opened with Ctrl+K or "/" from anywhere outside a text field, and from the dock's Search button. One input ("Search classes, folders, flashcards, cards…"), then results grouped as **Go to** (Review, Classes, Cultivation, Settings) and **Suggested** ("Continue: Weather idioms"). Arrow keys move, Enter opens, Esc closes. Footer shows the key hints.
 
 ## Do's and Don'ts

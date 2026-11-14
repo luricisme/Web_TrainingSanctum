@@ -20,7 +20,7 @@ Training Sanctum's visual identity ("Pastel Frame") and app structure come from 
 - **Quizlet** contributes the flashcard/review-card anatomy, the progress counter, the Class → Folder → Flashcard browsing pattern and the Manual card-entry editor (numbered term/definition rows). Explicitly *not* Quizlet's gamification, social features, or promotional surfaces.
 - **spy-family.net** contributes the section-bullet motif.
 
-Surfaces marked *not built* in this spine (mobile dock, quick search, per-Class colour) are decided but not implemented.
+Surfaces marked *not built* in this spine (quick search, per-Class colour) are decided but not implemented.
 
 This spine describes behavior; visual specs (exact colors, type, radii, shadows) live in `DESIGN.md` and are referenced here only by `{path.to.token}`, never restated as raw values.
 
@@ -88,7 +88,7 @@ Behavioral. Visual specs live in `DESIGN.md.components`.
 | Daily quest list | Cultivation page, top | Two checkbox rows, Learn Flashcards and Clear Review (FR-19), sized by the user's Bộ. Each row: label ("Learn 1 Flashcard", "Clear Review"), mono progress ("0 / 1 Flashcards", "12 due left"), and "+10 XP" on the right. **Locked** (condition not met): checkbox disabled, the reason as helper text. **Done, not ticked:** checkbox enabled, helper "Done. Tick to claim before the day ends." (an unticked quest is penalized at day end). **Skipped:** greyed out, "Nothing to do today.", no checkbox. **Claimed:** checked, not interactive. Ticking claims at once (no confirm); on failure the tick rolls back with an inline error. Space toggles a focused checkbox. |
 | Realm badge | App bar, right end; outside review only | The realm avatar inside a ring that fills with the stage's XP, then "{realm} · {stage}" (realm names in Vietnamese) over mono "40 / 100 XP". Links to Cultivation. Hidden during focus mode (FR-11) and below 640px. Renders nothing until the realm loads, and on error. |
 | Realm avatar | Realm badge | A cultivator illustration with one look per realm (19), more striking at higher realms (see `DESIGN.md`). Changes when the user enters a new realm, not on every stage. Decorative: never the only carrier of the realm, which is always also written out. No animation except the slow ray turn at Bộ 3 and up, which stops under reduced motion. |
-| Mobile dock | Below 640px, every screen except focus mode — *not built* | A floating pill at the bottom with Review, Classes, Cultivation, Settings and Search; the current destination is raised. Replaces the app bar so Settings and Log out are reachable on a phone. The Realm badge is not shown on mobile; Cultivation is one tap away. Stays clear of the device's bottom safe area. |
+| Mobile dock | Below 640px, every screen except focus mode — *built (Story 6.3); Search joins with Story 6.5* | A floating pill at the bottom with Review, Classes, Cultivation, Settings and Search; the current destination is raised. Replaces the app bar so Settings and Log out are reachable on a phone. The Realm badge is not shown on mobile; Cultivation is one tap away. Stays clear of the device's bottom safe area. |
 | Quick search | Ctrl+K or "/" outside a text field; the dock's Search button — *not built* | Centred palette over a scrim. One input, then **Go to** (the four destinations) and **Suggested** ("Continue: Weather idioms") before typing; typing filters destinations and searches Class, Folder, Flashcard and Card names, and Card terms. Arrow keys move, Enter opens, Esc closes and returns focus. Opening a Card result goes to its Flashcard. Disabled while a session or modal is open. |
 
 ## State Patterns
@@ -176,7 +176,7 @@ Failure: he stops halfway — every direction he graded is learned and comes bac
 |---|---|
 | Desktop (`>1024px`) | Frame, app bar with labelled nav items, and a 3-column tile grid; review session centred, single-column, card capped at 640px. Keyboard-first interaction is primary. |
 | Tablet (`640–1024px`) | Same structure; the nav items collapse to icons (the current one keeps its label) and tiles use 2 columns. Review session unaffected. |
-| Mobile (`<640px`) | No frame rim; the panel fills the screen. The app bar is replaced by the dock (*not built*; until then there is no navigation below 640px). Browsing screens use a single-column tile list. Review session: tap-to-flip plus swipe-to-grade, layered on top of the grade buttons' own tap targets — see Interaction Primitives for the full mapping. Grade-button row wraps when needed. |
+| Mobile (`<640px`) | No frame rim; the panel fills the screen. The app bar is replaced by the dock (built, Story 6.3). Browsing screens use a single-column tile list. Review session: tap-to-flip plus swipe-to-grade, layered on top of the grade buttons' own tap targets — see Interaction Primitives for the full mapping. Grade-button row wraps when needed. |
 
 Training Sanctum is responsive web only — no native mobile app ships in v1 (PRD §5). The mobile review experience is the one surface where interaction diverges meaningfully from desktop (swipe added as a layer), because the review loop is the product's single highest-frequency interaction and must stay fast on whichever device Luric has in hand at the moment of study.
 
