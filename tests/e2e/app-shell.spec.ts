@@ -148,12 +148,39 @@ test("theme choice persists across reloads", async ({ page }) => {
   await expect(html).toHaveAttribute("data-theme", "light");
 });
 
-test("sidebar is hidden below 640px", async ({ page }) => {
+// Story 6.3: below 640px the dock replaces the app bar.
+test("the dock replaces the app bar below 640px", async ({ page }) => {
   await register(page);
   await page.setViewportSize({ width: 600, height: 800 });
-  await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden();
-  await expect(page.locator("[data-app-bar]").getByRole("progressbar")).toBeHidden();
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.locator("[data-app-bar]")).toBeHidden();
+  await expect(page.getByRole("progressbar")).toBeHidden();
+
+  const dock = page.locator("[data-dock]");
+  const nav = page.getByRole("navigation", { name: "Main" });
+  await expect(nav).toBeVisible();
+  await expect(dock).toBeVisible();
+  await expect(nav.getByRole("link")).toHaveCount(4);
+  await expect(nav.getByRole("link", { name: "Review" })).toHaveAttribute("aria-current", "page");
+
+  for (const name of ["Cultivation", "Settings"]) {
+    await nav.getByRole("link", { name }).click();
+    await expect(page).toHaveURL(new RegExp(`/${name.toLowerCase()}$`));
+    await expect(nav.getByRole("link", { name })).toHaveAttribute("aria-current", "page");
+  }
+  // Log out lives on Settings, now reachable on a phone.
+  await expect(page.getByRole("button", { name: "Log out" })).toBeVisible();
+
+  // The last content is not covered by the dock.
+  await page.goto("/settings");
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  const dockTop = (await dock.locator("ul").boundingBox())!.y;
+  const lastBottom = (await page.getByRole("button", { name: "Log out" }).boundingBox())!;
+  expect(lastBottom.y + lastBottom.height).toBeLessThanOrEqual(dockTop);
+
+  // From 640px the app bar is back and the dock is gone.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(dock).toBeHidden();
+  await expect(page.locator("[data-app-bar]")).toBeVisible();
 });
 
 // The Settings screenshots (both themes, 1280px and 390px) live in settings.spec.ts (spec-4-9).

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "Training Sanctum",
   description: "Personal flashcard / spaced-repetition app.",
 };
+
+// Lets the mobile dock sit clear of the device's bottom safe area.
+export const viewport: Viewport = { viewportFit: "cover" };
 
 // Rounded geometric sans for the whole product; Vietnamese covers the realm names.
 const jakarta = Plus_Jakarta_Sans({

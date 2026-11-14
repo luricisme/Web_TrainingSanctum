@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/session";
 import { QueryProvider } from "@/lib/query-provider";
 import { AppBar } from "./app-bar";
+import { Dock } from "./dock";
 import { FocusModeProvider } from "./focus-mode";
 
 export default async function ShellLayout({
@@ -19,9 +20,11 @@ export default async function ShellLayout({
           {/* spec-4-5: Review and Learn turn focus mode on to hide the app bar. */}
           <FocusModeProvider>
             <AppBar />
-            <main className="min-w-0 flex-1 bg-background px-4 py-10 sm:rounded-panel sm:px-8">
+            {/* Below 640px the bottom padding keeps the dock off the page end. */}
+            <main className="min-w-0 flex-1 bg-background px-4 pb-28 pt-10 sm:rounded-panel sm:px-8 sm:pb-10">
               <div className="mx-auto w-full max-w-content">{children}</div>
             </main>
+            <Dock />
           </FocusModeProvider>
         </QueryProvider>
       </div>

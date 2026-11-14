@@ -426,6 +426,10 @@ test("the server-rendered session hides the sidebar before any script runs", asy
   await expect(raw.locator("[data-focus-session]")).toHaveCount(1);
   await expect(raw.locator("[data-app-bar]")).toHaveCount(1);
   await expect(raw.getByRole("navigation", { name: "Main" })).toBeHidden();
+  // Story 6.3: the mobile dock goes too, before any script runs.
+  await raw.setViewportSize({ width: 390, height: 800 });
+  await expect(raw.locator("[data-dock]")).toHaveCount(1);
+  await expect(raw.locator("[data-dock]")).toBeHidden();
   await noJs.close();
 });
 
