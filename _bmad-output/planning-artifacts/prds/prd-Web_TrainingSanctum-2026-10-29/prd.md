@@ -31,7 +31,7 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 
 ### 2.2 Non-Users (v1)
 
-- Other learners — no multi-user, social, sharing, or public-set functionality exists or is planned for v1.
+- Other learners as a social audience — no sharing, public-set or collaboration functionality exists or is planned for v1. Other people may hold accounts, each isolated from the other users, and an admin can see and manage all of them (FR-21). The admin sees users' study content; users should be told so at registration.
 - Learners wanting gamified/social study modes (Quizlet-style Test mode, Match game) — explicitly not this product's model.
 
 ### 2.3 Key User Journeys
@@ -70,7 +70,7 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 
 ### 4.1 Account & Session
 
-**Description:** Single-user authentication that isolates session/account state cleanly, so the data model supports multi-tenancy later without building multi-user features now. v1 ships simple email+password auth — no OAuth/social login, no invite flow, no multi-account UI — since the product has exactly one real user.
+**Description:** Email+password authentication with two roles, `user` and `admin`, that isolates each account's data from the other users. v1 has no OAuth/social login and no invite flow. The `admin` role is assigned only by server-side seed (an environment variable), never through the UI. *(Roles added by Sprint Change 2026-11-14d.)*
 
 #### FR-1: User authentication
 
@@ -78,7 +78,9 @@ A user can create an account and log in/out with email and password.
 
 **Consequences (testable):**
 - Unauthenticated requests to any class/folder/flashcard/card/review endpoint are rejected.
-- All persisted data (Classes, Folders, Flashcards, Cards, Scheduling Records, cultivation history) is scoped to a `user_id`, even though only one account exists in practice.
+- All persisted data (Classes, Folders, Flashcards, Cards, Scheduling Records, cultivation history) is scoped to a `user_id`.
+- Every user has a `role` (`user` by default). Admin routes (`/api/admin/**`) return `403` to a non-admin.
+- A disabled account cannot log in, and its existing sessions are revoked at once (FR-21).
 
 #### FR-2: Session persistence
 
@@ -302,7 +304,7 @@ XP per quest is 10 in Nhất Bộ, 20 in Nhị Bộ and 40 in Tam Bộ and Tứ 
 
 #### FR-13: Data export/backup
 
-A user can export their full Card + Scheduling Record + cultivation history (XP, quest days, XP events) to a portable format (e.g. JSON) on demand.
+An **admin** can export the full Card + Scheduling Record + cultivation history (XP, quest days, XP events) of **one selected user** to a portable format (e.g. JSON) on demand. A non-admin user has no export control and cannot call the route. *(Admin-only by Sprint Change 2026-11-14d.)*
 
 **Consequences (testable):**
 - Export completes and produces a file containing every Class, every Folder, every Flashcard (with its Folder), every Card (with its Flashcard), both Scheduling Records per Card, and the cultivation history, sufficient to reconstruct state.
@@ -314,12 +316,12 @@ A user can export their full Card + Scheduling Record + cultivation history (XP,
 
 #### FR-14: Restore from backup
 
-A user can import a previously-exported FR-13 JSON file to fully reconstruct their data, including both Scheduling Records per Card (interval, repetitions, ease_factor, next_review_date) and cultivation history — not just the five Card content fields.
+An **admin** can import a previously-exported FR-13 JSON file **into one selected user's account** to fully reconstruct that user's data, including both Scheduling Records per Card (interval, repetitions, ease_factor, next_review_date) and cultivation history — not just the five Card content fields.
 
 **Consequences (testable):**
 - Restoring a valid FR-13 export recreates the same Class → Folder → Flashcard structure and every Card in its original Flashcard, with both of its Scheduling Records in exactly the state captured at export time (same interval/repetitions/ease_factor/next_review_date), and restores the cultivation history.
 - After a restore, every day up to yesterday counts as settled, so no penalty is charged for days between the export and the restore (FR-19).
-- Restoring into an account that already has data requires explicit confirmation before proceeding (default: restore replaces existing data; the system does not silently merge or silently overwrite without confirmation).
+- Restoring into an account that already has data requires explicit confirmation, naming the target user, before proceeding (default: restore replaces existing data; the system does not silently merge or silently overwrite without confirmation).
 - This closes the loop the brief's durability dealbreaker requires: an export with no restore path is not a backup, so FR-13 and FR-14 ship together in Phase 1 MVP.
 
 #### FR-15: Progress & stats view
@@ -332,23 +334,34 @@ A user can view a basic stats screen, outside of active review (per FR-11), show
 
 ### 4.8 Navigation
 
-**Description:** Quick ways to get around once the library grows. *(Added by Sprint Change 2026-11-14b.)*
+**Description:** *Removed by Sprint Change 2026-11-14c: the only requirement here, FR-20, was dropped.*
 
-#### FR-20: Quick search
+#### FR-20: Quick search — REMOVED
 
-Pressing Ctrl+K, or "/" when focus is not in a text field, opens a search palette from anywhere outside a Review or Learn session and outside a modal. With nothing typed it offers the four destinations (Review, Classes, Cultivation, Settings) and a suggestion to continue the last-used Flashcard. Typing filters the destinations and searches Class, Folder and Flashcard names and Card terms. Enter opens the highlighted result, Esc closes the palette and returns focus. A Card result opens its Flashcard.
+Dropped by Sprint Change 2026-11-14c. The number is not reused.
+
+### 4.9 Administration
+
+**Description:** One admin role manages the other accounts. *(Added by Sprint Change 2026-11-14d.)*
+
+#### FR-21: Admin user management
+
+An admin has an **Admin** item in the menu, in addition to every feature a normal user has.
 
 **Consequences (testable):**
-- The palette never opens during a Review or Learn session (FR-11), while a modal is open, or while the user types in a field.
-- Search covers only the signed-in user's data and is read-only.
-- On a phone the same palette opens from the dock's Search button (see the responsive-navigation NFR).
-
----
+- The user list shows each user's email, creation date, status (active or disabled), realm, level and XP.
+- A user page, **read-only**, shows that user's full data as the FR-13 export payload: Class → Folder → Flashcard → Card tree, Scheduling Records and cultivation. The admin cannot edit Cards, grade, or claim quests for the user, and cannot read any password.
+- From the user page the admin can export (FR-13) and restore (FR-14), disable or enable the account, reset the password, and delete the user.
+- Disabling revokes the user's sessions and blocks login until the account is enabled again.
+- Resetting a password sets a new password of at least 8 characters, stored hashed like at registration, and revokes the user's sessions. Forcing a change at next login is not required.
+- Deleting a user removes the account and all of its data in one transaction, and needs the admin to retype the user's email to confirm.
+- An admin cannot disable or delete themselves, and the system never ends up with zero admins.
+- Admin accounts exist only through the `ADMIN_EMAILS` seed; no screen or route changes a role.
 
 ## 5. Non-Goals (Explicit)
 
 - Quizlet-style Test mode or Match game.
-- Public set discovery, sharing, or any collaboration/multi-user feature.
+- Public set discovery, sharing, or collaboration. (Account administration by an admin role is in scope, FR-21.)
 - Native mobile app (responsive web only).
 - Audio/pronunciation playback or recording.
 - Custom card templates/fields beyond the fixed five (the brief's whole point is *not* requiring template setup).
@@ -385,8 +398,8 @@ Pressing Ctrl+K, or "/" when focus is not in a text field, opens a search palett
 - Keyboard-driven review session of learned Cards with focus mode (FR-9, FR-11)
 - Flashcard card viewer and Learn session (FR-16, FR-17), with the study-directions setting (FR-18)
 - Cultivation progression and Daily Quests (FR-12, FR-19)
-- Quick search (FR-20): last in build order and droppable *(Sprint Change 2026-11-14b.)*
-- Data export/backup and restore (FR-13, FR-14) — promoted into Phase 1: data loss is a stated dealbreaker risk for a daily-dependency tool, and export without a restore path isn't actually a backup, so both ship with the MVP rather than waiting for Phase 2 polish.
+- Data export/backup and restore (FR-13, FR-14), admin-only — promoted into Phase 1: data loss is a stated dealbreaker risk for a daily-dependency tool, and export without a restore path isn't actually a backup, so both ship with the MVP rather than waiting for Phase 2 polish.
+- Admin role and user management (FR-21) *(Sprint Change 2026-11-14d)*
 - Basic progress/stats view (FR-15) — needed so the portfolio success metric SM-4 (retention curve) is observable in the shipped product, not just in raw data.
 - Live, publicly accessible deployment (minimal hosting, no architecture docs/case study required at this stage — see §8.2) — required for the brief's portfolio success criteria to be met at all.
 

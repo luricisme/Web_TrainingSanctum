@@ -249,16 +249,11 @@ components:
     active-background: '{colors.accent}'
     active-foreground: '{colors.on-accent}'
   dock:
-    status: 'built (Story 6.3), no Search button until Story 6.5'
+    status: 'built (Story 6.3)'
     background: '{colors.frame}'
     foreground: '{colors.on-frame}'
     active-background: '{colors.frame-raised}'
     radius: '{rounded.full}'
-  quick-search:
-    status: 'not built'
-    background: '{colors.card}'
-    radius: '{rounded.lg}'
-    shadow: '{elevation.high}'
 ---
 
 > Source of truth for token values in code: `apps/web/app/globals.css`. Visual references: the four screenshots of a Vietnamese language-learning app supplied on 2026-11-14 (not stored in `imports/`), plus the older [`imports/`](./imports/) set. On any conflict between this spec and those images, **this DESIGN.md wins** (per this workflow's spines-win rule). The earlier Focus Indigo design (spines, mockups, Design DNA profile) is kept in [`history/focus-indigo/`](./history/focus-indigo/README.md) for reference only; there are no mockups of Pastel Frame, current screenshots come from the e2e suite (`test-results/screenshots/`).
@@ -365,13 +360,14 @@ Hover on a tile or card draws a darker border; nothing scales or lifts.
 
   Purely decorative (`aria-hidden`); it never carries information the realm label does not. Rays turn once per 40s and stop under reduced motion. At the 34px badge size the swords and third eye are hard to see; palette, rim and halo carry the difference.
 - **Section bullet.** A 7px dot in `{colors.accent}` before a section overline.
-- **Modal** (`components.modal`). Centred, `{rounded.lg}`, `{elevation.high}`, 40% scrim with blur. Used for deletions, move-flashcard and restore (see EXPERIENCE.md for the wording).
+- **Modal** (`components.modal`). Centred, `{rounded.lg}`, `{elevation.high}`, 40% scrim with blur. Used for deletions, move-flashcard, restore and admin user actions (see EXPERIENCE.md for the wording). Delete user uses `{colors.error}`.
+- **Admin table** (`components.admin-table`) — *not built (Epic 7).* The user list on the existing tile/card surface; each row is clickable (pointer cursor) and shows the realm as a small Realm badge. Read-only.
+- **Read-only banner** (`components.readonly-banner`) — *not built (Epic 7).* A strip at the top of the Admin user page in `{colors.text}` on a tint, never the accent.
 - **Settings card** (`components.surface-card`). From 640px, each Settings section is a white card with the title (and help) at the start and the control at the end. Below 640px the sections are plain rows with a divider, so a stacked control can span the column.
 - **Switchers** (`components.mode-switcher`). Pill tracks on `{colors.elevated}`. Study directions and the Add cards Manual | Import switcher select with the accent fill; the Theme toggle and the Import Paste | Upload tabs are neutral (a card chip), so at most one accent pill shows.
 - **Inputs.** `{rounded.md}`, `{colors.border}` outline, `{colors.bg}` fill so they read on white cards and modals; the border turns `{colors.accent}` with a 2px offset outline on focus. Errors turn the border `{colors.error}`.
 - **Empty due-queue state, Cultivation notices, quest row, Breadcrumb, Add cards panel, Manual rows, Import mode.** Behave as before (EXPERIENCE.md). Visual changes only: ready-to-learn rows are a white list with a lavender round chip, the notice strips are `{colors.elevated}` with `{rounded.md}`, and the panel and rows take the new radii and shadows.
-- **Dock** (`components.dock`) — *built (Story 6.3); the Search button waits for Story 6.5.* The mobile navigation: a pill-shaped bar floating at the bottom of the screen on the frame colour, holding Review, Classes, Cultivation, Settings and Search as round icon buttons. The current destination is a raised pill (`{colors.frame-raised}`). Respects the device's bottom safe area. Hidden in focus mode. **Decision (2026-11-14):** a floating dock, as in the owner's reference screenshots, rather than a full-width bottom bar.
-- **Quick search** (`components.quick-search`) — *not built.* A centred palette (`{rounded.lg}`, `{elevation.high}`, scrim) opened with Ctrl+K or "/" from anywhere outside a text field, and from the dock's Search button. One input ("Search classes, folders, flashcards, cards…"), then results grouped as **Go to** (Review, Classes, Cultivation, Settings) and **Suggested** ("Continue: Weather idioms"). Arrow keys move, Enter opens, Esc closes. Footer shows the key hints.
+- **Dock** (`components.dock`) — *built (Story 6.3).* The mobile navigation: a pill-shaped bar floating at the bottom of the screen on the frame colour, holding Review, Classes, Cultivation and Settings as round icon buttons. The current destination is a raised pill (`{colors.frame-raised}`). Respects the device's bottom safe area. Hidden in focus mode. **Decision (2026-11-14):** a floating dock, as in the owner's reference screenshots, rather than a full-width bottom bar.
 
 ## Do's and Don'ts
 
@@ -390,4 +386,6 @@ Hover on a tile or card draws a darker border; nothing scales or lifts.
 | Keep the hierarchy at Class → Folder → Flashcard → Card | Add sub-folders, sub-classes, or Cards directly in a Class or Folder |
 | Use `{colors.error}` for destructive actions and form errors | Reuse the accent for errors or destructive states |
 | Check any new colour against `{colors.card}`, `{colors.bg}` and the tints | Ship a text pair under 4.5:1 |
+| Show the admin whom they are viewing on every user page, and keep that page free of edit controls | Give the Admin user view an edit, grade or claim control |
+| Make every clickable element `cursor: pointer` (disabled: `not-allowed`) through the global base style | Set the cursor per component, or leave a clickable tile or `role="button"` with the default cursor (Story 5.5) |
 | Reserve mono type for numeric displays and key hints | Use mono for prose or labels |

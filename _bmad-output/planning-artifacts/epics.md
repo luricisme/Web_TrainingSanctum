@@ -18,7 +18,7 @@ This document provides the complete epic and story breakdown for Training Sanctu
 
 ### Functional Requirements
 
-FR-1: User authentication — a user can create an account and log in/out with email and password. Unauthenticated requests to any card/flashcard/folder/review endpoint are rejected; all persisted data is scoped to `user_id`.
+FR-1: User authentication — a user can create an account and log in/out with email and password. Unauthenticated requests to any card/flashcard/folder/review endpoint are rejected; all persisted data is scoped to `user_id`. Users have a `role` (`user` or `admin`, admin seeded from `ADMIN_EMAILS` only); `/api/admin/**` returns `403` to a non-admin; a disabled account cannot log in and its sessions are revoked. *(Sprint Change 2026-11-14d.)*
 
 FR-2: Session persistence — a logged-in user stays authenticated across browser sessions until explicit logout or expiry (30-day sliding window per architecture). Concurrent sessions from multiple devices are permitted, last-write-wins on Scheduling Record updates.
 
@@ -42,9 +42,9 @@ FR-11: Focus mode — during an active Review Session, navigation, sidebar, real
 
 FR-12: Cultivation progression — the system keeps a total XP per user and derives a Cultivation Realm and Stage from it on a fixed 90-level ladder in four Bộ (Ngưng Khí · Tầng 1 … Đạp Thiên Cảnh; PRD addendum), shown outside active review. XP changes only by claiming a Daily Quest or by settling a past day; it never goes below 0, and a penalty can demote by stages or realms. Realm names are in Vietnamese. Quest days share the `User.timezone` local-day basis with `next_review_date`. (Replaces Streak, Sprint Change 2026-11-14.)
 
-FR-13: Data export/backup — a user can export their full Class/Folder/Flashcard/Card structure + Card + Scheduling Record + cultivation history (XP, quest days, XP events) to a portable JSON format on demand, sufficient to reconstruct state.
+FR-13: Data export/backup — an **admin** can export one selected user's full Class/Folder/Flashcard/Card structure + Card + Scheduling Record + cultivation history (XP, quest days, XP events) to a portable JSON format on demand, sufficient to reconstruct state.
 
-FR-14: Restore from backup — a user can import a previously-exported FR-13 JSON file to fully reconstruct their data (both Scheduling Records per Card, cultivation history). Restoring into an account with existing data requires explicit confirmation (default: replace, never silent merge/overwrite). After a restore every day up to yesterday counts as settled (no gap penalty).
+FR-14: Restore from backup — an **admin** can import a previously-exported FR-13 JSON file into one selected user's account to fully reconstruct that user's data (both Scheduling Records per Card, cultivation history). Restoring into an account with existing data requires explicit confirmation naming the target user (default: replace, never silent merge/overwrite). After a restore every day up to yesterday counts as settled (no gap penalty).
 
 FR-15: Progress & stats view — a user can view a stats screen (outside active review) showing realm and stage, total XP, XP progress and XP history, today's Daily Quests, total Cards (learned / unlearned), and a simple visualization of the SM-2 retention curve (distribution of Scheduling Records by current interval, or review-outcome history) per Recall Direction. Reflects latest graded state without requiring a page reload tied to a specific session.
 
@@ -56,7 +56,7 @@ FR-18: Study directions setting — per account: Both (default), Term → Defini
 
 FR-19: Daily Quests — each local day the user has two quests sized by their Bộ at the start of the day: Learn Flashcards (fully learn 1 / 2 / 3 / 4 Flashcards in Nhất / Nhị / Tam / Tứ Bộ) and Clear Review (grade at least one learned record and leave the due queue empty). XP per quest 10 / 20 / 40 / 40. A quest's checkbox unlocks only when its condition is met; the user ticks it to claim the XP, once. A quest with no work that day is skipped (no reward, no penalty). At day end each quest neither claimed nor skipped costs 2 × its XP, including done-but-unticked quests and days the app wasn't opened; settled lazily, in order, on the next visit. No penalty before cultivation started or for a restore gap. No rule reads grade values (SM-C1). (Sprint Change 2026-11-14)
 
-FR-20: Quick search — Ctrl+K or "/" (outside a text field, a session or a modal) opens a palette to jump to Review, Classes, Cultivation or Settings and to search Class, Folder and Flashcard names and Card terms; Enter opens, Esc closes. *(Sprint Change 2026-11-14b.)*
+FR-20: Quick search — REMOVED (Sprint Change 2026-11-14c). The number is not reused.
 
 ### NonFunctional Requirements
 
@@ -71,6 +71,8 @@ NFR-4: Testability — domain logic (SM-2 engine, import parsing, duplicate dete
 NFR-5: Accessibility of input — full Unicode/special-character input must work reliably across all Card fields, not just common Latin-1 accented characters (Postgres TEXT/UTF-8, no normalization/stripping).
 
 NFR-6: Live deployment — the product ships to a live, publicly accessible deployment (Vercel), independent of Phase 2 architecture-documentation/case-study work.
+
+FR-21: Admin user management — an admin has an Admin menu item and every normal-user feature. The user list shows email, creation date, status, realm, level and XP. A read-only user page shows the user's full data as the FR-13 export payload. The admin can export and restore (FR-13, FR-14), disable or enable, reset the password, and delete a user (retype the email to confirm). An admin cannot disable or delete themselves, and the system never has zero admins. *(Sprint Change 2026-11-14d.)*
 
 NFR-7: Responsive navigation — every Main nav destination, including Settings and Log out, is reachable at every viewport width; below 640px a dock replaces the top bar. *(Sprint Change 2026-11-14b.)*
 
@@ -138,9 +140,9 @@ UX-DR15: Apply the microcopy voice/tone rules from EXPERIENCE.md across all surf
 
 UX-DR16: Implement the light/dark theme toggle (light is default) reachable from Settings, applying the full token set from UX-DR1 consistently across every surface. *(Sprint Change 2026-11-14b.)*
 
-UX-DR20: Build the mobile dock (Sprint Change 2026-11-14b, NFR-7): below 640px a floating pill at the bottom on the frame colour with Review, Classes, Cultivation, Settings and Search as round icon buttons, the current destination raised, clear of the device's bottom safe area, hidden in focus mode; the Realm badge is not shown on mobile.
+UX-DR20: Build the mobile dock (Sprint Change 2026-11-14b, NFR-7): below 640px a floating pill at the bottom on the frame colour with Review, Classes, Cultivation and Settings as round icon buttons, the current destination raised, clear of the device's bottom safe area, hidden in focus mode; the Realm badge is not shown on mobile.
 
-UX-DR21: Build quick search (Sprint Change 2026-11-14b, FR-20): a centred palette over a scrim, opened with Ctrl+K or "/" and from the dock's Search button; **Go to** and **Suggested** groups before typing, results for names and Card terms after; arrow keys move, Enter opens, Esc closes and returns focus; key hints in the footer.
+UX-DR21: REMOVED (Sprint Change 2026-11-14c) with FR-20.
 
 UX-DR22: Build Class colour (Sprint Change 2026-11-14b, FR-5): five swatches in the Class create and rename modals and a Colour item in the Class "..." menu; the tint carries to the Class's Folder and Flashcard tiles; colour is never the only cue.
 
@@ -169,7 +171,8 @@ FR-16: Epic 4 - Flashcard card viewer (flip, ← →, non-graded)
 FR-17: Epic 4 - Learn session (graded introduction of Unlearned Cards per Flashcard)
 FR-18: Epic 4 - Study directions setting (per-direction learned model)
 FR-19: Epic 5 - Daily Quests (claim, skip, double penalty, settlement)
-FR-20: Epic 6 - Quick search (palette, Ctrl+K)
+FR-20: removed (Sprint Change 2026-11-14c)
+FR-21: Epic 7 - Administration (role, user list and levels, read-only user view, disable, reset password, delete)
 
 ## Epic List
 
@@ -199,9 +202,14 @@ A user advances through a tu-tiên cultivation ladder (Ngưng Khí → Đạp Th
 **Implementation notes:** Quest-day attribution and settlement reuse Epic 4's `toLocalCalendarDay` helper so due-dates and quest days share one clock (AD-8); XP ledger, quest snapshots and lazy settlement per AD-15 (`packages/domain/cultivation.ts`, no cron, grade route unchanged); FR-13/FR-14 share one `backupExportSchema` (AD-10) with a `cultivation` section, and restore runs inside one Prisma transaction (AD-11) and marks days through yesterday settled; restore-confirmation modal (UX-DR7), Realm badge (UX-DR6), Empty due-queue realm (UX-DR8) and the Cultivation page (UX-DR19); the Cultivation page surfaces the retention curve per Recall Direction (SM-4). Build order: 5.1 → 5.6 → 5.7 → 5.4 → 5.2 → 5.3 → 5.5 (Sprint Change 2026-11-14). As the final epic, this is also the natural point for a closing pass on cross-cutting UX items that touch every surface built so far: WCAG AA contrast verification in both themes (UX-DR13, with particular attention to the flagged light-mode combination), full keyboard focus-visible states app-wide (UX-DR14), and a microcopy/voice consistency check (UX-DR15).
 
 ### Epic 6: Pastel Frame & Navigation
-A user gets the refreshed look (dark frame, top bar, pastel tiles, realm avatar), can reach every destination on a phone through a dock, can give each Class its own colour, and can jump anywhere with quick search. Stories 6.1 and 6.2 record work already built.
-**FRs covered:** FR-20 (and the Class colour part of FR-5)
-**Implementation notes:** Tokens live in `apps/web/app/globals.css` and `DESIGN.md`. Class colour is the only schema change (one additive migration, deployed to Neon with the code) and must land before the backup stories so the backup schema is written once. Quick search is read-only and reuses the existing list endpoints or one new read-only search route.
+A user gets the refreshed look (dark frame, top bar, pastel tiles, realm avatar), can reach every destination on a phone through a dock, and can give each Class its own colour. Stories 6.1 and 6.2 record work already built.
+**FRs covered:** the Class colour part of FR-5 (FR-20 removed, Sprint Change 2026-11-14c)
+**Implementation notes:** Tokens live in `apps/web/app/globals.css` and `DESIGN.md`. Class colour is the only schema change (one additive migration, deployed to Neon with the code) and must land before the backup stories so the backup schema is written once.
+
+### Epic 7: Administration
+An admin (seeded from `ADMIN_EMAILS`, who also uses every normal feature) sees every user with their realm, level and XP, opens a read-only view of a user's data, exports and restores it (Stories 5.2 and 5.3), and can disable, reset the password of, or delete a user. *Added by Sprint Change 2026-11-14d.*
+**FRs covered:** FR-21 (and the admin-only access of FR-13, FR-14)
+**Implementation notes:** One additive migration (`User.role`, disabled flag) deployed to Neon with the code (every page returns 500 otherwise). One `requireAdmin()` guard for every `/api/admin/**` route (AD-16).
 
 ## Epic 1: Foundation, Auth & Live Deployment
 
@@ -827,7 +835,7 @@ So that I study the recall skill I actually need.
 
 A user advances through a tu-tiên cultivation ladder by claiming two daily quests that grow with their Bộ; unclaimed quests cost double XP and can demote them. They see their realm, quests and basic stats (including the SM-2 retention curve) outside of review, and can trust the product with months of history — exporting it on demand and restoring it, with destructive operations always confirmed and atomic.
 
-*Sprint Change 2026-11-14 replaced the streak with the cultivation progression: 5.1 rewritten, 5.6 and 5.7 added, 5.2–5.4 amended. Build order, merged with Epic 6 by Sprint Change 2026-11-14b: 5.1 (done) → 6.3 → 6.6 → 5.6 → 5.7 → 5.4 → 6.4 → 5.2 → 5.3 → 6.5 → 5.5.*
+*Sprint Change 2026-11-14 replaced the streak with the cultivation progression: 5.1 rewritten, 5.6 and 5.7 added, 5.2–5.4 amended. Build order, merged with Epic 6 by Sprint Change 2026-11-14b: 5.1 (done) → 6.3 → 6.6 → 5.6 → 5.7 → 5.4 → 6.4 → 5.2 → 5.3 → 5.5 (6.5 removed by Sprint Change 2026-11-14c). Sprint Change 2026-11-14d makes 5.2 and 5.3 admin-only and merges Epic 7: 7.1 → 7.2 → 5.2 → 7.3 → 5.3 → 7.4 → 7.5 → 7.6 → 5.5.*
 
 ### Story 5.1: Cultivation Realms & XP Ledger
 
@@ -852,13 +860,13 @@ So that months of study show up as a rank I care about.
 
 ### Story 5.2: Data Export/Backup
 
-As a user,
-I want to export my full Card + Scheduling Record + cultivation history on demand,
-So that I never lose months of study data.
+As an admin,
+I want to export one user's full Card + Scheduling Record + cultivation history on demand,
+So that no user loses months of study data.
 
 **Acceptance Criteria:**
 
-**Given** I trigger export from Settings
+**Given** I am an admin on a user's page and I trigger export
 **When** it completes
 **Then** I receive a JSON file containing every Class, Folder, Flashcard and Card (with its Flashcard), both Scheduling Records per Card, and the cultivation section (XP, settledThrough, CultivationDay snapshots, XpEvents) — sufficient to reconstruct state
 **And** export is strictly user-initiated/on-demand, no scheduled export job
@@ -866,12 +874,14 @@ So that I never lose months of study data.
 **And** the export includes `user.studyDirections`
 **And** each Scheduling Record's `firstGradedAt` is exported verbatim
 **And** each Class's `color` is exported (Sprint Change 2026-11-14b; built after Story 6.4)
+**And** the route is `GET /api/admin/users/[id]/export`, behind `requireAdmin()`: a non-admin gets `403` and no Settings export control exists (Sprint Change 2026-11-14d; needs Story 7.1)
+**And** one function builds the payload for a `userId`, and Story 7.3 reuses it
 
 ### Story 5.3: Restore from Backup
 
-As a user,
-I want to restore a previously-exported backup,
-So that I can recover my data if something goes wrong.
+As an admin,
+I want to restore a previously-exported backup into a user's account,
+So that a user can recover their data if something goes wrong.
 
 **Acceptance Criteria:**
 
@@ -879,13 +889,14 @@ So that I can recover my data if something goes wrong.
 **When** I restore it
 **Then** the Class → Folder → Flashcard structure is recreated and every Card is recreated in its original Flashcard with both Scheduling Records in exactly their exported state and the cultivation section is restored verbatim
 
-**Given** my account already has data
+**Given** the target user's account already has data
 **When** I attempt a restore
-**Then** I must explicitly confirm before it proceeds — restore replaces existing data, never a silent merge/overwrite
+**Then** I must explicitly confirm, with the user named, before it proceeds — restore replaces existing data, never a silent merge/overwrite
 **And** the restore runs inside one transaction: every row changes or none do, even on a partial failure
 **And** each Scheduling Record's `firstGradedAt` is restored verbatim
 **And** `user.studyDirections` is restored
 **And** each Class's `color` is restored; a backup without it restores with colours assigned by creation order (Sprint Change 2026-11-14b)
+**And** the route is `POST /api/admin/users/[id]/restore`, behind `requireAdmin()`, and the structured log names the target user (Sprint Change 2026-11-14d)
 
 **Given** a restore completes
 **Then** `cultivationSettledThrough` is set to yesterday, so no penalty is charged for days between the export and the restore
@@ -918,7 +929,7 @@ So that I can observe my progress and trust the scheduling is working correctly.
 ### Story 5.5: Cross-Cutting Accessibility & Microcopy Pass
 
 As a user,
-I want consistent accessibility and tone across every screen built so far,
+I want consistent accessibility, pointer feedback and tone across every screen built so far,
 So that the app feels like one coherent, trustworthy product.
 
 **Acceptance Criteria:**
@@ -930,6 +941,13 @@ So that the app feels like one coherent, trustworthy product.
 **Given** any interactive element
 **When** focused via keyboard
 **Then** a clearly visible focus-ring appears, and tab order follows reading order on every surface
+
+**Given** any button or clickable area (buttons, icon buttons, Class/Folder/Flashcard tiles and rows, dock items, tabs, toggles, links styled as buttons, and custom `role="button"` elements)
+**When** the pointer hovers it
+**Then** the cursor is `pointer`, including on the Admin screens (list, user page, dialogs)
+**And** a disabled control shows `not-allowed` (or `default` where "not-allowed" would mislead) and does not react to hover
+**And** non-interactive text and surfaces keep the default cursor
+**And** the rule is applied once, globally (a base style for `button`, `[role="button"]`, `a[href]` and `summary`), not repeated per component, and any element that needed an exception is recorded in the story (Sprint Change 2026-11-14c)
 
 **Given** all user-facing copy
 **When** reviewed
@@ -1008,9 +1026,9 @@ So that skipping study has real weight.
 
 ## Epic 6: Pastel Frame & Navigation
 
-A user gets the refreshed look (a dark frame with a top bar, pastel tiles and a realm avatar), can reach every destination on a phone, can give each Class its own colour, and can jump anywhere with quick search.
+A user gets the refreshed look (a dark frame with a top bar, pastel tiles and a realm avatar), can reach every destination on a phone, and can give each Class its own colour.
 
-*Added by Sprint Change 2026-11-14b. Stories 6.1 and 6.2 record work already built on `ui/big-ui-update`. Build order: 6.3 → 6.6 → (Epic 5 stories) → 6.4 → (5.2, 5.3) → 6.5 — see Epic 5.*
+*Added by Sprint Change 2026-11-14b. Stories 6.1 and 6.2 record work already built on `ui/big-ui-update`. Build order: 6.3 → 6.6 → (Epic 5 stories) → 6.4 → (5.2, 5.3) — see Epic 5. 6.5 removed by Sprint Change 2026-11-14c.*
 
 ### Story 6.1: Pastel Frame Shell and Tiles (built)
 
@@ -1066,7 +1084,7 @@ So that I can reach Settings, Cultivation and Log out below 640px.
 **Acceptance Criteria:**
 
 **Given** a viewport under 640px outside focus mode
-**Then** a floating dock shows Review, Classes, Cultivation, Settings and Search, with the current destination raised, clear of the device's bottom safe area (UX-DR20)
+**Then** a floating dock shows Review, Classes, Cultivation and Settings, with the current destination raised, clear of the device's bottom safe area (UX-DR20)
 
 **Given** a viewport of 640px or wider
 **Then** the dock is not shown and the app bar is
@@ -1076,7 +1094,7 @@ So that I can reach Settings, Cultivation and Log out below 640px.
 
 **Given** the dock
 **Then** every item is reachable and operable by keyboard with a visible focus ring, and the page content is not covered by the dock when scrolled to the end
-**And** the Search button opens quick search once Story 6.5 exists, and is hidden until then
+**And** the dock has no Search button (quick search was removed, Sprint Change 2026-11-14c)
 
 ### Story 6.4: Class Colour
 
@@ -1101,29 +1119,9 @@ So that I can tell my material apart at a glance.
 **And** the export includes `color` and restore reads it (Stories 5.2 and 5.3), validated by `backupExportSchema`
 **And** `color` is validated by Zod as one of the five values on create and update (AD-6), and the migration is deployed to Neon with the code
 
-### Story 6.5: Quick Search
+### Story 6.5: Quick Search — REMOVED
 
-As a user with a growing library,
-I want to jump anywhere from the keyboard,
-So that I do not have to drill through Classes and Folders.
-
-**Acceptance Criteria:**
-
-**Given** focus is not in a text field and no session or modal is open
-**When** I press Ctrl+K or "/"
-**Then** the palette opens with **Go to** (Review, Classes, Cultivation, Settings) and **Suggested** ("Continue: {last-used Flashcard}") (UX-DR21)
-
-**Given** I type
-**Then** results show matching destinations and Class, Folder and Flashcard names and Card terms, scoped to my account, and a Card result opens its Flashcard
-
-**Given** the palette
-**Then** arrow keys move the highlight, Enter opens it, Esc closes and returns focus to where it was
-
-**Given** a Review or Learn session, a modal, or a text field with focus
-**Then** the shortcut does nothing
-
-**Given** a search request
-**Then** it is read-only and returns only the signed-in user's data
+Removed by Sprint Change 2026-11-14c (not needed; FR-20 retired). The story number is not reused.
 
 ### Story 6.6: Input Border Contrast
 
@@ -1143,3 +1141,109 @@ So that I can see where to type.
 **Then** each is either brought to 3:1 or recorded in DESIGN.md as accepted, with the reason
 **And** the existing e2e suite still passes
 
+## Epic 7: Administration
+
+An admin sees every user with their level, opens a read-only view of a user's data, exports and restores it, and can disable, reset the password of, or delete a user. *Added by Sprint Change 2026-11-14d. Build order: 7.1 → 7.2 → 5.2 → 7.3 → 5.3 → 7.4 → 7.5 → 7.6 → 5.5.*
+
+### Story 7.1: Roles, Admin Seed and Guard
+
+As the owner,
+I want an admin role that only the server can grant,
+So that admin features are protected in one place.
+
+**Acceptance Criteria:**
+
+**Given** the schema
+**Then** `User` has `role` (`user` by default) and a disabled flag, added by an additive migration deployed to Neon with the code
+
+**Given** `ADMIN_EMAILS` lists an email
+**When** the app starts
+**Then** that account has role `admin`, and the variable is validated by the Config Zod schema
+**And** no route or screen changes a role
+
+**Given** any `/api/admin/**` request
+**When** it has no session
+**Then** it returns `401`; when the session is not an admin it returns `403`, both in the standard error envelope
+**And** every admin route uses the single `requireAdmin()` helper (AD-16)
+
+**Given** I am an admin
+**Then** the menu (app bar and dock) shows **Admin**, and a normal user never sees it
+
+**Given** this story
+**Then** it records whether Better Auth's `admin` plugin fits the installed version, and uses it or does not
+
+### Story 7.2: User List with Levels
+
+As an admin,
+I want to see every user and their level,
+So that I know where each person stands.
+
+**Acceptance Criteria:**
+
+**Given** I open Admin
+**Then** a table lists every user with email, creation date, status, realm, level and XP, paginated, read-only
+
+**Given** I select a row
+**Then** I go to that user's page (Story 7.3)
+
+**Given** a non-admin requests the list
+**Then** the request returns `403`
+
+### Story 7.3: Read-only User View
+
+As an admin,
+I want to see a user's full data without being able to change it,
+So that I can help and check their account.
+
+**Acceptance Criteria:**
+
+**Given** I open a user's page
+**Then** it shows that user's data as the `backupExportSchema` payload built by the Story 5.2 function: the Class → Folder → Flashcard → Card tree, Scheduling Records and cultivation
+**And** a banner states "Read-only. You are viewing {email}'s data."
+**And** there is no control to edit a Card, grade, or claim a quest
+
+**Given** the user page
+**Then** it offers Export and Restore (Stories 5.2, 5.3) and the actions of Stories 7.4 to 7.6
+
+### Story 7.4: Disable / Enable User
+
+As an admin,
+I want to disable and re-enable an account,
+So that I can stop access without deleting data.
+
+**Acceptance Criteria:**
+
+**Given** I disable a user
+**Then** their sessions are deleted at once, and login is refused until I enable the account again
+**And** their data is untouched
+
+**Given** I try to disable myself
+**Then** the action is refused
+**And** the last admin can never be disabled
+
+### Story 7.5: Reset User Password
+
+As an admin,
+I want to set a new password for a user,
+So that a locked-out user can get back in.
+
+**Acceptance Criteria:**
+
+**Given** I enter a new password of at least 8 characters for a user
+**Then** it is stored hashed as at registration, and the user's sessions are deleted
+**And** I can never read any password
+
+### Story 7.6: Delete User
+
+As an admin,
+I want to delete a user and all their data,
+So that an account can be removed for good.
+
+**Acceptance Criteria:**
+
+**Given** I choose Delete on a user
+**Then** a dialog asks me to retype their email, and Delete stays disabled until it matches
+**And** deletion removes the account and everything scoped to it in one `$transaction`
+
+**Given** I try to delete myself, or the last admin
+**Then** the action is refused

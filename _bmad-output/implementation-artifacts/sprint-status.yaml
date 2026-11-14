@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-07-2026 00:00
-last_updated: 11-14-2026 17:00
+last_updated: 11-14-2026 19:00
 project: Web_TrainingSanctum
 project_key: NOKEY
 tracking_system: file-system
@@ -72,10 +72,10 @@ development_status:
 
   epic-5: in-progress
   5-1-cultivation-realms-xp-ledger: review # was 5-1-streak-tracking (Sprint Change 2026-11-14)
-  5-2-data-export-backup: backlog
-  5-3-restore-from-backup: backlog
+  5-2-data-export-backup: backlog # admin-only, per selected user (Sprint Change 2026-11-14d); needs 7-1
+  5-3-restore-from-backup: backlog # admin-only, per selected user (Sprint Change 2026-11-14d); needs 7-1
   5-4-progress-stats-view: review # now "Cultivation & Stats Page"
-  5-5-cross-cutting-accessibility-microcopy-pass: backlog
+  5-5-cross-cutting-accessibility-microcopy-pass: backlog # + pointer-cursor audit (Sprint Change 2026-11-14c)
   5-6-daily-quests: review # Sprint Change 2026-11-14
   5-7-day-settlement-penalties: review # Sprint Change 2026-11-14
   # build order (Sprint Change 2026-11-14): 5-1 -> 5-6 -> 5-7 -> 5-4 -> 5-2 -> 5-3 -> 5-5
@@ -86,7 +86,17 @@ development_status:
   6-2-realm-avatar: review # built (92167eb)
   6-3-mobile-dock: review
   6-4-class-colour: review # needs a Class.color migration; before 5-2
-  6-5-quick-search: backlog # last, droppable
   6-6-input-border-contrast: review
   # build order (Sprint Change 2026-11-14b): 5-1 -> 6-3 -> 6-6 -> 5-6 -> 5-7 -> 5-4 -> 6-4 -> 5-2 -> 5-3 -> 6-5 -> 5-5
+  # build order (Sprint Change 2026-11-14c): 5-2 -> 5-3 -> 5-5; 6-5 removed (number not reused)
   epic-6-retrospective: optional
+
+  epic-7: backlog # Sprint Change 2026-11-14d (Administration)
+  7-1-roles-admin-seed-and-guard: backlog # migration must be deployed to Neon with the code
+  7-2-user-list-with-levels: backlog
+  7-3-read-only-user-view: backlog # reuses the 5-2 payload builder
+  7-4-disable-enable-user: backlog
+  7-5-reset-user-password: backlog
+  7-6-delete-user: backlog
+  # build order (Sprint Change 2026-11-14d): 7-1 -> 7-2 -> 5-2 -> 7-3 -> 5-3 -> 7-4 -> 7-5 -> 7-6 -> 5-5
+  epic-7-retrospective: optional

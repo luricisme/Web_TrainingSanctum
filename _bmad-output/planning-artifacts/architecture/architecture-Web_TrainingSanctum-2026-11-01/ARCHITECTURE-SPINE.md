@@ -139,6 +139,19 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
   - The grade route (AD-4) is not changed: quest conditions read `first_graded_at`, `updated_at` and `next_review_date`, which it already writes.
   - No cron or scheduled job.
 
+### AD-16 — Roles, admin authorization and user management (Sprint Change 2026-11-14d)
+
+- **Binds:** FR-1, FR-13, FR-14, FR-21
+- **Prevents:** an admin route that forgets its permission check; an admin disabling or deleting themselves, or the system ending with zero admins; "view a user's data" and "export a user's data" drifting into two code paths.
+- **Rule:**
+  - `User.role` is `user` or `admin` (default `user`), added by an additive migration, together with a disabled flag. A disabled user cannot log in and every session they hold is deleted when they are disabled.
+  - Admins are seeded at startup from the `ADMIN_EMAILS` environment variable, validated by the Config Zod schema. No route changes `role`.
+  - Every `/api/admin/**` Route Handler calls one helper, `requireAdmin()`, in the auth layer: no session returns `401`, a non-admin returns `403`, both in the standard error envelope. No route writes its own role check.
+  - Export, restore and the read-only user page take a target `userId` and use the same builder of `backupExportSchema` (AD-10): "view" renders the payload, "export" downloads it. Restore keeps AD-11's single `$transaction`.
+  - Deleting a user runs in one `$transaction` that removes the user and everything scoped to them. An admin cannot disable or delete themselves, and the last admin cannot be removed.
+  - Password reset sets a new hashed password and deletes the user's sessions. The admin never reads a password.
+  - Option to verify in Story 7.1: Better Auth's `admin` plugin (roles, ban, set password, remove user) against the installed `better-auth` 1.7.x and the Prisma adapter. Use it if it fits; otherwise write the routes against the same Prisma client (AD-2).
+
 ## Consistency Conventions
 
 | Concern | Convention |
@@ -148,9 +161,9 @@ Dependency direction is one-way, top to bottom. Domain and Persistence have no o
 | Dates & timezone | All timestamps stored in UTC. Local-day computations go through `User.timezone` per AD-8 — never a raw client `Date` or server-local timezone. |
 | Error envelope | Every Route Handler error response is `{ error: { code: string, message: string, fields?: Record<string, string>, details?: { line: number, reason: string }[] } }`, HTTP status matching `code`. `fields` is for single-record field-level errors (FR-3: one bad field per request); `details` is for batch/line-numbered errors (FR-6/FR-7: one entry per failed row). A response uses at most one of the two, never both, and never a bare string or toast-only message. |
 | State & mutation | Only Route Handlers mutate persisted state (AD-1, AD-2, AD-4). Client state (TanStack Query cache) is a projection, never a source of truth. |
-| Observability | Every write path that can silently lose data if it fails partway (import commit, grade write, export, restore, folder-delete, flashcard-delete and class-delete cascades) logs a structured, single-line summary (operation, record counts including flashcard counts, outcome) on completion or failure — enough to audit "did this actually happen" against the §6 durability NFR. Full APM/tracing is out of scope for v1 (see Deferred). |
-| Auth | Better Auth session cookie required on every Route Handler except `/api/auth/**`; unauthenticated requests return `401` with the standard error envelope. Session lifetime is a fixed 30-day sliding window (refreshed on activity) — resolves PRD §10 Open Question 2. |
-| Config | Environment variables validated against a Zod schema at process start (`DATABASE_URL`, `BETTER_AUTH_SECRET`, etc.); the app fails fast on a missing/malformed var rather than failing deep inside a request. |
+| Observability | Every write path that can silently lose data if it fails partway (import commit, grade write, export, restore, user disable, password reset, user delete, folder-delete, flashcard-delete and class-delete cascades) logs a structured, single-line summary (operation, record counts including flashcard counts, outcome) on completion or failure — enough to audit "did this actually happen" against the §6 durability NFR. Full APM/tracing is out of scope for v1 (see Deferred). |
+| Auth | Better Auth session cookie required on every Route Handler except `/api/auth/**`; unauthenticated requests return `401` with the standard error envelope. `/api/admin/**` additionally requires `role = admin` (AD-16), else `403`. Session lifetime is a fixed 30-day sliding window (refreshed on activity) — resolves PRD §10 Open Question 2. |
+| Config | Environment variables validated against a Zod schema at process start (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `ADMIN_EMAILS`, etc.); the app fails fast on a missing/malformed var rather than failing deep inside a request. |
 | Text encoding (Unicode) | All five Card text fields are Postgres `TEXT` columns with the database's default UTF-8 encoding; no ASCII/Latin-1 collation, no server-side normalization or stripping of non-Latin scripts, combining diacritics, or IPA symbols. Resolves PRD §6 "Accessibility of input" NFR. |
 
 ## Stack
@@ -194,8 +207,11 @@ training-sanctum/
           stats/
           cultivation/           # GET: settle past days, then realm, XP and today's quests (FR-12, FR-19, AD-15)
             quests/[kind]/claim/ # POST: claim one of today's quests (AD-15)
-          export/                # FR-13
-          restore/               # FR-14
+          admin/                 # FR-21, AD-16: requireAdmin() on every handler
+            users/               # GET list with levels; GET [id] read-only payload; PATCH [id] disable/enable; DELETE [id]
+              [id]/export/       # GET FR-13 (target user)
+              [id]/restore/      # POST FR-14 (target user)
+              [id]/password/     # POST reset password
         components/
       lib/                      # TanStack Query client, API fetch wrappers
   packages/
@@ -205,7 +221,7 @@ training-sanctum/
       cultivation.ts            # FR-12, FR-19: ladder, quests, settlement (AD-15), uses toLocalCalendarDay (AD-8)
       time.ts                   # toLocalCalendarDay helper
     db/
-      schema.prisma             # Class, Folder, Flashcard, Card, SchedulingRecord, User, CultivationDay, XpEvent
+      schema.prisma             # Class, Folder, Flashcard, Card, SchedulingRecord, User (role, disabled), CultivationDay, XpEvent
       client.ts                 # exported Prisma client singleton
   tests/
     domain/                     # Vitest
@@ -251,7 +267,8 @@ A `Card` always has exactly two `SchedulingRecord`s (one per Recall Direction, A
 | FR-17 Learn session | `app/(routes)/flashcards/[id]/learn`, `app/api/review/learn`, `app/api/review/grade` | AD-4, AD-7, AD-14 |
 | FR-18 Study directions | `app/(routes)/settings`, `app/api/settings`, `packages/domain/learned.ts` | AD-2, AD-6, AD-14 |
 | FR-12 Cultivation, FR-19 Daily Quests | `packages/domain/cultivation.ts`, `app/api/cultivation/**`, `app/(routes)/cultivation` | AD-1, AD-8, AD-14, AD-15 |
-| FR-13, FR-14 Export/restore | `app/api/export`, `app/api/restore` | AD-2, AD-4, AD-6, AD-10, AD-11, AD-15 |
+| FR-13, FR-14 Export/restore (admin-only, per user) | `app/api/admin/users/[id]/export`, `app/api/admin/users/[id]/restore` | AD-2, AD-4, AD-6, AD-10, AD-11, AD-15, AD-16 |
+| FR-21 Admin user management | `app/api/admin/**`, `app/(shell)/admin/**` | AD-2, AD-6, AD-10, AD-11, AD-16 |
 | FR-15 Stats (on the Cultivation page) | `app/api/stats`, `app/(routes)/cultivation` | AD-2, AD-10 |
 
 ## Deferred
@@ -259,7 +276,7 @@ A `Card` always has exactly two `SchedulingRecord`s (one per Recall Direction, A
 - **Light-mode contrast verification** (sage background × white cards × charcoal text) — flagged `[ASSUMPTION]` in `DESIGN.md` as unverified; resolve during UI build, not an architectural concern.
 - **Grade-distribution / quest-pressure monitoring (PRD SM-C1)** — the only v1 mitigation is that no quest or XP rule reads grade values (AD-15); no grade-distribution check is built.
 - **`User.timezone` editability** — v1 captures it once at signup (AD-8) and does not expose a settings UI to change it; revisit if a user ever travels across timezones, since a timezone change would shift quest days and settlement.
-- **Multi-user / multi-tenant features** — data model is `User`-scoped (AD inherited from PRD FR-1) but no multi-account UI, invite flow, or per-tenant isolation beyond the foreign key is built; revisit only if the product ever grows beyond its single-operator scope.
+- **Self-service multi-tenant features** — invite flow, team or organisation accounts and sharing between users stay out of scope. Account administration by one admin role is in scope (AD-16).
 - **CSV/Excel parsing library choice** (e.g. `papaparse` vs `exceljs` vs `xlsx`) — implementation-level seed, not architecturally load-bearing; pick at build time behind the `packages/domain/import.ts` boundary (AD-5) without needing a spine update.
-- **Rate limiting / abuse protection** — not needed for a single-user product; revisit only if the deployment ever becomes multi-tenant.
+- **Sign-up abuse protection** — registration is open and relies on Better Auth's built-in rate limit. Revisit if registration should be limited to known users (see Sprint Change 2026-11-14d, open risks).
 - **Full observability/APM** — v1 relies on structured single-line logs for write paths (see Consistency Conventions) plus Vercel/Neon's built-in platform logs; no dedicated tracing/metrics/alerting stack. Revisit if the product gains real concurrent/multi-user load.
