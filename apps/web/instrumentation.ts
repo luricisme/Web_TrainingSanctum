@@ -18,4 +18,15 @@ export async function register() {
   // runtime risks silently skipping the fail-fast check under any other
   // runtime Next.js invokes this hook for.
   await import("./lib/env");
+
+  // Story 7.1: promote ADMIN_EMAILS accounts. A DB error must not stop boot.
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    try {
+      const { seedAdmins } = await import("@training-sanctum/db");
+      const { adminEmails } = await import("./lib/env");
+      await seedAdmins(adminEmails);
+    } catch (error) {
+      console.error("Admin seed failed at start:", error);
+    }
+  }
 }

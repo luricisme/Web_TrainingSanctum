@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-07-2026 00:00
-last_updated: 11-14-2026 19:00
+last_updated: 11-14-2026 21:00
 project: Web_TrainingSanctum
 project_key: NOKEY
 tracking_system: file-system
@@ -91,8 +91,8 @@ development_status:
   # build order (Sprint Change 2026-11-14c): 5-2 -> 5-3 -> 5-5; 6-5 removed (number not reused)
   epic-6-retrospective: optional
 
-  epic-7: backlog # Sprint Change 2026-11-14d (Administration)
-  7-1-roles-admin-seed-and-guard: backlog # migration must be deployed to Neon with the code
+  epic-7: in-progress # Sprint Change 2026-11-14d (Administration)
+  7-1-roles-admin-seed-and-guard: review # migration deployed to Neon # migration must be deployed to Neon with the code
   7-2-user-list-with-levels: backlog
   7-3-read-only-user-view: backlog # reuses the 5-2 payload builder
   7-4-disable-enable-user: backlog

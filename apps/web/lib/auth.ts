@@ -9,7 +9,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { prisma } from "@training-sanctum/db";
-import { env } from "./env";
+import { adminEmails, env } from "./env";
 
 const THIRTY_DAYS_IN_SECONDS = 60 * 60 * 24 * 30;
 
@@ -60,6 +60,27 @@ export const auth = betterAuth({
         type: "string",
         required: true,
         input: true,
+      },
+      // Story 7.1: read-only on the client; only the ADMIN_EMAILS seed writes it.
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "user",
+        input: false,
+      },
+    },
+  },
+
+  databaseHooks: {
+    user: {
+      create: {
+        // An ADMIN_EMAILS email that registers is created as an admin, so its
+        // first session already carries the role.
+        before: async (user) => ({
+          data: adminEmails.includes(user.email.toLowerCase())
+            ? { ...user, role: "admin" }
+            : user,
+        }),
       },
     },
   },

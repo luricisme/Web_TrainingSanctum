@@ -149,3 +149,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-4-cultivation-stats-page.md`
   summary: Update DESIGN.md so the realm avatar may repeat on the Cultivation page's Realm Ladder.
   evidence: DESIGN.md says to show the avatar only in the Realm badge (enlarged on Cultivation at most), but UX-DR24 requires 19 avatars in the Ladder, so the design doc and the shipped screen disagree.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-7-1-roles-admin-seed-and-guard.md`
+  summary: Require a verified email (or another proof of ownership) before an `ADMIN_EMAILS` account is promoted to admin.
+  evidence: Sign-up has no email verification, so anyone who registers a listed address before its owner gets admin. Register the owner's account right after deploying, until this is closed.

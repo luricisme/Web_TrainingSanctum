@@ -32,3 +32,16 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export * from "./generated/client/client";
+
+/**
+ * Story 7.1: promotes the given emails to the `admin` role and returns how many
+ * changed. The only code that writes `User.role`; never demotes.
+ */
+export async function seedAdmins(emails: string[]): Promise<number> {
+  if (emails.length === 0) return 0;
+  const result = await prisma.user.updateMany({
+    where: { email: { in: emails }, role: { not: "admin" } },
+    data: { role: "admin" },
+  });
+  return result.count;
+}

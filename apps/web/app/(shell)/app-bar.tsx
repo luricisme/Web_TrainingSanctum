@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useIsFocused } from "./focus-mode";
-import { iconProps, isActive, navItems } from "./nav-items";
+import { adminNavItem, iconProps, isActive, navItems } from "./nav-items";
 import { RealmBadge } from "./realm-badge";
 
 /**
@@ -11,7 +11,7 @@ import { RealmBadge } from "./realm-badge";
  * centred (the current page is a raised pill; the others show their label
  * from 1024px), and the account menu (RealmBadge) on the right, outside the nav.
  */
-export function AppBar({ userName }: { userName: string }) {
+export function AppBar({ userName, isAdmin = false }: { userName: string; isAdmin?: boolean }) {
   const pathname = usePathname();
   // spec-4-5 focus mode: a running session hides all chrome (FR-11).
   const focused = useIsFocused();
@@ -42,7 +42,7 @@ export function AppBar({ userName }: { userName: string }) {
 
       <nav aria-label="Main">
         <ul className="flex items-center gap-1">
-          {navItems.map((item) => {
+          {(isAdmin ? [...navItems, adminNavItem] : navItems).map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <li key={item.href}>
