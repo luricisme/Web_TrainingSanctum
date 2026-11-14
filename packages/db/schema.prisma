@@ -38,6 +38,11 @@ model User {
   emailVerified             Boolean         @default(false)
   image                     String?
   timezone                  String
+  /// Story 7.1: "user" | "admin". Written only by the server-side
+  /// ADMIN_EMAILS seed; no route changes it.
+  role                      String          @default("user")
+  /// Story 7.1: stored only; enforced at login in Story 7.4.
+  disabled                  Boolean         @default(false)
   /// FR-18 (spec-4-9): which Recall Directions Learn and Review ask.
   studyDirections           StudyDirections @default(BOTH)
   /// AD-15 (spec-5-1): running sum of XpEvent deltas, floored at 0. The

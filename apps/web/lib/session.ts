@@ -8,6 +8,7 @@
 import { cache } from "react";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { fail } from "@/lib/api-response";
 import type { ErrorEnvelope } from "@training-sanctum/domain";
 
 type Session = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
@@ -27,6 +28,23 @@ export async function requireSession(request: Request): Promise<SessionResult> {
   }
 
   return { session };
+}
+
+export function isAdminRole(role: unknown): boolean {
+  return role === "admin";
+}
+
+/**
+ * Guard for every `/api/admin/**` handler (Story 7.1, AD-16): 401 without a
+ * session, 403 for a non-admin.
+ */
+export async function requireAdmin(request: Request): Promise<SessionResult> {
+  const result = await requireSession(request);
+  if (result.response) return result;
+  if (!isAdminRole((result.session.user as { role?: unknown }).role)) {
+    return { response: fail(403, "FORBIDDEN", "Admin access required.") };
+  }
+  return result;
 }
 
 /**

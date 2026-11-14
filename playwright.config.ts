@@ -42,6 +42,8 @@ export default defineConfig({
       BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "placeholder-secret-for-ci",
       // Suites sign up/in more than Better Auth's per-IP limit allows.
       AUTH_RATE_LIMIT: "off",
+      // Story 7.1: the test admin account (tests/api/admin-guard.spec.ts).
+      ADMIN_EMAILS: "admin-e2e@example.test",
     },
   },
 });

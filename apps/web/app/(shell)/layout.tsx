@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "@/lib/session";
+import { getServerSession, isAdminRole } from "@/lib/session";
 import { QueryProvider } from "@/lib/query-provider";
 import { AppBar } from "./app-bar";
 import { Dock } from "./dock";
@@ -10,6 +10,7 @@ export default async function ShellLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await getServerSession();
   if (!session) redirect("/login");
+  const isAdmin = isAdminRole((session.user as { role?: unknown }).role);
 
   return (
     <div className="min-h-screen bg-backdrop sm:p-3">
@@ -20,12 +21,12 @@ export default async function ShellLayout({
         <QueryProvider>
           {/* spec-4-5: Review and Learn turn focus mode on to hide the app bar. */}
           <FocusModeProvider>
-            <AppBar userName={session.user.name} />
+            <AppBar userName={session.user.name} isAdmin={isAdmin} />
             {/* Below 640px the bottom padding keeps the dock off the page end. */}
             <main className="min-w-0 flex-1 bg-background px-4 pb-28 pt-10 sm:rounded-panel sm:px-8 sm:pb-10">
               <div className="mx-auto w-full max-w-content">{children}</div>
             </main>
-            <Dock />
+            <Dock isAdmin={isAdmin} />
           </FocusModeProvider>
         </QueryProvider>
       </div>

@@ -36,6 +36,27 @@ const envSchema = z.object({
   // register and log in many users from one IP in seconds, so the test
   // webServer sets this to "off". Leave unset everywhere else.
   AUTH_RATE_LIMIT: z.enum(["on", "off"]).default("on"),
+  // Story 7.1: comma-separated emails promoted to the `admin` role at server
+  // start and at sign-up. Optional; trimmed, lower-cased, each a valid email.
+  ADMIN_EMAILS: z
+    .string()
+    .default("")
+    .transform((value, ctx) => {
+      const emails = value
+        .split(",")
+        .map((entry) => entry.trim().toLowerCase())
+        .filter((entry) => entry.length > 0);
+      for (const entry of emails) {
+        if (!z.string().email().safeParse(entry).success) {
+          ctx.addIssue({
+            code: "custom",
+            message: `ADMIN_EMAILS must be a comma-separated list of valid emails; "${entry}" is not one`,
+          });
+          return z.NEVER;
+        }
+      }
+      return [...new Set(emails)];
+    }),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -64,3 +85,6 @@ function loadEnv(): Env {
 }
 
 export const env: Env = loadEnv();
+
+/** Parsed `ADMIN_EMAILS`: lower-cased, de-duplicated, possibly empty. */
+export const adminEmails: string[] = env.ADMIN_EMAILS;

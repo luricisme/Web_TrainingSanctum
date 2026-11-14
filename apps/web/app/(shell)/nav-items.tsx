@@ -55,6 +55,17 @@ export const navItems: { href: string; label: string; icon: ReactNode }[] = [
   },
 ];
 
+/** Shown to admins only (Story 7.1), after the Main destinations. */
+export const adminNavItem: { href: string; label: string; icon: ReactNode } = {
+  href: "/admin",
+  label: "Admin",
+  icon: (
+    <svg {...iconProps}>
+      <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" />
+    </svg>
+  ),
+};
+
 /** True on the destination's own page and anything beneath it. */
 export function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);

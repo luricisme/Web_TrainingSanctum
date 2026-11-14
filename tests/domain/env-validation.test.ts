@@ -54,6 +54,42 @@ describe("apps/web/lib/env fail-fast validation (AC2)", () => {
     expect((await import("../../apps/web/lib/env")).env.AUTH_RATE_LIMIT).toBe("off");
   });
 
+  describe("ADMIN_EMAILS (Story 7.1)", () => {
+    const base = {
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
+      BETTER_AUTH_SECRET: "test-secret",
+    };
+
+    it("is [] when unset or empty", async () => {
+      process.env = { ...ORIGINAL_ENV, ...base };
+      delete process.env.ADMIN_EMAILS;
+      expect((await import("../../apps/web/lib/env")).adminEmails).toEqual([]);
+
+      vi.resetModules();
+      process.env = { ...ORIGINAL_ENV, ...base, ADMIN_EMAILS: "" };
+      expect((await import("../../apps/web/lib/env")).adminEmails).toEqual([]);
+    });
+
+    it("trims, lower-cases and de-duplicates", async () => {
+      process.env = {
+        ...ORIGINAL_ENV,
+        ...base,
+        ADMIN_EMAILS: " A@x.test , b@X.test,a@x.test ",
+      };
+      expect((await import("../../apps/web/lib/env")).adminEmails).toEqual([
+        "a@x.test",
+        "b@x.test",
+      ]);
+    });
+
+    it("fails with the ADMIN_EMAILS message on a malformed entry", async () => {
+      process.env = { ...ORIGINAL_ENV, ...base, ADMIN_EMAILS: "a@x.test,not-an-email" };
+      await expect(import("../../apps/web/lib/env")).rejects.toThrow(
+        /ADMIN_EMAILS: ADMIN_EMAILS must be a comma-separated list of valid emails/
+      );
+    });
+  });
+
   it("succeeds and returns the parsed env when config is valid", async () => {
     process.env = {
       ...ORIGINAL_ENV,
