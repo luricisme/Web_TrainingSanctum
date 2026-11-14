@@ -436,3 +436,103 @@ export function formatMissedNotice(notice: MissedNotice, realmLabel: string): st
   const quests = `${notice.missed} ${notice.missed === 1 ? "quest" : "quests"} missed`;
   return `${when}: ${quests}, −${notice.xpLost} XP. Now ${realmLabel}.`;
 }
+
+// ---------------------------------------------------------------------------
+// Stats (spec-5-4, FR-15, UX-DR24). Pure helpers for `GET /api/stats` and the
+// Realm Ladder; the route fetches counts and ledger rows.
+// ---------------------------------------------------------------------------
+
+/** One realm of the ladder, for the Realm Ladder (UX-DR24). */
+export interface LadderRealm {
+  /** Vietnamese realm name. */
+  name: string;
+  bo: BoNumber;
+  /** Index into `CULTIVATION_LADDER` of the realm's first level. */
+  firstLevelIndex: number;
+  /** Levels (stages) in the realm; 1 for the stageless Đạp Thiên Cảnh. */
+  stageCount: number;
+}
+
+/** The 19 realms low to high, derived from `CULTIVATION_LADDER`. */
+export function realmsOfLadder(): LadderRealm[] {
+  const realms: LadderRealm[] = [];
+  CULTIVATION_LADDER.forEach((level, index) => {
+    const last = realms[realms.length - 1];
+    if (last && last.name === level.realm) last.stageCount += 1;
+    else realms.push({ name: level.realm, bo: level.bo, firstLevelIndex: index, stageCount: 1 });
+  });
+  return realms;
+}
+
+/** An `XpEvent` as the series needs it, supplied in `createdAt, id` order. */
+export interface XpSeriesEvent {
+  delta: number;
+  createdAt: Date;
+}
+
+/** Cumulative XP at the end of one local day. */
+export interface XpSeriesPoint {
+  /** `YYYY-MM-DD`. */
+  localDay: string;
+  xp: number;
+}
+
+/**
+ * Cumulative `cultivationXp` at the end of each local day, replaying every
+ * event through `applyXpDelta` (floor 0). `localDays` ascend as UTC-midnight
+ * dates; `startOfDay` gives the instant a local date begins in the user's
+ * timezone, so a day ends where the next one starts (a DST day stays one day).
+ * Days with no events repeat the previous value.
+ */
+export function xpSeries(
+  events: readonly XpSeriesEvent[],
+  localDays: readonly Date[],
+  startOfDay: (localDay: Date) => Date
+): XpSeriesPoint[] {
+  let xp = 0;
+  let next = 0;
+  return localDays.map((day) => {
+    const end = startOfDay(new Date(day.getTime() + 86_400_000)).getTime();
+    while (next < events.length && events[next]!.createdAt.getTime() < end) {
+      xp = applyXpDelta(xp, events[next]!.delta);
+      next += 1;
+    }
+    return { localDay: day.toISOString().slice(0, 10), xp };
+  });
+}
+
+export type IntervalBucketKey = "new" | "d1" | "d2to6" | "d7to20" | "d21to59" | "d60plus";
+
+/** Distribution buckets in display order; `new` holds unlearned records. */
+export const INTERVAL_BUCKETS: readonly { key: IntervalBucketKey; label: string }[] = [
+  { key: "new", label: "New" },
+  { key: "d1", label: "1 d" },
+  { key: "d2to6", label: "2–6 d" },
+  { key: "d7to20", label: "7–20 d" },
+  { key: "d21to59", label: "21–59 d" },
+  { key: "d60plus", label: "60+ d" },
+];
+
+/** The bucket of a learned record's interval in days (never `new`). */
+export function intervalBucket(interval: number): Exclude<IntervalBucketKey, "new"> {
+  if (interval <= 1) return "d1";
+  if (interval <= 6) return "d2to6";
+  if (interval <= 20) return "d7to20";
+  if (interval <= 59) return "d21to59";
+  return "d60plus";
+}
+
+export interface IntervalDistribution {
+  direction: "TERM_TO_DEFINITION" | "DEFINITION_TO_TERM";
+  buckets: { key: IntervalBucketKey; label: string; count: number }[];
+  total: number;
+}
+
+/** Response of `GET /api/stats`. */
+export interface StatsResponse {
+  cards: { total: number; learned: number; unlearned: number };
+  /** One entry per studied Recall Direction. */
+  distribution: IntervalDistribution[];
+  /** Cumulative XP at the end of each of the last 30 local days, oldest first. */
+  xpHistory: XpSeriesPoint[];
+}

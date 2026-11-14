@@ -25,6 +25,8 @@
   --color-on-accent: #14151a;
   --color-success: #5ec79a;
   --color-warning: #e2a94b;
+  /* Gold of the current realm on the Realm Ladder (user request, 2026-11-14). */
+  --color-gold: #f5c542;
   --color-error: #ef6b6b;
   --color-info: #6bb6e0;
 
@@ -73,6 +75,7 @@
   --color-on-accent: #ffffff;
   --color-success: #2f7d52;
   --color-warning: #b45309;
+  --color-gold: #e0a800;
   --color-error: #c62f3a;
   --color-info: #2a6aa0;
 
@@ -127,6 +130,7 @@
   --color-on-accent: var(--color-on-accent);
   --color-success: var(--color-success);
   --color-warning: var(--color-warning);
+  --color-gold: var(--color-gold);
   --color-error: var(--color-error);
   --color-info: var(--color-info);
 
@@ -229,6 +233,44 @@
     outline: 2px solid var(--color-on-frame);
     outline-offset: 2px;
   }
+}
+
+/* The current realm on the Realm Ladder: a gold aura that breathes outward.
+   Reduced motion keeps the steady glow (the rule below stops the animation). */
+@keyframes realm-aura {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-gold) 55%, transparent),
+      0 0 14px 1px color-mix(in srgb, var(--color-gold) 55%, transparent),
+      0 0 32px 4px color-mix(in srgb, var(--color-gold) 28%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--color-gold) 40%, transparent),
+      0 0 24px 4px color-mix(in srgb, var(--color-gold) 70%, transparent),
+      0 0 56px 12px color-mix(in srgb, var(--color-gold) 38%, transparent);
+  }
+}
+
+@utility realm-aura {
+  /* The resting glow, for when the animation does not run. */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-gold) 55%, transparent),
+    0 0 14px 1px color-mix(in srgb, var(--color-gold) 55%, transparent),
+    0 0 32px 4px color-mix(in srgb, var(--color-gold) 28%, transparent);
+  animation: realm-aura 2.8s ease-in-out infinite;
+}
+
+/* The gold "water" of the current realm: a metallic sheen, brighter at the surface. */
+@utility realm-gold-fill {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-gold) 62%, var(--color-card)) 0%,
+    color-mix(in srgb, var(--color-gold) 38%, var(--color-card)) 45%,
+    color-mix(in srgb, var(--color-gold) 26%, var(--color-card)) 100%
+  );
+  border-top: 1px solid color-mix(in srgb, var(--color-gold) 85%, white);
 }
 
 @media (prefers-reduced-motion: reduce) {

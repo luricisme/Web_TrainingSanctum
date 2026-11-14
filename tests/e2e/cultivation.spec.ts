@@ -114,6 +114,8 @@ test("quests: disabled with progress, tick to claim, XP bar and Breakthrough not
   await expect(learn).toBeChecked();
   await expect(learn).toBeDisabled();
   await expect(main.getByText("Breakthrough: Ngưng Khí · Tầng 2")).toBeVisible();
+  // The claim refreshes the XP chart on the same page, without navigating.
+  await expect(main.getByText(/, 10 XP on /)).toBeVisible();
   await expect(main.getByRole("progressbar", { name: "Ngưng Khí · Tầng 2" })).toHaveAttribute(
     "aria-valuenow",
     "0"
@@ -323,5 +325,168 @@ for (const theme of ["dark", "light"] as const) {
         animations: "disabled",
       });
     });
+  }
+}
+
+// spec-5-4: Realm Ladder and stats sections.
+test("the Ladder lists 19 realms and marks the current one", async ({ page }) => {
+  const email = await register(page);
+  await prisma.user.update({ where: { email }, data: { cultivationXp: 9_275 } }); // Khuy Niết, Nhị Bộ
+  await page.goto("/cultivation");
+  const ladder = page.getByRole("region", { name: "Realm Ladder" });
+  await expect(ladder.getByRole("listitem")).toHaveCount(19);
+  const current = ladder.getByRole("listitem").filter({ hasText: "Current" });
+  await expect(current).toHaveCount(1);
+  await expect(current).toContainText("Khuy Niết");
+  await expect(current).toContainText("Khuy Niết · Sơ kỳ");
+  await expect(current).toHaveAttribute("aria-current", "step");
+  await expect(ladder.getByRole("listitem").first()).toContainText("Reached");
+  await expect(ladder.getByRole("listitem").last()).toContainText("Ahead");
+  // The fill: full when reached, empty ahead, and at the realm's start for 9,275 XP.
+  await expect(ladder.getByRole("listitem").first()).toHaveAttribute("data-fill", "100");
+  await expect(ladder.getByRole("listitem").last()).toHaveAttribute("data-fill", "0");
+  await expect(current).toHaveAttribute("data-fill", "0");
+  // Realm avatars are decorative: no image role carries a name.
+  await expect(ladder.getByRole("img")).toHaveCount(0);
+  // Each realm is a tab stop.
+  await ladder.getByRole("listitem").first().focus();
+  await page.keyboard.press("Tab");
+  await expect(ladder.getByRole("listitem").nth(1)).toBeFocused();
+});
+
+test("the current realm fills to the XP earned across its stages", async ({ page }) => {
+  const email = await register(page);
+  // Khuy Niết starts at 9,275 XP and costs 4 × 800: one stage in is a quarter.
+  await prisma.user.update({ where: { email }, data: { cultivationXp: 9_275 + 800 } });
+  await page.goto("/cultivation");
+  const ladder = page.getByRole("region", { name: "Realm Ladder" });
+  const current = ladder.getByRole("listitem").filter({ hasText: "Current" });
+  await expect(current).toContainText("Khuy Niết · Trung kỳ");
+  await expect(current).toHaveAttribute("data-fill", "25");
+  await expect(current).toContainText("25%");
+});
+
+test("the final realm is Current and every other realm is Reached", async ({ page }) => {
+  const email = await register(page);
+  await prisma.user.update({ where: { email }, data: { cultivationXp: 115_309 } });
+  await page.goto("/cultivation");
+  const items = page.getByRole("region", { name: "Realm Ladder" }).getByRole("listitem");
+  await expect(items.last()).toContainText("Current");
+  await expect(items.last()).toContainText("Đạp Thiên Cảnh");
+  await expect(items.filter({ hasText: "Reached" })).toHaveCount(18);
+  await expect(items.last()).toHaveAttribute("data-fill", "100");
+});
+
+test("on a phone the Ladder scrolls sideways and opens on the current realm", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  const email = await register(page);
+  await prisma.user.update({ where: { email }, data: { cultivationXp: 9_275 } });
+  await page.goto("/cultivation");
+  const list = page.getByRole("region", { name: "Realm Ladder" }).getByRole("list");
+  await expect(list).toBeVisible();
+  const scrolls = await list.evaluate((el) => el.scrollWidth > el.clientWidth);
+  expect(scrolls).toBe(true);
+  const current = list.getByRole("listitem").filter({ hasText: "Current" });
+  await expect(current).toBeInViewport({ ratio: 0.9 });
+  const pageOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+  );
+  expect(pageOverflow).toBe(false);
+});
+
+test("totals and intervals show the new grades without a reload", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const email = await register(page);
+  const { freshIds } = await seedWork(email);
+  await page.goto("/cultivation");
+  const main = page.getByRole("main");
+  const total = (label: string) => main.locator("dt", { hasText: new RegExp(`^${label}$`) }).locator("xpath=following-sibling::dd");
+  await expect(total("Learned")).toHaveText("1");
+  await expect(total("Unlearned")).toHaveText("1");
+  await expect(total("Total")).toHaveText("2");
+  await expect(main.getByRole("table", { name: /Term → Definition records by interval/ })).toBeAttached();
+
+  // Grade the fresh Card, then come back through the app (no page reload).
+  await learnedToday(freshIds);
+  await page.getByRole("link", { name: "Classes", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/classes/);
+  await page.getByRole("link", { name: "Cultivation" }).first().click();
+  await expect(total("Learned")).toHaveText("2");
+  await expect(total("Unlearned")).toHaveText("0");
+});
+
+test("a new user sees zeros, a flat chart summary and an empty intervals line", async ({ page }) => {
+  await register(page);
+  await page.goto("/cultivation");
+  const main = page.getByRole("main");
+  await expect(main.getByText("Add cards to see your intervals.")).toBeVisible();
+  await expect(main.getByText("0 XP on", { exact: false }).first()).toBeVisible();
+  await expect(main.locator("dt", { hasText: "Total" }).locator("xpath=following-sibling::dd")).toHaveText("0");
+});
+
+test("a failed stats load keeps the realm and quests, with Try again", async ({ page }) => {
+  await register(page);
+  let fail = true;
+  await page.route("**/api/stats", (route) =>
+    fail
+      ? route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: { code: "INTERNAL", message: "x" } }) })
+      : route.continue()
+  );
+  await page.goto("/cultivation");
+  const main = page.getByRole("main");
+  await expect(main.getByText("Could not load your stats.")).toBeVisible();
+  await expect(main.getByRole("heading", { name: "Today's quests" })).toBeVisible();
+  await expect(main.getByRole("heading", { name: "Realm Ladder" })).toBeVisible();
+  fail = false;
+  await main.getByRole("button", { name: "Try again" }).click();
+  await expect(main.getByRole("heading", { name: "Cards" })).toBeVisible();
+});
+
+for (const theme of ["dark", "light"] as const) {
+  for (const width of [1280, 390]) {
+    for (const [name, xp] of [["low", 25], ["high", 20_000]] as const) {
+      test(`stats screenshots (${name} realm, ${theme}, ${width}px)`, async ({ page }) => {
+        mkdirSync("test-results/screenshots", { recursive: true });
+        await page.setViewportSize({ width, height: 900 });
+        const email = await register(page);
+        const { freshIds } = await seedWork(email);
+        await learnedToday(freshIds);
+        const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+        const event = (daysAgo: number, delta: number, reason: "CLAIM" | "PENALTY") => ({
+          userId: user.id,
+          localDay: new Date(Date.now() - daysAgo * 86_400_000),
+          questKind: "CLEAR_REVIEW" as const,
+          delta,
+          reason,
+          createdAt: new Date(Date.now() - daysAgo * 86_400_000),
+        });
+        await prisma.xpEvent.createMany({
+          data: [
+            event(26, xp / 2, "CLAIM"), event(20, xp / 4, "CLAIM"), event(14, -xp / 5, "PENALTY"),
+            event(8, xp / 4, "CLAIM"), event(2, xp / 5, "CLAIM"),
+          ].map((e) => ({ ...e, delta: Math.round(e.delta) })),
+        });
+        await prisma.user.update({ where: { email }, data: { cultivationXp: xp } });
+        await page.goto("/cultivation");
+        await expect(page.getByRole("heading", { name: "Intervals" })).toBeVisible();
+        // The frame ends the page: nothing (such as an sr-only table) may
+        // lengthen the document below it.
+        const below = await page.evaluate(
+          () =>
+            document.documentElement.scrollHeight -
+            (document.querySelector("main")!.getBoundingClientRect().bottom + window.scrollY)
+        );
+        expect(below).toBeLessThan(24);
+        await page.evaluate((t) => {
+          if (t === "light") document.documentElement.dataset.theme = "light";
+          else delete document.documentElement.dataset.theme;
+        }, theme);
+        await page.screenshot({
+          path: `test-results/screenshots/cultivation-stats-${name}-${theme}-${width}.png`,
+          animations: "disabled",
+          fullPage: true,
+        });
+      });
+    }
   }
 }

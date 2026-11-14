@@ -8,11 +8,14 @@ import {
   evaluateClearReview,
   evaluateLearnFlashcards,
   formatMissedNotice,
+  intervalBucket,
   levelForXp,
   parseDaySnapshot,
   questKindForSlug,
   questsForSnapshot,
+  realmsOfLadder,
   settleDays,
+  xpSeries,
 } from "@training-sanctum/domain";
 
 // spec-5-1: the 90-level ladder from the PRD addendum (FR-12, AD-15).
@@ -428,5 +431,63 @@ describe("formatMissedNotice", () => {
       "Nov 10–12: 1 quest missed, −20 XP. Now Trúc Cơ · Sơ kỳ."
     );
     expect(formatMissedNotice({ ...base, fromDay: "2026-10-30" }, "A")).toContain("Oct 30 – Nov 12:");
+  });
+});
+
+describe("realmsOfLadder", () => {
+  it("lists the 19 realms in order, covering all 90 levels", () => {
+    const realms = realmsOfLadder();
+    expect(realms).toHaveLength(19);
+    expect(realms[0]).toEqual({ name: "Ngưng Khí", bo: 1, firstLevelIndex: 0, stageCount: 15 });
+    expect(realms[1]).toEqual({ name: "Trúc Cơ", bo: 1, firstLevelIndex: 15, stageCount: 4 });
+    expect(realms[18]).toEqual({ name: "Đạp Thiên Cảnh", bo: 4, firstLevelIndex: 89, stageCount: 1 });
+    expect(realms.reduce((n, r) => n + r.stageCount, 0)).toBe(CULTIVATION_LADDER.length);
+    const starts = realms.map((r) => r.firstLevelIndex);
+    expect(starts).toEqual([...starts].sort((a, b) => a - b));
+  });
+});
+
+describe("intervalBucket", () => {
+  it("puts the edges in the right bucket", () => {
+    expect([intervalBucket(0), intervalBucket(1)]).toEqual(["d1", "d1"]);
+    expect([intervalBucket(2), intervalBucket(6)]).toEqual(["d2to6", "d2to6"]);
+    expect([intervalBucket(7), intervalBucket(20)]).toEqual(["d7to20", "d7to20"]);
+    expect([intervalBucket(21), intervalBucket(59)]).toEqual(["d21to59", "d21to59"]);
+    expect([intervalBucket(60), intervalBucket(400)]).toEqual(["d60plus", "d60plus"]);
+  });
+});
+
+describe("xpSeries", () => {
+  const days = [1, 2, 3, 4].map((d) => new Date(Date.UTC(2026, 10, d)));
+  const startOfDay = (d: Date) => d; // UTC: a local day starts at its UTC midnight
+  const ev = (day: number, hour: number, delta: number) => ({
+    delta,
+    createdAt: new Date(Date.UTC(2026, 10, day, hour)),
+  });
+
+  it("is a flat line at 0 with no events", () => {
+    expect(xpSeries([], days, startOfDay).map((p) => p.xp)).toEqual([0, 0, 0, 0]);
+  });
+
+  it("accumulates per day, repeats on quiet days and labels days", () => {
+    const series = xpSeries([ev(1, 9, 10), ev(1, 20, 10), ev(3, 1, 20)], days, startOfDay);
+    expect(series).toEqual([
+      { localDay: "2026-11-01", xp: 20 },
+      { localDay: "2026-11-02", xp: 20 },
+      { localDay: "2026-11-03", xp: 40 },
+      { localDay: "2026-11-04", xp: 40 },
+    ]);
+  });
+
+  it("follows the floored running total", () => {
+    const series = xpSeries([ev(1, 1, 10), ev(2, 1, -40), ev(3, 1, 10)], days, startOfDay);
+    expect(series.map((p) => p.xp)).toEqual([10, 0, 10, 10]);
+  });
+
+  it("splits days at the local midnight of the timezone", () => {
+    // UTC+7: a local day starts 7 h before its UTC midnight, so 20:00Z on the 1st is the 2nd.
+    const shifted = (d: Date) => new Date(d.getTime() - 7 * 3_600_000);
+    const series = xpSeries([ev(1, 20, 10)], days, shifted);
+    expect(series.map((p) => p.xp)).toEqual([0, 10, 10, 10]);
   });
 });

@@ -69,6 +69,7 @@ export function QuestList({ quests }: { quests: QuestView[] }) {
     onSuccess: (data) => {
       setBreakthrough(data.breakthrough ? data.realm.label : null);
       void queryClient.invalidateQueries({ queryKey: ["cultivation"] });
+      void queryClient.invalidateQueries({ queryKey: ["stats"] });
     },
     onError: (err, quest) => {
       setError({
