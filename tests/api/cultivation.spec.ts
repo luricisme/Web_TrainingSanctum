@@ -42,6 +42,7 @@ test.describe("/api/cultivation", () => {
     const res = await request.get(`${base}/api/cultivation`);
     expect(res.status()).toBe(200);
     expect((await res.json()).data).toEqual({
+      quests: expect.any(Array),
       bo: 1,
       boName: "Nhất Bộ Tung Hoành",
       realm: "Ngưng Khí",
@@ -76,6 +77,7 @@ test.describe("/api/cultivation", () => {
     const request = await newUser(playwright, base, 115_309);
     const res = await request.get(`${base}/api/cultivation`);
     expect((await res.json()).data).toEqual({
+      quests: expect.any(Array),
       bo: 4,
       boName: "Tứ Bộ Đạp Thiên",
       realm: "Đạp Thiên Cảnh",

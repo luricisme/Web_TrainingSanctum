@@ -2,8 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   BO_NAMES,
   CULTIVATION_LADDER,
+  QUEST_TABLE,
   applyXpDelta,
+  buildDaySnapshot,
+  evaluateClearReview,
+  evaluateLearnFlashcards,
   levelForXp,
+  parseDaySnapshot,
+  questKindForSlug,
+  questsForSnapshot,
 } from "@training-sanctum/domain";
 
 // spec-5-1: the 90-level ladder from the PRD addendum (FR-12, AD-15).
@@ -244,5 +251,102 @@ describe("applyXpDelta", () => {
     [Number.POSITIVE_INFINITY, 1],
   ])("throws RangeError for (%s, %s)", (current, delta) => {
     expect(() => applyXpDelta(current, delta)).toThrow(RangeError);
+  });
+});
+
+// spec-5-6: daily quests (FR-19, AD-15).
+describe("quest sizing", () => {
+  it.each([
+    [1, 1, 10],
+    [2, 2, 20],
+    [3, 3, 40],
+    [4, 4, 40],
+  ] as const)("Bộ %i: learn %i Flashcards, %i XP", (bo, target, xp) => {
+    expect(QUEST_TABLE[bo]).toEqual({ learnTarget: target, xp });
+    const snap = buildDaySnapshot(bo, { flashcardsWithUnlearned: 10, dueCount: 5 });
+    expect(snap.LEARN_FLASHCARDS).toEqual({ target, xp, skipped: false, claimed: false });
+    expect(snap.CLEAR_REVIEW).toEqual({ xp, skipped: false, claimed: false });
+  });
+
+  it("caps the Learn target by the Flashcards that have unlearned records", () => {
+    const snap = buildDaySnapshot(3, { flashcardsWithUnlearned: 2, dueCount: 0 });
+    expect(snap.LEARN_FLASHCARDS).toMatchObject({ target: 2, skipped: false });
+  });
+
+  it("skips Learn with no unlearned Flashcard and Clear Review with nothing due", () => {
+    const snap = buildDaySnapshot(1, { flashcardsWithUnlearned: 0, dueCount: 0 });
+    expect(snap.LEARN_FLASHCARDS.skipped).toBe(true);
+    expect(snap.CLEAR_REVIEW.skipped).toBe(true);
+  });
+
+  it("maps path slugs to kinds", () => {
+    expect(questKindForSlug("learn-flashcards")).toBe("LEARN_FLASHCARDS");
+    expect(questKindForSlug("clear-review")).toBe("CLEAR_REVIEW");
+    expect(questKindForSlug("nope")).toBeNull();
+  });
+
+  it("round-trips and rejects a stored snapshot", () => {
+    const snap = buildDaySnapshot(2, { flashcardsWithUnlearned: 5, dueCount: 1 });
+    expect(parseDaySnapshot(JSON.parse(JSON.stringify(snap)))).toEqual(snap);
+    expect(() => parseDaySnapshot({})).toThrow(RangeError);
+    expect(() => parseDaySnapshot(null)).toThrow(RangeError);
+  });
+});
+
+describe("quest evaluators", () => {
+  const learn = { target: 2, xp: 20, skipped: false, claimed: false };
+  const clear = { xp: 20, skipped: false, claimed: false };
+
+  it("Learn is met at the target and progress is capped", () => {
+    expect(evaluateLearnFlashcards(learn, { flashcardsLearnedToday: 1 })).toEqual({
+      met: false,
+      progress: 1,
+    });
+    expect(evaluateLearnFlashcards(learn, { flashcardsLearnedToday: 5 })).toEqual({
+      met: true,
+      progress: 2,
+    });
+    expect(evaluateLearnFlashcards(learn, { flashcardsLearnedToday: 0 }).met).toBe(false);
+  });
+
+  it("Learn is never met when skipped", () => {
+    expect(
+      evaluateLearnFlashcards({ ...learn, skipped: true }, { flashcardsLearnedToday: 9 }).met
+    ).toBe(false);
+  });
+
+  it("Clear Review needs a reviewed record and an empty due queue", () => {
+    expect(evaluateClearReview(clear, { reviewedToday: 1, dueCount: 0 }).met).toBe(true);
+    expect(evaluateClearReview(clear, { reviewedToday: 1, dueCount: 12 }).met).toBe(false);
+    expect(evaluateClearReview(clear, { reviewedToday: 0, dueCount: 0 }).met).toBe(false);
+    expect(evaluateClearReview({ ...clear, skipped: true }, { reviewedToday: 3, dueCount: 0 }).met).toBe(
+      false
+    );
+  });
+
+  it("takes no grade input", () => {
+    expect(evaluateLearnFlashcards.length).toBe(2);
+    expect(evaluateClearReview.length).toBe(2);
+  });
+
+  it("builds quest views with a status per state", () => {
+    const snap = buildDaySnapshot(1, { flashcardsWithUnlearned: 3, dueCount: 4 });
+    const facts = { flashcardsLearnedToday: 0, reviewedToday: 0, dueCount: 12 };
+    const locked = questsForSnapshot(snap, facts);
+    expect(locked.map((q) => q.status)).toEqual(["locked", "locked"]);
+    expect(locked[0]).toMatchObject({ slug: "learn-flashcards", target: 1, progress: 0, dueLeft: null });
+    expect(locked[1]).toMatchObject({ slug: "clear-review", target: null, dueLeft: 12, xp: 10 });
+
+    const ready = questsForSnapshot(snap, { flashcardsLearnedToday: 1, reviewedToday: 2, dueCount: 0 });
+    expect(ready.map((q) => q.status)).toEqual(["ready", "ready"]);
+
+    const claimed = questsForSnapshot(
+      { ...snap, LEARN_FLASHCARDS: { ...snap.LEARN_FLASHCARDS, claimed: true } },
+      { flashcardsLearnedToday: 1, reviewedToday: 0, dueCount: 1 }
+    );
+    expect(claimed.map((q) => q.status)).toEqual(["claimed", "locked"]);
+
+    const skipped = questsForSnapshot(buildDaySnapshot(1, { flashcardsWithUnlearned: 0, dueCount: 0 }), facts);
+    expect(skipped.map((q) => q.status)).toEqual(["skipped", "skipped"]);
   });
 });

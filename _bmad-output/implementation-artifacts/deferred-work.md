@@ -137,3 +137,11 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-5-focus-mode.md`
   summary: List-row icon chips use `bg-card` but DESIGN.md assigns icon chips `{colors.elevated}` (class-row, class-detail-view, folder-detail-view, empty-due-queue).
   evidence: On hover the row turns `row-hover` (elevated) and the chip stays darker than the row; pre-existing pattern copied by 4.5.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-6-daily-quests.md`
+  summary: Clear Review reads `SchedulingRecord.updatedAt` as "graded today", so Story 5.3 restore (or any other record write) must not leave `updatedAt` inside today for rows that were not graded today.
+  evidence: AD-15 forbids changing the grade route, so `gatherQuestFacts` uses `updatedAt >= dayStart`; a restore rewrites every record and could unlock Clear Review with no grading.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-6-daily-quests.md`
+  summary: `tests/e2e/cultivation.spec.ts` `seedWork` deletes today's `CultivationDay` right after register, which can race the badge's first GET and recreate it with empty skip flags.
+  evidence: Maybe-false: it passed in two full runs; settle it by delaying `/api/cultivation` and re-running, or by awaiting network idle before the delete.

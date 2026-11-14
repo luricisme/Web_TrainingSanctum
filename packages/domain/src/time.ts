@@ -44,3 +44,12 @@ export function toLocalCalendarDay(now: Date, timeZone: string): Date {
   guess += wallMidnight - refined;
   return new Date(guess);
 }
+
+/**
+ * The local calendar date of `now` in `timeZone` as a UTC-midnight `Date`
+ * (the shape of a `@db.Date` column such as `CultivationDay.localDay`).
+ */
+export function toLocalDate(now: Date, timeZone: string): Date {
+  const wall = wallClockAsUtc(Math.floor(now.getTime() / 1000) * 1000, timeZone);
+  return new Date(Math.floor(wall / 86_400_000) * 86_400_000);
+}

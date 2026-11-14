@@ -4,138 +4,60 @@
 
 ## Goal
 
-Give the user a long-term reason to come back and a guarantee their history is safe. A tu tiên cultivation progression replaces the day-count streak (Sprint Change 2026-11-14). Two daily quests, Learn Flashcards (sized by Bộ) and Clear Review, are ticked by hand once the work is done and award XP. XP moves the user up a fixed 90-level realm ladder. Unclaimed quests cost double XP at day end and can demote the user. The user sees realm, quests, card totals and the SM-2 retention curve on one Cultivation page outside review. They can export everything on demand and restore it atomically after an explicit confirmation. The epic closes with an app-wide accessibility and microcopy pass. The product contains no "streak" concept and no "streak" text anywhere.
+Users advance through a tu-tiên cultivation ladder by earning XP from two daily quests (Learn Flashcards, Clear Review) that they tick off themselves once the work is done. Unclaimed quests cost double XP and can demote them, so skipping study has weight and months of study show up as a rank. Users see their realm, quests and basic stats (including the SM-2 retention curve) outside review. They can trust the product with months of history: export on demand and restore, with destructive operations always confirmed and atomic. This epic replaced the old day-streak (Sprint Changes 2026-11-14 and 2026-11-14b).
 
 ## Stories
 
-- Story 5.1: Cultivation Realms & XP Ledger
-- Story 5.6: Daily Quests
-- Story 5.7: Day Settlement & Penalties
-- Story 5.4: Cultivation & Stats Page
+- Story 5.1: Cultivation Realms & XP Ledger (done)
 - Story 5.2: Data Export/Backup
 - Story 5.3: Restore from Backup
+- Story 5.4: Cultivation & Stats Page
 - Story 5.5: Cross-Cutting Accessibility & Microcopy Pass
+- Story 5.6: Daily Quests
+- Story 5.7: Day Settlement & Penalties
 
-(Listed in build order.)
+Build order, interleaved with Epic 6: 5.1 (done) → 6.3 → 6.6 → 5.6 → 5.7 → 5.4 → 6.4 → 5.2 → 5.3 → 6.5 → 5.5.
 
 ## Requirements & Constraints
 
-- **Ladder (90 levels, four Bộ):**
-  - Nhất Bộ: Ngưng Khí has Tầng 1–15, where each stage costs 5·n + 5 XP (10 … 80). Then Trúc Cơ 100, Kết Đan 150, Nguyên Anh 200, Hóa Thần 250, Anh Biến 300, Vấn Đỉnh 350, Âm Hư 400 and Dương Thực 400 XP per stage.
-  - Nhị Bộ: Khuy Niết 800, Tịnh Niết 900, Toái Niết 1,000, then Thiên Nhân Ngũ Suy with 5 suy at 1,200.
-  - Tam Bộ: Không Niết 2,000, Không Linh 2,400, Không Huyền 2,800, Không Kiếp (Đại / Kim / Thiên / Đại Thiên Tôn) 4,000, then Đạp Thiên Kiều with 9 bridges at 4,800.
-  - Tứ Bộ: Đạp Thiên Cảnh, the final level. XP keeps adding up past it.
-  - Unless noted, a realm has 4 stages: Sơ kỳ / Trung kỳ / Hậu kỳ / Đại viên mãn.
-  - Display format is `{realm} · {stage}`, for example "Trúc Cơ · Trung kỳ", or just "Đạp Thiên Cảnh".
-  - Realm names are in Vietnamese. All other copy is in English.
-  - The PRD addendum table is binding and is the single constant table in `cultivation.ts`. If you retune it, change both together.
-- **XP:**
-  - XP changes only by a claim (+XP) or by settlement (a penalty).
-  - XP is floored at 0. The realm is always `levelForXp(xp)` and is never stored, so demotion across stages, realms or a whole Bộ falls out naturally.
-- **Quests, by Bộ:** XP per quest is 10 / 20 / 40 / 40, and the Learn target is 1 / 2 / 3 / 4 Flashcards.
-  - Targets come from the realm at the start of the day and are snapshotted. A realm change later that day doesn't change them.
-  - If fewer Flashcards with unlearned records exist than the target, the target is the number available.
-- **Learn Flashcards is done when:** at least the target number of Flashcards became fully learned today. A Flashcard counts when it has no unlearned record left in the studied directions and its last one got `firstGradedAt` today.
-  - It is skipped when no Flashcard had an unlearned record at the start of the day.
-- **Clear Review is done when:** at least one record learned before today was graded today, and the due queue (all Classes, studied directions) is now empty.
-  - It is skipped when nothing was due at the start of the day.
-- **Claiming:**
-  - The checkbox unlocks only when the condition is met. Ticking it claims the XP.
-  - The server re-checks the condition before it records the claim.
-  - A claim can happen only once. A second claim is rejected with no extra XP.
-  - A skipped quest can't be claimed and is neither rewarded nor penalized.
-- **Settlement:**
-  - At the next cultivation read or claim, every day from `settledThrough + 1` through yesterday is settled in order.
-  - Each quest that was neither claimed nor skipped costs −2 × its XP. That includes a quest whose work was done but wasn't ticked, and days the app was never opened.
-  - Each day is penalized exactly once, even with two tabs or concurrent requests.
-- **No-penalty rules:**
-  - On first run, `settledThrough` is set to yesterday, so no earlier day is penalized.
-  - A restore also sets it to yesterday, so the gap between export and restore is never charged.
-- **SM-C1:** no quest or XP rule reads grade values.
-- **Export (FR-13):**
-  - On demand only, with no scheduled job.
-  - A JSON file containing every Class, Folder, Flashcard and Card, both Scheduling Records per Card (including `firstGradedAt`), `user.studyDirections`, and the cultivation section. That section holds XP, settledThrough, the CultivationDay snapshots and the XpEvents.
-- **Restore (FR-14):**
-  - Recreates the full hierarchy and every record exactly. The cultivation section is restored verbatim, except settledThrough, which is set to yesterday.
-  - If the account already has data, the user must confirm, and the restore replaces it. It never merges.
-  - It is all-or-nothing.
-- **Stats:** the page reflects the latest graded state without a reload tied to a particular session. Learned and unlearned counts cover the studied directions only.
-- **5.5 pass:** WCAG AA (4.5:1) in both themes against the "Focus Indigo" ratios, a visible `:focus-visible` ring and reading-order tab order on every surface, and copy that follows the Voice table.
-- **Success:**
-  - `cultivation.ts` is unit-tested for the ladder (every realm boundary, 0, and past the final level), both quest kinds including the skip and reduced-target cases, and `settleDays`. The `settleDays` cases are one missed day, a 30-day absence, demotion across a realm and across a Bộ, the 0 floor, a DST day, and skipped quests.
-  - Export → restore round-trips the cultivation section with no gap penalty.
-  - Every migration is deployed to Neon (`npm run db:migrate:deploy`) before the dev server runs.
+- Realm and stage derive only from total XP via a fixed 90-level ladder (Ngưng Khí · Tầng 1 to Đạp Thiên Cảnh). The realm is never stored. XP is floored at 0, and Đạp Thiên Cảnh is final (XP keeps adding up). Realm names are Vietnamese; all other copy is English.
+- XP changes only by claiming a quest (+XP) or settling a past day (−2 × XP per quest neither claimed nor skipped, even if its work was done).
+- Each local day has two quests sized by Bộ at the start of that day. Learn target is 1/2/3/4 Flashcards for Nhất/Nhị/Tam/Tứ Bộ. Quest XP is 10/20/40/40 by Bộ. Transition realms count toward the Bộ they sit under.
+  - Learn is met when min(target, available) Flashcards became fully learned today, counting only studied directions.
+  - Clear Review is met when at least one previously learned record was graded today and the due queue (all Classes) is empty.
+  - A quest is skipped, neither rewarded nor penalized, when no work existed at the start of the day. A skipped quest can't be claimed.
+  - A checkbox unlocks only when the condition is met. A claim is final and happens once per quest per day.
+- No penalty for days before cultivation first ran, or for the gap a restore creates. Quests never read grade values (SM-C1).
+- Export is strictly on-demand (no scheduled job). The payload includes all Classes (with `color`), Folders, Flashcards, Cards, both Scheduling Records per Card (`firstGradedAt` verbatim), `user.studyDirections` and the cultivation section.
+- Restore requires explicit confirmation when data exists (replace, never a silent merge), runs in one transaction (all or nothing), and restores everything verbatim. A backup without class colours restores with colours assigned by creation order. After restore, `cultivationSettledThrough` = yesterday.
+- Stats page: total Cards (learned/unlearned over studied directions), distribution of Scheduling Records by interval per Recall Direction, reflecting the latest grades without a session-tied reload.
+- Accessibility pass (5.5): 4.5:1 text contrast in both themes against the measured Pastel Frame ratios, the non-text 3:1 gaps closed or accepted in writing, visible focus rings, tab order matching reading order, and direct imperative copy (no cheerleading, emoji or mascot voice).
 
 ## Technical Decisions
 
-- **AD-15 (cultivation ledger):**
-  - Pure module `packages/domain/cultivation.ts` holds the ladder, the quest table, `levelForXp`, `questsForLevel`, the `LEARN_FLASHCARDS` / `CLEAR_REVIEW` evaluators and `settleDays`. It imports no DB or framework code. Routes fetch the facts (counts, timestamps) and the domain decides.
-  - Only two paths write XP: the claim route and settlement.
-  - Every `XpEvent` write updates `User.cultivationXp` in the same transaction. That field caches the running sum of deltas, floored at 0.
-- **Schema (one additive migration, 5.1):**
-  - `User.cultivationXp Int @default(0)` and `User.cultivationSettledThrough` (date, nullable).
-  - `CultivationDay(userId, localDay date, quests JSON)`, unique on `(userId, localDay)`. Each snapshot holds the quest kinds, targets, XP, skip flags and claim status.
-  - `XpEvent(userId, localDay, questKind, delta int, reason CLAIM | PENALTY, createdAt)`, append-only.
-- **Snapshots:**
-  - The day's row is created on the first cultivation read of that day.
-  - Settlement rebuilds a missing day from the realm in effect after the previous day settled. Its skip flags come from the data: Flashcards with unlearned records with `createdAt ≤ day`, and learned records with `next_review_date ≤ day`.
-- **Settlement:**
-  - Runs at the start of `GET /api/cultivation` and of `POST /api/cultivation/quests/[kind]/claim`, inside one Prisma `$transaction`.
-  - Idempotent through the unique day row, a conditional update that advances `cultivationSettledThrough` only from the value it read, and a claim that only flips an unclaimed quest.
-  - A concurrent loser retries or returns the current state.
-  - No cron job.
-- **Grade route:** `POST /api/review/grade` is unchanged. Quest conditions read the `first_graded_at`, `updated_at` and `next_review_date` it already writes. No grade-history table is needed.
-- **Shared helpers:**
-  - Local day: `toLocalCalendarDay` with `User.timezone`, the same clock as the due queue (AD-8).
-  - Learned/unlearned and studied directions: only the existing AD-14 builders in `packages/domain/learned.ts`, used by both evaluators and Stats.
-- **Export/restore:**
-  - One Zod `backupExportSchema` in `packages/domain`, used by both routes (AD-10). The export serializes to it and restore validates against it.
-  - Restore runs in a single Prisma transaction (AD-11) and is one of the two paths allowed to write SM-2 fields (AD-4).
-  - Both the export and restore routes log a one-line structured summary: operation, counts and outcome.
-- **Routes:** `api/cultivation`, `api/cultivation/quests/[kind]/claim`, `api/stats`, `api/export` and `api/restore`. The page is `(routes)/cultivation`, which replaces stats.
-- **Conventions:**
-  - Validate input with Zod before calling domain or DB code.
-  - Success responses are `{ data }`. Errors are `{ error: { code, message, fields?|details? } }`.
-  - A Better Auth session is required, otherwise 401.
+- Pure domain module `packages/domain/cultivation.ts` (AD-1, AD-12): ladder constants, `levelForXp`, `questsForLevel`, the two condition evaluators and `settleDays`. Route Handlers fetch the facts and pass them in. Unit tests run with no DB.
+- Schema (one additive migration, already deployed with 5.1): `User.cultivationXp` (default 0), `User.cultivationSettledThrough` (nullable date), `CultivationDay` (unique on userId + localDay; snapshot of quests, targets, XP, skip flags, claim status) and `XpEvent`. `cultivationXp` caches the `XpEvent` deltas applied in order with a running floor at 0, updated in the same transaction as each event. New migrations must be deployed to Neon or every page returns 500.
+- Routes: `GET /api/cultivation` settles past days, then returns realm, XP and today's quests with progress. `POST /api/cultivation/quests/[kind]/claim` re-checks the condition server-side and writes `XpEvent(+xp)`. Settlement also runs at the start of claim. Only these two paths write XP (AD-15).
+- Settlement covers `cultivationSettledThrough + 1` to yesterday, in order, in one `$transaction`. A day's Bộ, targets and XP come from the realm in effect after the previous day settled. A day with no row is rebuilt, with skip flags derived from data (unlearned records with `createdAt ≤ day`, due records with `next_review_date ≤ day`). When `cultivationSettledThrough` is null it is set to yesterday and nothing earlier is settled.
+- Idempotency: the unique day key, a conditional update that advances `cultivationSettledThrough` only from the value read, and a claim that only flips an unclaimed quest. A concurrent loser retries or returns current state. No cron.
+- Day attribution uses `User.timezone` through `toLocalCalendarDay` (AD-8); never a raw client or server date.
+- Learned vs. unlearned is one per-direction predicate (AD-14); quest conditions read `firstGradedAt`, `updatedAt` and `next_review_date`. The grade route is unchanged.
+- Export and restore share one `backupExportSchema` (AD-10), and restore atomicity follows AD-11. Responses use the standard envelope and error shape. Write paths log a structured one-line summary (operation, counts, outcome).
+- Build 5.2 and 5.3 after every new table exists (cultivation tables, Class colour) so the backup schema is written once.
 
 ## UX & Interaction Patterns
 
-- **Sidebar:** Review, Classes, Cultivation and Settings, with Cultivation replacing Stats.
-- **Realm badge (sidebar bottom):**
-  - "{realm} · {stage}" in `body-small` 600 weight.
-  - Below it, a 4px `rounded.full` XP bar: track `elevated`, fill `accent`.
-  - Mono "40 / 100 XP" in `caption` / `text-tertiary`.
-  - No icon, flame or glow. Links to Cultivation. Hidden in focus mode and on mobile.
-- **Empty due-queue (closes the 4.5 deferred item):**
-  - Realm · stage in `heading-1` with the XP bar, then mono "Today's quests 1 / 2" linking to Cultivation.
-  - Then the existing calm line and Flashcard list or "+ Add card".
-  - Fix the stale streak comment in `empty-due-queue.tsx`.
-- **Cultivation page:** realm card with XP bar and total XP, the missed-quests and breakthrough notices, then the daily quest list. Below that come the FR-15 stats: card totals (learned / unlearned), the interval distribution per Recall Direction and the XP-over-time chart from `XpEvent`.
-- **Quest row (folder-tile row geometry):**
-  - Each row shows a checkbox, the label ("Learn 1 Flashcard", "Clear Review"), mono progress ("0 / 1 Flashcards", "12 due left") and a right-aligned "+10 XP".
-  - Locked: checkbox at 0.4 opacity, with the reason in `text-tertiary`.
-  - Done, not ticked: enabled checkbox and "Done. Tick to claim before the day ends."
-  - Skipped: the whole row in `text-tertiary`, "Nothing to do today.", no checkbox.
-  - Claimed: checkbox filled `accent` with an `on-accent` check, not interactive.
-  - Ticking claims immediately, with no confirm. On failure the tick rolls back and an inline error shows. Space toggles a focused checkbox.
-- **Notices:**
-  - Both are `elevated`, `rounded.md` strips above the quest list in `body-small`.
-  - Missed quests: a 2px `warning` left border (never `error`). Dismissible, one per settled range: "Nov 12: 2 quests missed, −40 XP. Now Ngưng Khí · Tầng 9."
-  - Breakthrough: "Breakthrough: Trúc Cơ · Sơ kỳ." with no modal, confetti, sound or animation beyond the bar fill.
-  - Demotion just shows the lower stage. No vacation pause in v1.
-- **Restore modal:** consequence statement "This will replace all current data." with Confirm/Cancel and no type-to-confirm. Export and restore live in Settings.
-- **Voice:**
-  - Direct and calm, with no cheerleading or emoji.
-  - Write "Trúc Cơ · Trung kỳ — 40 / 100 XP", never "⚡ BREAKTHROUGH!!".
-- **Theme contrast:** check every new token (quest checkbox, notices) against `card` and `bg` in both themes.
+- Realm badge (avatar inside an XP ring, realm · stage, "n / m XP") sits in the app bar and is hidden during focus mode. The Empty due-queue state shows the realm in heading size with "Today's quests n / 2" linking to Cultivation.
+- Cultivation page replaces Stats in the main nav: realm and stage with XP bar, today's quest list, XP-over-time chart, card totals, then the retention/interval visualization.
+- Realm Ladder: all 19 realms in order with avatar and Vietnamese name. The current realm is highlighted, labelled "Current" (never colour alone) and scrolled into view. Passed realms look reached and later ones dimmed. It scrolls horizontally below 640px, is keyboard reachable, uses decorative avatars (empty alt, name as text) and reads realms from the domain module.
+- Quest row states: locked (disabled, progress in mono such as "0 / 1 Flashcards" or "12 due left", plus the reason); done-unticked ("Done. Tick to claim before the day ends."); skipped (greyed, "Nothing to do today."); claimed (check, not interactive). Contrast must hold in both themes.
+- Notices are quiet inline text, with no modal, confetti, sound or animation beyond the XP bar fill. A breakthrough shows "Breakthrough: {realm · stage}". After a settlement that charged XP, show one notice per settled range, such as "Nov 12: 2 quests missed, −40 XP. Now Ngưng Khí · Tầng 9." There is no vacation pause in v1.
+- The Pastel Frame DESIGN.md and EXPERIENCE.md are the authority for visuals and voice (e.g. "Trúc Cơ · Trung kỳ — 40 / 100 XP", never "BREAKTHROUGH!!").
 
 ## Cross-Story Dependencies
 
-- **Build order:** 5.1 → 5.6 → 5.7 → 5.4 → 5.2 → 5.3 → 5.5.
-- **5.1** lays the ground for the rest: the schema and Neon deploy, `levelForXp`, the badge and the Empty-state realm.
-- **5.6** builds `GET /api/cultivation` and the claim route that 5.7's settlement plugs into. Its quest list appears on 5.4's page.
-- **5.2 and 5.3** follow every new table so that `backupExportSchema` is written once, with the cultivation section, `firstGradedAt` and `studyDirections`.
-- **5.5** audits everything built across Epics 1–5.
-- **Epic 4 dependencies:**
-  - Settled Epic 4 work is reused, not reworked: `toLocalCalendarDay` (AD-8), the AD-14 predicates and studied directions, `first_graded_at`, focus mode hiding chrome (now the realm badge) and the 4.5 Empty due-queue component.
-  - Learn grades feed Learn Flashcards, and Review grades feed Clear Review.
+- 5.6 builds on 5.1 (ladder, ledger, schema) and adds quests and the claim route. 5.7 builds on 5.6's `CultivationDay` snapshots and claim state. 5.4 displays 5.6's quests, 5.7's notices and 5.1's ladder.
+- 5.2 depends on all cultivation tables (5.1/5.6/5.7) and on Story 6.4 (Class `color`). 5.3 depends on 5.2's schema and sets the settled-through date to yesterday, tying into 5.7's settlement rules.
+- 5.5 runs last, after the Epic 6 shell, dock, contrast fix (6.6) and class colours (6.4) exist. It audits them against the Pastel Frame ratios. Stories 6.3 and 6.6 are built before 5.6.
+- Epic 4 dependency: the grade route, `firstGradedAt` and the due queue (4.x) are consumed read-only. The 5.1 Empty due-queue realm display closes a deferred 4.5 item.
+- Epic 6 owns the realm avatar (6.2) and the app-bar shell (6.1) that the Realm badge and Ladder reuse.

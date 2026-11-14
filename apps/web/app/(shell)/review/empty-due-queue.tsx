@@ -18,8 +18,9 @@ import { XpBar, useCultivation, xpText } from "../realm-badge";
  * as list rows, or, with none, a "+ Add card" button, the screen's one accent
  * action (the section bullet is the sanctioned non-actionable accent motif).
  * Fetched fresh each time it shows, so a cleared queue reads the latest
- * counts. spec-5-1: the realm and its XP bar sit above the calm line; today's
- * quest count joins them in Story 5.6.
+ * counts. spec-5-1: the realm and its XP bar sit above the calm line; spec-5-6:
+ * "Today's quests n / m" (claimed / non-skipped) links to Cultivation and is
+ * hidden when every quest is skipped.
  */
 export function EmptyDueQueue({
   scope,
@@ -104,6 +105,8 @@ function RealmSummaryBlock() {
     );
   }
   if (!data) return null;
+  const active = data.quests.filter((q) => q.status !== "skipped");
+  const claimed = active.filter((q) => q.status === "claimed").length;
   return (
     <div className="flex w-full flex-col items-center gap-3">
       <p className="text-balance text-heading-1 text-foreground">{data.label}</p>
@@ -111,6 +114,17 @@ function RealmSummaryBlock() {
       <p className="font-mono text-caption text-foreground-tertiary tabular-nums">
         {xpText(data)}
       </p>
+      {active.length > 0 ? (
+        <Link
+          href="/cultivation"
+          className="rounded-full px-3 py-1 text-body-sm font-medium text-foreground-secondary transition-state hover:bg-row-hover hover:text-foreground focus-ring"
+        >
+          Today&apos;s quests{" "}
+          <span className="font-mono tabular-nums">
+            {claimed} / {active.length}
+          </span>
+        </Link>
+      ) : null}
     </div>
   );
 }
