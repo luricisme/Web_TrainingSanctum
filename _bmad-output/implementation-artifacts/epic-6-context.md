@@ -4,7 +4,7 @@
 
 ## Goal
 
-Give users the refreshed "Pastel Frame" look (dark frame with top bar around a light content panel, pastel tint tiles, realm avatar), make every destination reachable on a phone through a floating dock, let each Class carry its own colour, and let users jump anywhere with keyboard quick search. The shell/tiles and realm avatar work is already built; the remaining work is navigation, colour, search and a contrast fix.
+Give users the refreshed look (dark frame with top bar, inset light panel, pastel tiles, realm avatar), let them reach every destination on a phone through a bottom dock, let them give each Class its own colour, and let them jump anywhere with quick search. Two stories (6.1, 6.2) record work already built; the remaining four finish navigation, colour, search and input contrast.
 
 ## Stories
 
@@ -17,35 +17,32 @@ Give users the refreshed "Pastel Frame" look (dark frame with top bar around a l
 
 ## Requirements & Constraints
 
-- Every Main nav destination, including Settings and Log out, must be reachable at every viewport width (below 640px was previously a dead end).
-- Each Class has one of five colours (lavender, sky, mint, butter, rose). A new Class defaults to the next colour in order; the colour is changeable; its Folders and Flashcards show it. Colour is never the only cue: Class name and breadcrumb stay primary.
-- Existing Classes get colours by creation order; nothing else changes.
-- Quick search opens on Ctrl+K or "/" only when focus is not in a text field and no session or modal is open. It offers Go to (Review, Classes, Cultivation, Settings) and Suggested (continue last-used Flashcard), then searches Class, Folder, Flashcard names and Card terms. Read-only, scoped to the signed-in user. It is last in build order and droppable for MVP.
-- Contrast: input borders, selects and Add cards fields must reach at least 3:1 against `bg` and `card` in both themes (currently about 1.3:1 light, 1.6:1 dark). Tile edges, card hairlines and the XP ring track must reach 3:1 or be recorded in DESIGN.md as accepted with a reason. Measured ratios are recorded in DESIGN.md. Text pairs already pass AA; any new token must be checked against `card`, `bg` and tints in both themes.
-- The existing e2e suite (138 tests) must keep passing.
-- Focus mode (Review, Learn) hides the app bar and the dock from first paint, with and without JavaScript. Light theme is the default.
+- Below 640px a floating dock (Review, Classes, Cultivation, Settings, Search) replaces the app bar; at 640px and up the app bar shows and the dock does not. Both are absent in Review and Learn focus mode, including first paint with no JavaScript.
+- The dock must be keyboard operable with visible focus rings, clear the device bottom safe area, and never cover page content at scroll end.
+- Each Class has one of five colours; new Classes default to the next colour in order; existing Classes are backfilled by creation order. Colour shows on the Class tile and its Folder and Flashcard tiles. It is never the only cue (name and breadcrumb stay primary).
+- Quick search (FR-20): opens with Ctrl+K or "/" only when focus is not in a text field and no session or modal is open. Shows Go to (Review, Classes, Cultivation, Settings) and Suggested ("Continue: last-used Flashcard"). Typing matches destinations plus Class, Folder, Flashcard names and Card terms, scoped to the user. Arrow keys, Enter and Esc work; Esc returns focus. It is read-only and returns only the signed-in user's data.
+- Input borders and the `border` token must reach at least 3:1 against panel and card backgrounds in both themes, measured and recorded in DESIGN.md. Tile edges, card hairlines and the XP ring track are either brought to 3:1 or recorded as accepted with a reason. Input focus and error states are kept; the existing e2e suite must still pass.
+- Default theme is light; a stored dark choice loads with no flash. Reduced motion stops the slow ray turn on the realm avatar at Bộ 3 and up.
 
 ## Technical Decisions
 
-- Tokens live in `apps/web/app/globals.css` and DESIGN.md. Tailwind v4 maps CSS variables to DESIGN.md tokens. Font is Plus Jakarta Sans via `next/font/google` (latin, vietnamese).
-- Class colour is the only schema change: one additive migration adding `Class.color` (enum of five values, default assigned at creation, never null). Per project rule, the migration must be deployed to Neon with the code, or the dev server returns 500 on every page.
-- Every Route Handler validates with Zod before touching domain or db (AD-6), so `color` is validated as one of the five values on create and update.
-- Backup: `backupExportSchema` (single shared schema for export and restore, AD-10) carries `class.color`; restore validates it, and an older backup without it restores with colours assigned by creation order.
-- UI never imports domain or db packages directly; it calls the API via TanStack Query. Success responses use the `{ data: T }` envelope.
-- Quick search reuses existing list endpoints or adds one new read-only search route.
-- The dock's Search button is hidden until Story 6.5 exists, then opens the palette.
+- Design tokens live in `apps/web/app/globals.css` and DESIGN.md.
+- Class colour is the only schema change: one additive migration, deployed to Neon together with the code (a missing migration makes every page 500). `color` is validated by Zod as one of the five values on create and update (AD-6).
+- The backup export includes `color` and restore reads it, validated by the shared `backupExportSchema` (Stories 5.2 and 5.3), so 6.4 must land before those so the backup schema is written once.
+- Quick search reuses existing list endpoints or adds one read-only search route.
+- Realm avatar has 19 looks (one per realm) rendered inside the XP ring, gaining detail at higher realms and showing the lower look after a demotion.
 
 ## UX & Interaction Patterns
 
-- Dock: below 640px, a floating pill on the frame colour with Review, Classes, Cultivation, Settings and Search as round icon buttons; current destination raised; clear of the device bottom safe area; page content must not be covered when scrolled to the end; keyboard operable with visible focus ring. The Realm badge is not shown on mobile; at 640px and wider the dock is hidden and the app bar shows.
-- Tiles: Class, Folder and Flashcard tiles in a 1, 2 or 3 column grid with a "..." menu; Class tiles add a Colour item. Class create and rename modals show five swatches.
-- Palette: centred over a scrim; arrows move the highlight, Enter opens, Esc closes and returns focus to where it was; key hints in footer.
-- Grade buttons are four pastel pills (rose, butter, mint, sky).
+- Class, Folder and Flashcard lists are tiles in a 1, 2 or 3 column grid, each with a "..." menu (Colour is an entry on the Class menu).
+- Review and Learn grade buttons are the four pastel pills.
+- Realm badge sits at the right end of the app bar, showing avatar, realm, stage and XP in words.
+- The dock raises the current destination; the Search button appears only once Story 6.5 exists.
 
 ## Cross-Story Dependencies
 
-- Build order: 6.3, 6.6, then Epic 5 stories 5.6, 5.7, 5.4, then 6.4, then 5.2, 5.3, then 6.5, then 5.5.
-- 6.4 must land before Stories 5.2 and 5.3 so the backup schema is written once; those stories carry a Class colour AC.
-- 6.5 enables the Search button in the dock from 6.3.
-- 6.6 feeds Story 5.5's contrast verification AC.
-- 6.1 and 6.2 are done; 6.3 to 6.6 build on the shell and Realm badge (UX-DR6) they delivered.
+- Build order: 6.3, 6.6, then Epic 5 stories, then 6.4, then 5.2 and 5.3, then 6.5.
+- 6.4 must precede Stories 5.2 and 5.3 (backup export and restore carry `color`).
+- 6.3's Search button depends on 6.5 and stays hidden until then.
+- 6.5 is last in build order and droppable.
+- 6.1 and 6.2 depend on Epic 5's Realm badge and ladder (UX-DR6, UX-DR23); Review and Learn focus mode comes from Epic 4.

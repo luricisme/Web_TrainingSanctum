@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-07-2026 00:00
-last_updated: 11-14-2026 13:00
+last_updated: 11-14-2026 15:30
 project: Web_TrainingSanctum
 project_key: NOKEY
 tracking_system: file-system
@@ -87,6 +87,6 @@ development_status:
   6-3-mobile-dock: review
   6-4-class-colour: review # needs a Class.color migration; before 5-2
   6-5-quick-search: backlog # last, droppable
-  6-6-input-border-contrast: backlog
+  6-6-input-border-contrast: review
   # build order (Sprint Change 2026-11-14b): 5-1 -> 6-3 -> 6-6 -> 5-6 -> 5-7 -> 5-4 -> 6-4 -> 5-2 -> 5-3 -> 6-5 -> 5-5
   epic-6-retrospective: optional

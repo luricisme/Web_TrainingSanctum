@@ -15,7 +15,7 @@ colors:
   text: '#14151a'
   text-secondary: '#484c59'
   text-tertiary: '#666b79'
-  border: '#d3d9e1'
+  border: '#838a98'
   divider: '#e3e7ed'
   row-hover: '#eaeef3'
   accent: '#15161c'
@@ -46,7 +46,7 @@ colors:
   text-dark: '#eceef4'
   text-secondary-dark: '#b5b9c7'
   text-tertiary-dark: '#8a8fa0'
-  border-dark: '#363a48'
+  border-dark: '#656b80'
   divider-dark: '#2a2d39'
   row-hover-dark: '#252833'
   accent-dark: '#f1f2f6'
@@ -284,17 +284,16 @@ All values are in the frontmatter, light first (default), `-dark` variants besid
 - **Accent** — `{colors.accent}` is ink (#15161c) in light and paper (#f1f2f6) in dark; `{colors.on-accent}` is the text on it. Hover is `{colors.accent-hover}`. Primary buttons, the selected option of a switcher, the section bullet, the XP bar fill, a claimed quest's checkbox, the input focus border and the revealed answer on the review card (text) use it. Because the accent is now ink or paper, the answer text reads almost the same as `{colors.text}`; it is kept as an accent role so the answer stays the one emphasised line.
 - **Tints** — five pastel surfaces, each with a border: lavender, sky, mint, butter, rose. Text on a tint is `{colors.text}` or `{colors.text-secondary}`, never an accent. In dark mode the tints are deep, desaturated versions of the same hues. Tints are assigned to Classes (see Components, tint tile) and to the four grades; they have no other use.
 - **Semantic** — success, warning, error, info. Error is for destructive actions and form errors. The "Again" grade is **no longer error-coloured**; it is the rose tint.
-- **Borders** — `{colors.border}` for inputs and outlines, `{colors.divider}` for hairlines on cards.
+- **Borders** — `{colors.border}` for inputs and outlines, `{colors.divider}` for hairlines on cards. `{colors.border}` is the 3:1 UI-boundary token (see Accessibility): use it only on `{colors.bg}` or `{colors.card}`, never decoratively. It is also the track of the 4px XP bar on the Empty due-queue state, where it now reads at 3:1 against the panel; the accent fill stays clearly distinct from it.
 
 **Accessibility (measured 2026-11-14, WCAG 2.x, from `globals.css`).**
 
 *Text — every pair meets AA 4.5:1 in both themes.* Light: text/bg 16.7, text/card 18.2, text-secondary/card 8.6, text-tertiary/card 5.3 (4.9 on bg), error/card 5.4 (5.0 on bg), on-accent/accent 18.1, on-frame/frame 18.6, on-frame-muted/frame 7.7. Dark: text/bg 15.6, text-secondary/card 8.4, text-tertiary/card 5.1 (5.6 on bg), error/card 5.5, on-accent/accent 16.3, on-frame/frame 19.4, on-frame-muted/frame 8.1. Text on tints: text 11.0–15.7 and text-secondary 6.3–7.4, both themes (lowest: dark butter 11.0 and 6.5; light lavender 13.4 and 6.3).
 
-*Non-text 3:1 (UI boundaries) — these do not meet it, and that is a known gap:*
-- Input border `{colors.border}` on the panel: 1.30 (light), 1.59 (dark).
-- Tile and card edges (`{colors.divider}`, tint borders) on the panel: 1.14–1.92 in light and 1.28–2.33 in dark. Tiles stay identifiable by their text and icon, and a tint fill is not the only cue, so this is judged acceptable for tiles.
-- XP ring track on the frame: 2.2 in both themes. The XP value is also shown as text, so the information is not lost.
-- The input border is the real gap: an empty input has no other boundary. Fix when next touched: darken `{colors.border}` to at least 3:1 against `{colors.bg}`.
+*Non-text 3:1 (UI boundaries). Updated 2026-11-14 (Story 6.6).*
+- **Met: input border.** `{colors.border}` was `#d3d9e1` / `#363a48` (1.30 and 1.59 on `{colors.bg}`). It is now `#838a98` (light) and `#656b80` (dark): light 3.18 on `{colors.bg}` and 3.47 on `{colors.card}`; dark 3.41 on `{colors.bg}` and 3.10 on `{colors.card}`. It is also the outline of secondary buttons, the card-viewer arrows and dashed drop zones, so those meet 3:1 too. On `{colors.elevated}` it is 2.9 (light) and 2.7 (dark); no input sits on `elevated`, so keep it that way.
+- **Accepted: tile and card edges** (`{colors.divider}`, tint borders) on the panel: 1.14–1.92 in light and 1.28–2.33 in dark. Reason: 3:1 edges would turn the pastel tiles into heavy outlines and undo the Pastel Frame. Each tile is identified by its name and icon, and a tint fill is never the only cue.
+- **Accepted: XP ring track** on the frame: 2.2 in both themes. Reason: the XP value is always written out beside the ring, so no information depends on the track.
 
 Any new token must be checked against `{colors.card}`, `{colors.bg}` and, where it sits on one, a tint.
 
