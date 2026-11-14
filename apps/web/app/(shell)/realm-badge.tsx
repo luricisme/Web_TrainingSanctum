@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { CultivationResponse, RealmSummary } from "@training-sanctum/domain";
 import { apiFetch } from "@/lib/api-client";
+import { RealmAvatar } from "./realm-avatar";
 
 /** spec-5-1: the realm summary, shared by the sidebar badge and the Empty due-queue state. */
 export function useCultivation() {
@@ -54,14 +55,17 @@ export function XpBar({
   );
 }
 
-const RING_RADIUS = 11;
+const RING_SIZE = 44;
+const RING_RADIUS = 20;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+const AVATAR_SIZE = 34;
 
 /**
- * spec-5-1: the Realm badge at the right end of the app bar: an XP ring, the
- * realm label and the mono XP figure, on the dark frame. Renders nothing
- * while loading or on error, so the nav never waits on it. The app bar itself
- * hides it in focus mode and below 640px.
+ * spec-5-1: the Realm badge at the right end of the app bar: the user's realm
+ * avatar inside an XP ring, the realm label and the mono XP figure, on the
+ * dark frame. The avatar changes with every realm (see `RealmAvatar`).
+ * Renders nothing while loading or on error, so the nav never waits on it.
+ * The app bar itself hides it in focus mode and below 640px.
  */
 export function RealmBadge() {
   const { data } = useCultivation();
@@ -83,22 +87,35 @@ export function RealmBadge() {
         aria-valuemax={max}
         aria-valuenow={now}
         aria-valuetext={xpText(data)}
-        className="flex shrink-0"
+        className="relative flex shrink-0 items-center justify-center"
       >
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-          <circle cx="14" cy="14" r={RING_RADIUS} strokeWidth="3" className="stroke-on-frame-muted/40" />
+        <svg
+          width={RING_SIZE}
+          height={RING_SIZE}
+          viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+          fill="none"
+          aria-hidden="true"
+        >
           <circle
-            cx="14"
-            cy="14"
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
             r={RING_RADIUS}
-            strokeWidth="3"
+            strokeWidth="2.5"
+            className="stroke-on-frame-muted/40"
+          />
+          <circle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_RADIUS}
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeDasharray={RING_LENGTH}
             strokeDashoffset={RING_LENGTH * (1 - now / max)}
-            transform="rotate(-90 14 14)"
+            transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
             className="stroke-on-frame"
           />
         </svg>
+        <RealmAvatar levelIndex={data.levelIndex} size={AVATAR_SIZE} className="absolute" />
       </span>
       <span className="flex flex-col text-left leading-tight">
         <span className="text-body-sm font-bold text-on-frame">{data.label}</span>

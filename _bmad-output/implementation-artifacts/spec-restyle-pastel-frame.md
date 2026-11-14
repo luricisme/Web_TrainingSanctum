@@ -95,6 +95,8 @@ context:
 
 ## Spec Change Log
 
+- 2026-11-14: added the realm avatar (owner request). The Realm badge shows a seated cultivator drawn in SVG inside the XP ring, with one look per realm (19 realms): a palette per realm, and layers added at fixed realms (aura, core, halo, flying swords, rays, third eye, crown; gold on black at Đạp Thiên Cảnh). The brand mark on the left is unchanged. New file `apps/web/app/(shell)/realm-avatar.tsx`; `realm-badge.tsx` ring grew from 28px to 44px. Decorative only (`aria-hidden`); the badge's link name and `progressbar` are unchanged. Verified: typecheck, lint, and the app-shell, review and settings e2e specs (43/43); a gallery of all 19 avatars was reviewed by eye.
+
 ## Review Triage Log
 
 Not yet reviewed.
