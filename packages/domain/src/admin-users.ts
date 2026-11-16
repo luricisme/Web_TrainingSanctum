@@ -43,3 +43,16 @@ export interface AdminUsersResponse {
   page: number;
   pageSize: number;
 }
+
+/** Story 7.4: `PATCH /api/admin/users/{id}` body. */
+export const adminUserStatusSchema = z.object({
+  disabled: z.boolean({ error: "Disabled must be true or false." }),
+});
+
+export type AdminUserStatusInput = z.infer<typeof adminUserStatusSchema>;
+
+/** Story 7.4: the account's state after the change. */
+export interface AdminUserStatus {
+  id: string;
+  disabled: boolean;
+}

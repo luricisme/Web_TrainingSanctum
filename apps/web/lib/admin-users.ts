@@ -30,3 +30,9 @@ export async function listUsers({ page, pageSize }: AdminUsersQuery): Promise<Ad
   });
   return { items, total, page, pageSize };
 }
+
+/** Story 7.4: whether the account is disabled, or null when the user does not exist. */
+export async function getUserDisabled(id: string): Promise<boolean | null> {
+  const user = await prisma.user.findUnique({ where: { id }, select: { disabled: true } });
+  return user ? user.disabled : null;
+}
