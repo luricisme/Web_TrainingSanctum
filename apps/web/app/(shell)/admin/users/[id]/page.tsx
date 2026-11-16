@@ -7,6 +7,7 @@ import { getServerSession, isAdminRole } from "@/lib/session";
 import { PageHeader } from "../../../page-header";
 import { BackupTreeView } from "./backup-tree-view";
 import { CultivationSummary } from "./cultivation-summary";
+import { PasswordPanel } from "./password-panel";
 import { ReadOnlyBanner } from "./read-only-banner";
 import { RestorePanel } from "./restore-panel";
 import { StatusPanel } from "./status-panel";
@@ -56,6 +57,11 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
             userId={payload.user.id}
             email={payload.user.email}
             disabled={disabled}
+            isSelf={payload.user.id === session.user.id}
+          />
+          <PasswordPanel
+            userId={payload.user.id}
+            email={payload.user.email}
             isSelf={payload.user.id === session.user.id}
           />
         </div>
