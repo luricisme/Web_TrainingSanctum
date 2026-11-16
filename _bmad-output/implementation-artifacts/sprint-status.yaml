@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-07-2026 00:00
-last_updated: 11-16-2026 23:30
+last_updated: 11-17-2026 01:00
 project: Web_TrainingSanctum
 project_key: NOKEY
 tracking_system: file-system
@@ -75,7 +75,7 @@ development_status:
   5-2-data-export-backup: review # admin-only, per selected user (Sprint Change 2026-11-14d); needs 7-1
   5-3-restore-from-backup: review # admin-only, per selected user (Sprint Change 2026-11-14d); needs 7-1
   5-4-progress-stats-view: review # now "Cultivation & Stats Page"
-  5-5-cross-cutting-accessibility-microcopy-pass: backlog # + pointer-cursor audit (Sprint Change 2026-11-14c)
+  5-5-cross-cutting-accessibility-microcopy-pass: backlog # + pointer-cursor audit (Sprint Change 2026-11-14c); + Planner surfaces, now last of all (Sprint Change 2026-11-16); + Share modal, bell, Member pages (Sprint Change 2026-11-17)
   5-6-daily-quests: review # Sprint Change 2026-11-14
   5-7-day-settlement-penalties: review # Sprint Change 2026-11-14
   # build order (Sprint Change 2026-11-14): 5-1 -> 5-6 -> 5-7 -> 5-4 -> 5-2 -> 5-3 -> 5-5
@@ -99,4 +99,42 @@ development_status:
   7-5-reset-user-password: review
   7-6-delete-user: review
   # build order (Sprint Change 2026-11-14d): 7-1 -> 7-2 -> 5-2 -> 7-3 -> 5-3 -> 7-4 -> 7-5 -> 7-6 -> 5-5
+  # build order (Sprint Change 2026-11-16): ... 7-6 -> 8-1 ... 11-3 -> 5-5 (5-5 moved to the end)
+  # build order (Sprint Change 2026-11-17): ... 7-6 -> 12-1 ... 12-5 -> 8-1 ... 11-3 -> 5-5 (Epic 12 before Epic 8)
   epic-7-retrospective: optional
+
+  epic-8: backlog # Sprint Change 2026-11-16 (Planner — Tasks & Categories); forge: _bmad-output/forge/planner-module-todo-pomodoro-calendar/forged-idea.md
+  8-1-planner-shell-and-navigation: backlog
+  8-2-task-categories: backlog # migration: TaskCategory, Task, XpEvent.questKind nullable + FOCUS_SESSION/TASK_DONE; deploy to Neon with the code
+  8-3-tasks-per-day: backlog # TASK_DONE XP
+  8-4-overdue-tasks-and-move-to-today: backlog
+  epic-8-retrospective: optional
+
+  epic-9: backlog # Sprint Change 2026-11-16 (Planner — Pomodoro)
+  9-1-pomodoro-plan-engine-and-settings: backlog # migration: PomodoroSession, User.pomodoroSettings, partial unique (userId) WHERE endedAt IS NULL
+  9-2-server-truth-sessions: backlog # FOCUS_SESSION XP; 409 on second start / overrun cap
+  9-3-pomodoro-screen: backlog
+  9-4-planner-in-export-and-restore: backlog # extends backupExportSchema (touches 5-2, 5-3, 7-3)
+  epic-9-retrospective: optional
+
+  epic-10: backlog # Sprint Change 2026-11-16 (Planner — Calendar); no migration expected
+  10-1-week-grid-and-unscheduled-tray: backlog
+  10-2-drag-to-reschedule: backlog
+  10-3-live-blocks: backlog
+  epic-10-retrospective: optional
+
+  epic-11: backlog # Sprint Change 2026-11-16 (Planner — Music, Jamendo)
+  11-1-jamendo-adapter: backlog # FIRST verify Jamendo terms (page dated 2013) + listen to tags=lofi,chillout; stop and re-decide if either fails; needs JAMENDO_CLIENT_ID
+  11-2-track-per-category-and-task: backlog # migration: musicTrack on TaskCategory and Task
+  11-3-player-in-the-pomodoro-screen: backlog
+  epic-11-retrospective: optional
+  # build order (Sprint Change 2026-11-16): 8-1 -> 8-2 -> 8-3 -> 8-4 -> 9-1 -> 9-2 -> 9-3 -> 9-4 -> 10-1 -> 10-2 -> 10-3 -> 11-1 -> 11-2 -> 11-3 -> 5-5
+
+  epic-12: backlog # Sprint Change 2026-11-17 (Shared Classes) — BUILT BEFORE EPIC 8
+  12-1-scheduling-records-per-learner: backlog # migration: SchedulingRecord.userId backfilled from Card.userId, unique -> (userId, cardId, direction); dry-run on a Neon branch with row counts first
+  12-2-class-membership-and-access-guards: backlog # ClassMember; requireClassOwner / requireClassAccess (AD-19); card creation fans out to learners (AD-9)
+  12-3-invitations-share-modal-and-the-bell: backlog # ClassInvitation (partial unique on PENDING); bell = invitations only, no email
+  12-4-member-experience: backlog # "{Owner}'s" tile, read-only pages, Leave, shared classes in Review/Learn/quests
+  12-5-export-restore-and-admin-with-sharing: backlog # backupExportSchema: members[], sharedClasses[]; user delete cascade (touches 5-2, 5-3, 7-3, 7-6)
+  epic-12-retrospective: optional
+  # build order (Sprint Change 2026-11-17): 12-1 -> 12-2 -> 12-3 -> 12-4 -> 12-5 -> 8-1 -> ... -> 11-3 -> 5-5 (Epic 12 before Epic 8)

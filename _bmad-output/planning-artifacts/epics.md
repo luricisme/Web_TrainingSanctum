@@ -76,6 +76,30 @@ FR-21: Admin user management — an admin has an Admin menu item and every norma
 
 NFR-7: Responsive navigation — every Main nav destination, including Settings and Log out, is reachable at every viewport width; below 640px a dock replaces the top bar. *(Sprint Change 2026-11-14b.)*
 
+FR-22: Task categories and tasks — a user keeps Task Categories (name, one of the five tints, optional music) and free-form Tasks (title, Category, local day, optional start time, estimate ≥ 5 min). One day at a time, mono "actual / estimate"; open Tasks on past days are overdue, shown as "N overdue" with one manual "Move all to today"; nothing moves on its own. Marking done writes one XP event, once. A Task never references flashcard content. *(Sprint Change 2026-11-16.)*
+
+FR-23: Pomodoro plan and timer — from a Task the app builds a binding plan from `max(estimate − logged, 0)` and the user's settings (25 / 5 / 15 / every 4 by default): full focus sessions, breaks between, one shorter final session for the remainder (90 → 25·5·25·5·25·5·15). The server's `startedAt` is the only clock; one running session per user; expired sessions count as complete at planned length; each completed focus session is logged and earns XP; the last session ends with "Done?". *(Sprint Change 2026-11-16.)*
+
+FR-24: Overrun and completion — "Not yet" offers "+1 session" at most twice per Task over its life; after that the user must edit the estimate. The estimate is never changed by the app; logged minutes above it are the overrun. A restarted Task plans from its remainder. *(Sprint Change 2026-11-16.)*
+
+FR-25: Calendar — a week time grid (day view below 640px): scheduled Tasks are blocks as long as the whole plan incl. breaks; timeless Tasks sit in an unscheduled tray; a Pomodoro start moves the block to the real start and an added session lengthens it; overlaps are drawn as conflicts and left alone; drag sets day and start time. *(Sprint Change 2026-11-16.)*
+
+FR-26: Background music — Jamendo (CC, free client_id) behind one adapter; a track per Category with a per-Task override; fades in/out with each focus session, silent on breaks; title · artist · licence shown; when unreachable the timer runs and says so once. *(Sprint Change 2026-11-16.)*
+
+NFR-8: Timer truth — the server's session start time is the only clock; a client never reports elapsed time. *(Sprint Change 2026-11-16.)*
+
+NFR-9: External dependency isolation — Jamendo is the only outbound call; its failure degrades music only. *(Sprint Change 2026-11-16.)*
+
+FR-27: Invitations and the bell — an Owner invites a registered account by email (unknown, own, member or already-pending emails are field errors); the invitee sees a bell with the pending count and accepts or declines; accepting creates the membership and the Member's two Scheduling Records per Card in one transaction; declining lets the Owner invite again; no expiry, no email; the bell carries Invitations only. The Share modal lists Members (Remove), pending (Cancel) and declined (Invite again). *(Sprint Change 2026-11-17.)*
+
+FR-28: Member study — a Shared Class shows in the Member's Classes with "{Owner}'s" in the Owner's colour; browsing, viewer, Learn and Review work on the Member's own records only; no write control is shown and write routes refuse (`403`); counts and Stats are per viewer; a Member can Leave, which deletes their membership and records. *(Sprint Change 2026-11-17.)*
+
+FR-29: Content changes and membership lifecycle — a new Card creates two records for every Learner; edits are seen by all, schedules untouched; Owner deletes remove every Learner's records and the confirmation names the member count; removing or leaving deletes only that Member's records; deleting the Owner's account deletes the Class for everyone; a cross-Class Flashcard move re-creates records for the target's Learners and drops the others, with a confirmation line. *(Sprint Change 2026-11-17.)*
+
+NFR-10: Per-learner isolation — a Scheduling Record belongs to exactly one user; no route reads or writes another user's record. *(Sprint Change 2026-11-17.)*
+
+*Amended by Sprint Change 2026-11-17:* FR-5 (only the Owner changes a Class; a Member's writes are `403`), FR-9 ("all Classes the user owns or is a Member of"), FR-17 (a Member's Learn grades only their records), FR-19 (quests cover every Class the user learns), FR-13/FR-14 (export = owned Classes with member emails + own records + a `sharedClasses` reference list; restore re-attaches resolvable members, ignores the list).
+
 ### Additional Requirements
 
 - No canned starter template is specified by the architecture; Epic 1 / Story 1 scaffolds the monorepo from scratch per the Structural Seed (`apps/web`, `packages/domain`, `packages/db`, `tests/`).
@@ -150,6 +174,26 @@ UX-DR23: Build the realm avatar (Sprint Change 2026-11-14b, FR-12): one cultivat
 
 UX-DR24: Build the Realm Ladder on the Cultivation page (change request 2026-11-14): a row of all 19 realms in order, each an avatar (UX-DR23) over its Vietnamese name; the current realm highlighted with a "Current" label and scrolled into view, passed realms reached, realms ahead dimmed; horizontal scroll below 640px; highlight never colour alone.
 
+UX-DR25: Build the Planner shell (Sprint Change 2026-11-16): a fifth nav item **Planner** (sixth for an admin) in the app bar and dock, landing on `/planner`; a `components.mode-switcher` with Tasks (default) / Calendar / Pomodoro, the segment in the URL; the Planner never enters focus mode.
+
+UX-DR26: Build the Tasks segment: day header with ← / → and a date field; Task rows (Category chip, title, optional time, mono "actual / estimate" in `warning` when over, done checkbox, "…" menu Edit / Start pomodoro / Delete; done rows muted and last); the Overdue strip ("N overdue" + "Move all to today"); the Categories modal (name, tint radio reusing the Class-colour picker, Music field from Epic 11, delete asks move-or-delete); empty state "Nothing planned for {day}." + "+ Add task".
+
+UX-DR27: Build the Pomodoro segment: the Plan strip (one pill per session — focus in the Task's tint, break neutral, current ink-bordered, done ticked, overrun "+"); the Countdown in mono at display size derived from the server's `startedAt` and re-synced on visibility change; Start / Stop; breaks start only on Start; the inline Done card ("Done?" → Done / Not yet → "+1 session (n of 2 left)" or "Edit the estimate to continue."); Space starts/stops, Esc closes the card.
+
+UX-DR28: Build the Calendar segment: 7-day time grid (single day below 640px) with hour labels, a now-line, Calendar blocks in the Category tint sized by `planLengthMinutes`, muted when done, `error`-bordered with a "Conflict" caption when overlapping (side by side, never resolved), a progress fill while a session runs; the Unscheduled tray of chips above each day column.
+
+UX-DR29: Implement drag and keyboard rescheduling on the Calendar: drag a block to a time/day (15-minute snap) or to/from the tray, optimistic with rollback; keyboard: select a block, arrows move 15 min / one day, Enter commits, Esc cancels.
+
+UX-DR30: Build the Music player below the countdown: title · artist · licence link, pause, volume (remembered); fades in/out with the focus session, silent on breaks; one quiet line "Music unavailable — the timer continues." when the source fails; nothing else (no artwork, no playlist).
+
+UX-DR31: Build the Share modal (Sprint Change 2026-11-17) from an owned Class's "…" menu: an email field with "Invite" and field-level errors (no account, your own email, already a member, already invited); three lists — Members (Remove → confirm "Remove {email}? Their progress in {Class} will be deleted."), Pending (Cancel), Declined (muted, Invite again).
+
+UX-DR32: Build the Bell and Invitations panel: a round icon button at the app bar's right before the Realm badge (≥ 640px) and at the top-right of the content panel below 640px (decision B1), with a mono count chip when > 0; hidden in focus mode; opens an anchored popover listing pending Invitations as "{Owner} invited you to {Class} ({N} cards)" with Accept (primary, navigates to the Class) and Decline (quiet); empty "No invitations."; keys: Enter/Space open, arrows move, Enter accepts, Delete declines, Esc closes. Invitations only — never a general feed.
+
+UX-DR33: Build the Shared Class presentation: the tile in the Owner's tint with "{Owner}'s" in caption / text-secondary under the name and a "…" menu holding only Leave (confirm "Leave {Class}? Your progress in it will be deleted."); on Class, Folder and Flashcard detail the write controls are not rendered (no disabled ghosts) and the header shows "{Owner}'s class" beside the breadcrumb; Learn, the viewer and counts work per viewer.
+
+UX-DR34: Add the member-count line to the existing Class, Folder, Flashcard and Card delete confirmations and to the cross-Class Flashcard move modal — "{N} members are studying this." / "…will lose it." — only when N > 0; no extra step.
+
 ### FR Coverage Map
 
 FR-1: Epic 1 - User account creation and login/logout
@@ -173,6 +217,15 @@ FR-18: Epic 4 - Study directions setting (per-direction learned model)
 FR-19: Epic 5 - Daily Quests (claim, skip, double penalty, settlement)
 FR-20: removed (Sprint Change 2026-11-14c)
 FR-21: Epic 7 - Administration (role, user list and levels, read-only user view, disable, reset password, delete)
+FR-22: Epic 8 - Planner: task categories, tasks per day, overdue + move to today, task-done XP (Sprint Change 2026-11-16)
+FR-23: Epic 9 - Planner: pomodoro plan engine, server-truth sessions, pomodoro screen, focus-session XP
+FR-24: Epic 9 - Planner: bounded overrun ("+1 session" ×2) and completion
+FR-25: Epic 10 - Planner: week grid, unscheduled tray, drag to reschedule, live blocks
+FR-26: Epic 11 - Planner: Jamendo adapter, track per category/task, player
+FR-12 amendment (passive Planner XP): Epics 8 and 9 · FR-13/FR-14 planner section: Story 9.4
+FR-27: Epic 12 - Shared Classes: invitations, Share modal, bell (Story 12.3) (Sprint Change 2026-11-17)
+FR-28: Epic 12 - Shared Classes: member experience (Story 12.4)
+FR-29: Epic 12 - Shared Classes: per-learner records, guards, fan-out, cascades (Stories 12.1, 12.2); export/restore/admin (Story 12.5)
 
 ## Epic List
 
@@ -210,6 +263,33 @@ A user gets the refreshed look (dark frame, top bar, pastel tiles, realm avatar)
 An admin (seeded from `ADMIN_EMAILS`, who also uses every normal feature) sees every user with their realm, level and XP, opens a read-only view of a user's data, exports and restores it (Stories 5.2 and 5.3), and can disable, reset the password of, or delete a user. *Added by Sprint Change 2026-11-14d.*
 **FRs covered:** FR-21 (and the admin-only access of FR-13, FR-14)
 **Implementation notes:** One additive migration (`User.role`, disabled flag) deployed to Neon with the code (every page returns 500 otherwise). One `requireAdmin()` guard for every `/api/admin/**` route (AD-16).
+
+### Epic 8: Planner — Tasks & Categories
+A user reaches a **Planner** item in the nav and, on its Tasks segment, keeps free-form tasks per day with a category, an estimate and an optional start time; sees overdue tasks and moves them to today in one action; earns XP for marking a task done. *Added by Sprint Change 2026-11-16 (forge: `_bmad-output/forge/planner-module-todo-pomodoro-calendar/forged-idea.md`).*
+**FRs covered:** FR-22, FR-12 (task-done XP); FR-13/FR-14 planner section via Story 9.4
+**Implementation notes:** one additive migration (`TaskCategory`, `Task`, `XpEvent.questKind` nullable + `FOCUS_SESSION` / `TASK_DONE` reasons) deployed to Neon with the code. Planner shell with segment switcher (UX-DR25); Calendar and Pomodoro segments are placeholders until Epics 9–10. All writes under `app/api/planner/**` (AD-17). Nav e2e tests updated for five items.
+
+### Epic 9: Planner — Pomodoro
+A user starts a Pomodoro from a task; the app builds a binding plan from the remaining estimate, runs it on a server-truth timer, asks "Done?" at the end, allows at most two extra sessions per task, logs every focus session and awards XP for each. *Added by Sprint Change 2026-11-16.*
+**FRs covered:** FR-23, FR-24, FR-12 (focus-session XP), FR-13/FR-14 (planner section)
+**Implementation notes:** `packages/domain/pomodoro.ts` pure and unit-tested; `PomodoroSession` + `User.pomodoroSettings` migration with the partial unique index for one running session; expired sessions closed server-side (AD-17). Story 9.4 extends `backupExportSchema` with `planner` (AD-10) — the only touch on Stories 5.2/5.3/7.3.
+
+### Epic 10: Planner — Calendar
+A user sees the week as a time grid where each scheduled task is a block as long as its whole plan, drags tasks between times and days, and watches a block move to the real start when its Pomodoro begins. *Added by Sprint Change 2026-11-16.*
+**FRs covered:** FR-25
+**Implementation notes:** no new tables; reads `Task` and `PomodoroSession`, block length from `planLengthMinutes` (AD-17). Conflicts drawn, never resolved. The `error`-on-tint conflict border is a non-text contrast to measure and record (UX-DR13).
+
+### Epic 11: Planner — Music
+A user picks a Jamendo track per category (or per task); it fades in with each focus session, out at its end, stays silent in breaks, and shows its attribution. *Added by Sprint Change 2026-11-16.*
+**FRs covered:** FR-26
+**Implementation notes:** `MusicSource` adapter with one implementation (AD-18); `JAMENDO_CLIENT_ID` joins the Config schema in Story 11.1; `<audio>` playback; `musicTrack` JSON columns (additive migration). **Story 11.1 starts by verifying Jamendo's terms and catalogue and stops if either fails** — the forge's open crack.
+
+### Epic 12: Shared Classes
+An Owner invites registered users into a Class by email; the invitee accepts from a bell; from then on the Member studies the Class with their own schedule while the Owner alone edits it. *Added by Sprint Change 2026-11-17. Built **before** Epic 8.*
+**FRs covered:** FR-27, FR-28, FR-29; FR-5 / FR-9 / FR-17 / FR-19 / FR-13 / FR-14 amendments
+**Implementation notes:** one migration adds `SchedulingRecord.userId` (backfilled from `Card.userId`), swaps the unique index to `(userId, cardId, direction)`, and adds `ClassMember` and `ClassInvitation` — dry-run on a Neon branch with row counts first (AD-19). `requireClassOwner` / `requireClassAccess` on every class-scoped route; `createCardWithSchedulingRecords` fans out to all learners (AD-9); AD-14 predicates take `userId`. Story 9.4 (Planner export) later builds on the schema this epic leaves.
+
+*Build order from Sprint Change 2026-11-16, amended by Sprint Change 2026-11-17 (Epic 12 first): 12.1 → 12.2 → 12.3 → 12.4 → 12.5 → 8.1 → 8.2 → 8.3 → 8.4 → 9.1 → 9.2 → 9.3 → 9.4 → 10.1 → 10.2 → 10.3 → 11.1 → 11.2 → 11.3 → 5.5. Story 5.5 closes the whole product.*
 
 ## Epic 1: Foundation, Auth & Live Deployment
 
@@ -397,6 +477,7 @@ So that I can organize a Class's cards by topic or source.
 ### Story 2.3: Add Cards — Manual Mode
 
 > **Rework (Sprint Change 2026-11-10):** already built against Folders; re-pointed to Flashcards after Story 2.7. `POST /api/cards/batch` takes `flashcardId`.
+> *Sprint Change 2026-11-17 (Story 12.2): records are created for every learner of the Class (AD-9); a Member's call is `403`.*
 
 As a user,
 I want to add cards inside a Flashcard by typing them Quizlet-style,
@@ -531,6 +612,8 @@ So that I can group related Cards into sets within a topic.
 
 A user can paste line-delimited term/definition pairs or upload a CSV/Excel file, review and fix the parsed rows in the same editor as manual entry, and save them as Cards in one pass, with duplicates and malformed rows clearly flagged and reported without losing the valid rows in the same batch.
 
+*Sprint Change 2026-11-17 (Stories 3.1, 3.2, via Story 12.2): the commit creates records for every learner of the Class (AD-9); only the Owner may import (`403` for a Member).*
+
 ### Story 3.1: Paste Import with Review Editor
 
 As a user,
@@ -592,6 +675,8 @@ So that a week's worth of notes-app vocabulary becomes cards in one pass without
 ## Epic 4: Spaced Repetition Review Engine
 
 A user can run a daily, keyboard-first review session: due cards are presented one at a time per direction, graded with a single keystroke, and correctly rescheduled per the classical SM-2 algorithm — with distraction-free focus mode in place. New Cards are introduced deliberately through a Flashcard's card viewer and Learn session; Review only brings back Cards already learned. The user chooses which Recall Directions they study (both by default); "learned" is tracked per direction, so a graded direction joins Review without waiting for the other.
+
+*Sprint Change 2026-11-17 (Story 12.1): Scheduling Records are per learner. 4.2's grade route loads the caller's record only (AD-4); 4.3, 4.6, 4.8 and 4.9's queue, Learn route and predicates filter by `userId` (AD-14) and, from Story 12.4, include Shared Classes. Behaviour for a single learner is unchanged.*
 
 ### Story 4.1: SM-2 Scheduling Engine
 
@@ -835,7 +920,7 @@ So that I study the recall skill I actually need.
 
 A user advances through a tu-tiên cultivation ladder by claiming two daily quests that grow with their Bộ; unclaimed quests cost double XP and can demote them. They see their realm, quests and basic stats (including the SM-2 retention curve) outside of review, and can trust the product with months of history — exporting it on demand and restoring it, with destructive operations always confirmed and atomic.
 
-*Sprint Change 2026-11-14 replaced the streak with the cultivation progression: 5.1 rewritten, 5.6 and 5.7 added, 5.2–5.4 amended. Build order, merged with Epic 6 by Sprint Change 2026-11-14b: 5.1 (done) → 6.3 → 6.6 → 5.6 → 5.7 → 5.4 → 6.4 → 5.2 → 5.3 → 5.5 (6.5 removed by Sprint Change 2026-11-14c). Sprint Change 2026-11-14d makes 5.2 and 5.3 admin-only and merges Epic 7: 7.1 → 7.2 → 5.2 → 7.3 → 5.3 → 7.4 → 7.5 → 7.6 → 5.5.*
+*Sprint Change 2026-11-14 replaced the streak with the cultivation progression: 5.1 rewritten, 5.6 and 5.7 added, 5.2–5.4 amended. Build order, merged with Epic 6 by Sprint Change 2026-11-14b: 5.1 (done) → 6.3 → 6.6 → 5.6 → 5.7 → 5.4 → 6.4 → 5.2 → 5.3 → 5.5 (6.5 removed by Sprint Change 2026-11-14c). Sprint Change 2026-11-14d makes 5.2 and 5.3 admin-only and merges Epic 7: 7.1 → 7.2 → 5.2 → 7.3 → 5.3 → 7.4 → 7.5 → 7.6 → 5.5. Sprint Change 2026-11-16 adds Epics 8–11 after Epic 7 and moves 5.5 to the very end; Sprint Change 2026-11-17 inserts Epic 12 before Epic 8: … 7.6 → 12.1 → 12.2 → 12.3 → 12.4 → 12.5 → 8.1 → … → 11.3 → 5.5.*
 
 ### Story 5.1: Cultivation Realms & XP Ledger
 
@@ -876,6 +961,7 @@ So that no user loses months of study data.
 **And** each Class's `color` is exported (Sprint Change 2026-11-14b; built after Story 6.4)
 **And** the route is `GET /api/admin/users/[id]/export`, behind `requireAdmin()`: a non-admin gets `403` and no Settings export control exists (Sprint Change 2026-11-14d; needs Story 7.1)
 **And** one function builds the payload for a `userId`, and Story 7.3 reuses it
+*Sprint Change 2026-11-17 (Story 12.5): the payload covers owned Classes with `members[]` and the user's own records, plus a `sharedClasses[]` reference list (AD-10).*
 
 ### Story 5.3: Restore from Backup
 
@@ -900,6 +986,7 @@ So that a user can recover their data if something goes wrong.
 
 **Given** a restore completes
 **Then** `cultivationSettledThrough` is set to yesterday, so no penalty is charged for days between the export and the restore
+*Sprint Change 2026-11-17 (Story 12.5): restore re-attaches members whose emails resolve, with default records, and ignores `sharedClasses` (AD-10).*
 
 ### Story 5.4: Cultivation & Stats Page
 
@@ -936,7 +1023,7 @@ So that the app feels like one coherent, trustworthy product.
 
 **Given** both themes
 **When** checked against WCAG AA
-**Then** all text/background combinations meet 4.5:1 contrast — matching the measured "Pastel Frame" ratios recorded in DESIGN.md (text on the five tints included), and the non-text 3:1 gaps listed there are closed or accepted in writing (Sprint Change 2026-11-14b)
+**Then** all text/background combinations meet 4.5:1 contrast — matching the measured "Pastel Frame" ratios recorded in DESIGN.md (text on the five tints included), and the non-text 3:1 gaps listed there are closed or accepted in writing (Sprint Change 2026-11-14b), including the Planner surfaces — Tasks, Categories modal, Pomodoro screen, Calendar grid, tray and conflict border, music player (Sprint Change 2026-11-16) — and the sharing surfaces — Share modal, bell and Invitations panel, Shared Class tiles and read-only Member pages (Sprint Change 2026-11-17)
 
 **Given** any interactive element
 **When** focused via keyboard
@@ -944,7 +1031,7 @@ So that the app feels like one coherent, trustworthy product.
 
 **Given** any button or clickable area (buttons, icon buttons, Class/Folder/Flashcard tiles and rows, dock items, tabs, toggles, links styled as buttons, and custom `role="button"` elements)
 **When** the pointer hovers it
-**Then** the cursor is `pointer`, including on the Admin screens (list, user page, dialogs)
+**Then** the cursor is `pointer`, including on the Admin screens (list, user page, dialogs) and the Planner surfaces (task rows, plan strip, calendar blocks and tray chips, player controls; Sprint Change 2026-11-16)
 **And** a disabled control shows `not-allowed` (or `default` where "not-allowed" would mislead) and does not react to hover
 **And** non-interactive text and surfaces keep the default cursor
 **And** the rule is applied once, globally (a base style for `button`, `[role="button"]`, `a[href]` and `summary`), not repeated per component, and any element that needed an exception is recorded in the story (Sprint Change 2026-11-14c)
@@ -1204,6 +1291,7 @@ So that I can help and check their account.
 
 **Given** the user page
 **Then** it offers Export and Restore (Stories 5.2, 5.3) and the actions of Stories 7.4 to 7.6
+*Sprint Change 2026-11-17 (Story 12.5): owned Classes show member counts and a "Member of N shared classes" line.*
 
 ### Story 7.4: Disable / Enable User
 
@@ -1247,3 +1335,461 @@ So that an account can be removed for good.
 
 **Given** I try to delete myself, or the last admin
 **Then** the action is refused
+*Sprint Change 2026-11-17 (Story 12.5): the transaction also removes the user's memberships, invitations and records in Shared Classes; Classes they own are deleted for every learner (AD-16).*
+
+## Epic 8: Planner — Tasks & Categories
+
+A user reaches a **Planner** item in the nav and keeps free-form tasks per day with a category, an estimate and an optional start time; overdue tasks are moved to today by one manual action; marking a task done earns XP. *Added by Sprint Change 2026-11-16. Build order: 8.1 → 8.2 → 8.3 → 8.4.*
+
+### Story 8.1: Planner Shell and Navigation
+
+As a user,
+I want a Planner destination in the nav,
+So that tasks, calendar and pomodoro live in one place.
+
+**Acceptance Criteria:**
+
+**Given** the app bar or dock
+**Then** a fifth item **Planner** (sixth for an admin) links to `/planner` (UX-DR25); labels and icon-only rules follow UX-DR4 / UX-DR20
+
+**Given** `/planner`
+**Then** a segment switcher (`components.mode-switcher`) offers Tasks (default), Calendar, Pomodoro; the chosen segment is in the URL (`/planner/calendar`) and survives reload; arrow keys move between options
+
+**Given** Calendar or Pomodoro before their epics ship
+**Then** a one-line "Coming with Epic 9/10" placeholder, no broken controls
+**And** focus mode (FR-11) is unaffected; the nav e2e tests are updated for five items (six for an admin)
+
+### Story 8.2: Task Categories
+
+As a user,
+I want categories with a colour,
+So that tasks are easy to tell apart.
+
+**Acceptance Criteria:**
+
+**Given** the migration
+**Then** `TaskCategory` and `Task` exist, `XpEvent.questKind` is nullable and `XpEventReason` has `FOCUS_SESSION` and `TASK_DONE`; deployed to Neon with the code; existing XpEvents are unchanged and the AD-15 ledger check still passes
+
+**Given** Planner → Tasks
+**When** I open "Categories"
+**Then** I can create (name + one of the five tints, default the next in order), rename, recolour and delete; names are unique per user case-insensitively with a field-level error (AD-6)
+
+**Given** a Category with Tasks
+**When** I delete it
+**Then** a modal offers "Move tasks to …" (default, Category picker) or "Delete tasks too" (danger); either runs in one transaction (AD-11) and logs a structured line
+
+**Given** a user with no Categories
+**Then** the first Task creation offers to create one inline
+**And** UI conforms to DESIGN.md (tint picker reused from Class colour) in both themes
+
+### Story 8.3: Tasks per Day
+
+As a user,
+I want to list what I'll do on a day with an estimate,
+So that the day has a budget.
+
+**Acceptance Criteria:**
+
+**Given** Planner → Tasks
+**Then** I see one local day (today by default) with ← / → and a date field, and its Tasks in order (UX-DR26): Category chip, title, optional start time, mono "actual / estimate" (in `warning` when actual > estimate)
+
+**Given** I add a Task
+**When** I save title, Category, day, estimate (≥ 5 min) and an optional start time
+**Then** it appears at once via `POST /api/planner/tasks`; missing or invalid fields give field-level errors (AD-6)
+
+**Given** a Task
+**When** I edit it (`PATCH /api/planner/tasks/[id]`)
+**Then** changes apply at once; the estimate is never changed except by me
+
+**Given** a Task
+**When** I mark it done
+**Then** `POST /api/planner/tasks/[id]/done` sets `status = DONE`, writes one `XpEvent(TASK_DONE, +5 / 10 / 20 / 20 by Bộ)` once (`xpAwardedAt`) in the same transaction as `cultivationXp`, and the Realm badge updates; reopening keeps the XP and a second done never awards again
+
+**Given** a Task
+**When** I delete it
+**Then** it and its sessions are removed; a confirm names the Task
+
+**Given** a Task whose start time is 23:30 with a 90-minute estimate
+**Then** it belongs to that day (AD-8) even though its plan would end after midnight
+
+**Given** no Task on the shown day
+**Then** "Nothing planned for {day}." and a primary "+ Add task"
+**And** `plannerXp(bộ, kind)` is unit-tested at all four Bộ; every route is 401 without a session and scoped to the user
+
+### Story 8.4: Overdue Tasks and Move to Today
+
+As a user,
+I want to see what I didn't finish and bring it forward in one action,
+So that nothing moves without me.
+
+**Acceptance Criteria:**
+
+**Given** open Tasks on past days
+**When** I open Tasks
+**Then** an Overdue strip "N overdue" shows with one button "Move all to today"
+
+**When** I press it
+**Then** `PATCH /api/planner/tasks/move-overdue` sets each overdue Task's day to today in one transaction, keeps its start time if set, keeps its estimate and logged minutes, logs a structured line, and the strip disappears
+
+**Given** no overdue Task
+**Then** neither strip nor button shows
+**And** nothing ever moves a Task without this action (no job, no on-open prompt); API-tested incl. a Task with logged minutes above its estimate
+
+## Epic 9: Planner — Pomodoro
+
+A user starts a Pomodoro from a task; the app builds a binding plan from the remaining estimate, runs it on a server-truth timer, asks "Done?" at the end, allows at most two extra sessions per task, logs every focus session and awards XP for each. *Added by Sprint Change 2026-11-16. Build order: 9.1 → 9.2 → 9.3 → 9.4.*
+
+### Story 9.1: Pomodoro Plan Engine and Settings
+
+As the builder,
+I want a pure plan function and user settings,
+So that every screen agrees on the plan.
+
+**Acceptance Criteria:**
+
+**Given** `packages/domain/pomodoro.ts`
+**Then** `planPomodoro(remaining, settings)` returns full focus sessions, breaks between (a long break after every N focus sessions), and one final focus session for the remainder, never rounded up; 90 with defaults → 25·5·25·5·25·5·15; unit-tested at 0, 10, 25, 50, 90, 100 and the long-break boundary, with no network, DB or browser dependency (AD-1, AD-12)
+**And** `remainingMinutes`, `overrunSessionsUsed`, `planLengthMinutes` and `plannerXp` are pure and tested
+
+**Given** the migration
+**Then** `PomodoroSession` and `User.pomodoroSettings` (JSON, default `{ focus: 25, shortBreak: 5, longBreak: 15, longBreakEvery: 4 }`) exist, with the partial unique index `(userId) WHERE endedAt IS NULL`; deployed to Neon with the code
+
+**Given** Settings
+**Then** a Pomodoro card lets me set focus, short break, long break (5–90 min) and long-break-every (2–8) via `PATCH /api/planner/settings` (Zod-validated), saved on change with a quiet "Saved" and rollback on error (as the Study directions control)
+**And** `backupExportSchema` is not touched here (Story 9.4)
+
+### Story 9.2: Server-Truth Sessions
+
+As a user,
+I want the timer to survive reloads and devices,
+So that I trust it.
+
+**Acceptance Criteria:**
+
+**Given** a Task
+**When** `POST /api/planner/sessions { taskId, kind, overrun }`
+**Then** a session starts with `startedAt = now` and `plannedMinutes` taken from the plan's next session of that kind; the response carries `startedAt` and `plannedMinutes`
+
+**Given** a running session
+**When** I start another (same or another Task)
+**Then** `409` in the standard error envelope; two concurrent starts yield exactly one row (API-tested)
+
+**Given** a session whose planned end has passed
+**When** any `/api/planner/**` route is called
+**Then** it is closed at its planned end with `actualMinutes = plannedMinutes` before the route proceeds (AD-17)
+
+**When** `POST /api/planner/sessions/[id]/end`
+**Then** `endedAt = now`, `actualMinutes = min(elapsed, planned)`; a `FOCUS` session with ≥ 1 actual minute writes one `XpEvent(FOCUS_SESSION, +1 / 2 / 4 / 4 by Bộ)` and updates `cultivationXp` in the same transaction; a `BREAK` writes no XP
+
+**Given** `overrun = true`
+**When** the Task already has two overrun sessions
+**Then** `409`
+**And** `GET /api/planner/sessions/running` returns the running session or none; every write logs a structured line; the sleep/offline rule is recorded in the spec (see `deferred-work.md`)
+
+### Story 9.3: Pomodoro Screen
+
+As a user,
+I want to run my task's plan and be asked at the end,
+So that the estimate is a real budget.
+
+**Acceptance Criteria:**
+
+**Given** Planner → Pomodoro with a Task chosen (from a Task row's "Start pomodoro" or a picker)
+**Then** I see the Plan strip and the current session's large mono countdown derived from `startedAt` (UX-DR27), with Start / Stop
+
+**Given** a reload, a tab switch or another device
+**Then** the countdown shows the same remaining time (re-synced on visibility change)
+
+**Given** a focus session ends
+**Then** the break waits for Start (never automatic) and shows "Break · 5:00" quietly
+
+**Given** the plan's last session ends
+**Then** an inline Done card asks "Done?" with **Done** (marks the Task done, Story 8.3) and **Not yet**
+
+**Given** Not yet
+**Then** "+1 session (n of 2 left)" is offered while fewer than two overrun sessions exist; otherwise "Edit the estimate to continue." with an Edit link
+
+**Given** Stop
+**Then** the session ends early, its minutes are logged, and the strip shows what is left; nothing continues on its own
+
+**Given** a Task with 50 logged of 90
+**When** I open it
+**Then** the plan is built from 40 (25 · 5 · 15); with nothing remaining only unused overrun sessions are offered
+
+**Given** another session is running on a different Task
+**Then** "A session is running on {Task} — {m:ss} left." with a link, and Start is disabled
+**And** Space starts/stops, Esc closes the Done card; the Realm badge updates after each focus session; copy follows EXPERIENCE.md; UI conforms to DESIGN.md (plan-strip, countdown) in both themes
+
+### Story 9.4: Planner in Export and Restore
+
+As an admin,
+I want a user's planner data in backups,
+So that restore loses nothing.
+
+**Acceptance Criteria:**
+
+**Given** `backupExportSchema`
+**Then** it has a `planner` section `{ settings, categories[], tasks[], sessions[] }` (AD-10); export (Story 5.2) writes it and restore (Story 5.3) restores it verbatim inside the existing transaction; a backup without it restores with no Planner data
+
+**Given** the read-only user page (Story 7.3)
+**Then** it shows the planner section
+**And** the schema change is unit-tested; an API test round-trips export → restore with Planner data; user delete (Story 7.6) is verified to leave no Planner rows
+
+## Epic 10: Planner — Calendar
+
+A user sees the week as a time grid where each scheduled task is a block as long as its whole plan, drags tasks between times and days, and watches a block move to the real start when its Pomodoro begins. *Added by Sprint Change 2026-11-16. Build order: 10.1 → 10.2 → 10.3.*
+
+### Story 10.1: Week Grid and Unscheduled Tray
+
+As a user,
+I want to see my week as blocks,
+So that I know whether it fits.
+
+**Acceptance Criteria:**
+
+**Given** Planner → Calendar
+**Then** a 7-day time grid (06:00–24:00 shown by default, scrollable to 00:00, a now-line) shows each Task with a start time as a block in its Category tint, as long as `planLengthMinutes` of its plan incl. breaks (UX-DR28), with the title and "90 min" inside
+
+**Given** Tasks without a start time
+**Then** they sit in an unscheduled tray above their day column
+
+**Given** two blocks overlap
+**Then** both are drawn side by side with the `error` conflict border and a "Conflict" caption; nothing moves or blocks
+
+**Given** a done Task
+**Then** its block is muted; a block past midnight continues into the next column but belongs to its start day
+
+**Given** a viewport under 640px
+**Then** a single day with ← / → replaces the week and the tray is a horizontal chip row
+**And** the conflict border's contrast on each tint is measured and recorded in DESIGN.md (UX-DR13); every block and chip is reachable by keyboard
+
+### Story 10.2: Drag to Reschedule
+
+As a user,
+I want to move tasks by dragging,
+So that planning is fast.
+
+**Acceptance Criteria:**
+
+**When** I drag a block to another time or day
+**Then** `PATCH /api/planner/tasks/[id]` sets day and start time (15-minute snap); the move is optimistic with rollback and an inline error on failure
+
+**When** I drag a tray Task onto the grid
+**Then** it gains a start time; dragging a block to the tray clears it
+
+**Given** a block has keyboard focus
+**Then** arrows move it 15 min / one day, Enter commits, Esc cancels (UX-DR29)
+**And** a moved Task keeps its estimate, sessions and overrun count
+
+### Story 10.3: Live Blocks
+
+As a user,
+I want the calendar to show what really happened,
+So that it is a record, not a wish.
+
+**Acceptance Criteria:**
+
+**Given** a Pomodoro starts on a scheduled Task
+**Then** `Task.startAt` is set to the session's `startedAt` and the block moves there (AD-17); a tray Task that starts gains that start time
+
+**Given** an overrun session is added
+**Then** the block lengthens by it
+
+**Given** a session running now
+**Then** its block shows a progress fill in the accent
+
+**Given** a plan stopped early
+**Then** the block is as long as what was logged plus what remains of the plan
+**And** no second copy of the planned time is kept anywhere (one `startAt`)
+
+## Epic 11: Planner — Music
+
+A user picks a Jamendo track per category (or per task); it fades in with each focus session, out at its end, stays silent in breaks, and shows its attribution. *Added by Sprint Change 2026-11-16. Build order: 11.1 → 11.2 → 11.3.*
+
+### Story 11.1: Jamendo Adapter
+
+As the builder,
+I want one music source behind an interface,
+So that the timer never depends on it.
+
+**Acceptance Criteria:**
+
+**Given** this story starts
+**Then** its spec records the current Jamendo API terms (the page was dated 2013 at planning time) and a listening check of `tags=lofi,chillout`; if either fails, the story stops and the music source is re-decided by a sprint change
+
+**Given** `JAMENDO_CLIENT_ID`
+**Then** it is required by the Config Zod schema from this story on (and set on Vercel before deploy); `apps/web/lib/music/jamendo.ts` implements `MusicSource` (AD-18)
+
+**Given** `GET /api/planner/music/search?q=&tags=` and `GET /api/planner/music/[trackId]`
+**Then** they return `{ id, title, artist, licence, licenceUrl, streamUrl, duration }` in the standard envelope, cached one hour; a Jamendo failure returns `502` in the error envelope and is logged; 401 without a session
+**And** no other module makes outbound HTTP; the adapter is unit-tested against recorded responses
+
+### Story 11.2: Track per Category and Task
+
+As a user,
+I want a track for each category,
+So that starting a session picks the music for me.
+
+**Acceptance Criteria:**
+
+**Given** the migration
+**Then** `TaskCategory.musicTrack` and `Task.musicTrack` (JSON `{ source, trackId }`, nullable) exist; deployed to Neon with the code; `backupExportSchema`'s planner section carries them
+
+**Given** a Category's edit modal and a Task's edit
+**Then** a "Music" field searches Jamendo and stores the chosen track; a Task's choice overrides its Category's; "None" is allowed; the last picked track is offered first
+**And** attribution (title · artist · licence) is shown beside the field
+
+### Story 11.3: Player in the Pomodoro Screen
+
+As a user,
+I want the music to follow the session,
+So that I never touch it.
+
+**Acceptance Criteria:**
+
+**Given** a focus session starts with a track
+**Then** an `<audio>` element plays it, fading in over 3 s; at the session's end it fades out over 3 s; breaks are silent
+
+**Given** the player (UX-DR30)
+**Then** it shows title · artist · licence link, pause and volume (remembered in `localStorage`), nothing else
+
+**Given** Jamendo or the stream is unreachable
+**Then** one quiet line "Music unavailable — the timer continues." shows and the session runs unchanged
+
+**Given** a track longer than the session
+**Then** it is cut by the fade-out; a shorter one loops until the fade-out
+**And** `prefers-reduced-motion` changes nothing about the audio fades
+
+## Epic 12: Shared Classes
+
+An Owner invites registered users into a Class by email; the invitee accepts from a bell; from then on the Member studies the Class with their own schedule while the Owner alone edits it. *Added by Sprint Change 2026-11-17. Build order: 12.1 → 12.2 → 12.3 → 12.4 → 12.5, then Epic 8.*
+
+### Story 12.1: Scheduling Records per Learner
+
+As the builder,
+I want every Scheduling Record to belong to one user,
+So that two people can study the same Card independently.
+
+**Acceptance Criteria:**
+
+**Given** the migration
+**Then** `SchedulingRecord.userId` exists (required), backfilled from `Card.userId`; the unique `(cardId, direction)` is replaced by `(userId, cardId, direction)`; an index `(userId, nextReviewDate)` is added; a before/after row count from a Neon-branch dry run is recorded in the spec; deployed to Neon with the code
+
+**Given** `createCardWithSchedulingRecords`
+**Then** it takes `learnerIds` and returns two records per learner, unit-tested for 1 and 3 learners; every existing caller passes `[ownerId]` until Story 12.2
+
+**Given** the AD-14 predicates
+**Then** each takes `userId` and filters on `SchedulingRecord.userId`; unit tests cover two users on one Card
+
+**Given** `POST /api/review/grade`
+**Then** it loads the record where `userId = caller` and returns `404` otherwise; `GET /api/review/queue`, `GET /api/review/learn`, the counts on `GET /api/flashcards/[id]` and `GET /api/stats` read the caller's records only
+**And** the whole existing unit, API and e2e suite passes with unchanged behaviour for a single learner; test fixtures that build records set `userId`
+
+### Story 12.2: Class Membership and Access Guards
+
+As the builder,
+I want one ownership check and one access check,
+So that no route forgets who may do what.
+
+**Acceptance Criteria:**
+
+**Given** the schema
+**Then** `ClassMember (classId, userId)` with unique `(classId, userId)` exists (in the 12.1 migration or a second additive one)
+
+**Given** `packages/domain/access.ts`
+**Then** `classAccess(userId, class, members)` and `classLearnerIds(class, members)` are pure and unit-tested
+
+**Given** every write route on classes, folders, flashcards, cards, import and colour
+**Then** it calls `requireClassOwner`: a Member gets `403`, a stranger `404`, in the standard envelope; API-tested for one route of each kind
+
+**Given** every read route and `review/queue`, `review/learn`, `review/grade`, `flashcards/[id]`
+**Then** it calls `requireClassAccess`; a Member reads, a stranger gets `404`
+
+**Given** a Card is created by any path in a Class with Members
+**Then** records are created for every learner (AD-9)
+
+**Given** a Flashcard is moved to another Class
+**Then** the move transaction drops the records of learners not in the target and creates defaults for target learners without them
+
+**Given** a Folder, Flashcard, Class or Card delete
+**Then** every learner's records go with it; `GET /api/classes/[id]` returns `memberCount` for the confirmations
+**And** every membership-affecting write logs a structured line
+
+### Story 12.3: Invitations, Share Modal and the Bell
+
+As an Owner,
+I want to invite someone by email and have them accept,
+So that nobody lands in a Class they didn't ask for.
+
+**Acceptance Criteria:**
+
+**Given** the schema
+**Then** `ClassInvitation (classId, inviterId, inviteeId, status, createdAt, respondedAt?)` exists with the partial unique `(classId, inviteeId) WHERE status = 'PENDING'`; `prisma migrate` is verified to keep it
+
+**Given** an owned Class's "…" menu
+**When** I choose **Share**
+**Then** a modal lists Members (Remove), pending Invitations (Cancel) and declined ones (muted, Invite again), with an email field (UX-DR31)
+
+**When** I invite an email
+**Then** `POST /api/classes/[id]/invitations` resolves it to a user; an unknown account, my own email, a Member's or a pending one returns a field-level error; otherwise a pending Invitation appears at once
+
+**Given** I am the invitee
+**Then** the bell (UX-DR32) shows the pending count from `GET /api/invitations` and opens a panel with "{Owner} invited you to {Class} ({N} cards)" and Accept / Decline; the bell is hidden in focus mode
+
+**When** I accept
+**Then** `POST /api/invitations/[id]/accept` inserts the membership and my two records per Card (batched) in one transaction, marks it accepted, and the Class appears in my Classes; **when** I decline it is marked declined and the Owner can invite again
+
+**Given** a non-invitee calls accept or decline
+**Then** `404`; a Member calling cancel gets `403`
+
+**Given** the Owner removes a Member
+**Then** `DELETE /api/classes/[id]/members/[userId]` deletes the membership and that user's records in one transaction after the confirm "Remove {email}? Their progress in {Class} will be deleted."
+**And** the bell shows nothing but Invitations; no email is sent; UI conforms to DESIGN.md (bell, Share modal) in both themes
+
+### Story 12.4: Member Experience
+
+As a Member,
+I want to study a shared Class like my own,
+So that the invitation was worth accepting.
+
+**Acceptance Criteria:**
+
+**Given** my Classes grid
+**Then** a Shared Class tile shows "{Owner}'s" under its name, in the Owner's colour (UX-DR33); its "…" menu holds only **Leave**
+
+**Given** I browse its Folders, Flashcards and Cards
+**Then** no create, edit, move, rename, recolour, share, import or delete control renders; the header shows "{Owner}'s class"; breadcrumbs work; the counts are mine
+
+**Given** I press Learn or run Review
+**Then** my own records are graded; the Owner's and other Members' never change (API-tested with two learners)
+
+**Given** Cultivation
+**Then** Learn Flashcards and Clear Review count the Shared Class as mine
+
+**When** I choose Leave
+**Then** a confirm names the Class and says my progress in it is deleted; `POST /api/classes/[id]/members/leave` removes my membership and records in one transaction
+
+**Given** the Owner adds a Card
+**Then** it shows as new in my Learn count
+**And** the Owner's delete confirmations and the cross-Class move modal carry the member-count line when N > 0 (UX-DR34)
+
+### Story 12.5: Export, Restore and Admin with Sharing
+
+As an admin,
+I want backups and the user view to respect ownership,
+So that restore never leaks or breaks another user's Class.
+
+**Acceptance Criteria:**
+
+**Given** `backupExportSchema`
+**Then** owned Classes carry `members[]` (emails) and the user's own records; a `sharedClasses[]` list `{ name, ownerEmail }` is included; a Member's records in Shared Classes are not (AD-10)
+
+**Given** a restore
+**Then** owned Classes and the user's records are recreated; members whose emails resolve are re-attached with default records; unresolved emails and `sharedClasses` are ignored and named in the structured log
+
+**Given** the admin user page
+**Then** owned Classes show member counts and a "Member of N shared classes" line
+
+**Given** a user is deleted (Story 7.6)
+**Then** their memberships, invitations and records in Shared Classes are gone and the Classes they owned are gone for every learner — API-tested
+**And** the backup round-trip test covers a Class with one Member

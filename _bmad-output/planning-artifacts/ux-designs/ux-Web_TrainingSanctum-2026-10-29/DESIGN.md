@@ -1,7 +1,7 @@
 ---
 status: final
 created: 2026-10-29
-updated: 2026-11-14
+updated: 2026-11-17
 sources:
   - ../../prds/prd-Web_TrainingSanctum-2026-10-29/prd.md
   - ../../briefs/brief-Web_TrainingSanctum-2026-10-29/brief.md
@@ -254,6 +254,48 @@ components:
     foreground: '{colors.on-frame}'
     active-background: '{colors.frame-raised}'
     radius: '{rounded.full}'
+  plan-strip:
+    status: 'not built (Epic 9, Sprint Change 2026-11-16)'
+    pill-radius: '{rounded.full}'
+    focus-background: '{colors.tint-*}'
+    break-background: '{colors.elevated}'
+    current-border: '{colors.text}'
+  countdown:
+    status: 'not built (Epic 9)'
+    font: '{typography.mono} at display size'
+    foreground: '{colors.text}'
+    over-foreground: '{colors.warning}'
+  calendar-block:
+    status: 'not built (Epic 10)'
+    background: '{colors.tint-*}'
+    border: '{colors.tint-*-border}'
+    radius: '{rounded.sm}'
+    conflict-border: '{colors.error}'
+    done-opacity: 0.5
+    progress-fill: '{colors.accent}'
+  calendar-grid:
+    status: 'not built (Epic 10)'
+    line: '{colors.divider}'
+    hour-label: '{typography.caption}'
+    now-line: '{colors.accent}'
+  music-player:
+    status: 'not built (Epic 11)'
+    background: '{colors.card}'
+    border: '{colors.divider}'
+    radius: '{rounded.md}'
+  bell:
+    status: 'not built (Epic 12, Sprint Change 2026-11-17)'
+    size: 36px
+    foreground: '{colors.on-frame}'
+    foreground-on-panel: '{colors.text}'
+    badge-background: '{colors.accent}'
+    badge-background-on-frame: '{colors.on-frame}'
+    badge-font: '{typography.mono}'
+    popover: '{components.modal} without scrim, elevation.medium'
+  shared-label:
+    status: 'not built (Epic 12)'
+    font: '{typography.caption}'
+    foreground: '{colors.text-secondary}'
 ---
 
 > Source of truth for token values in code: `apps/web/app/globals.css`. Visual references: the four screenshots of a Vietnamese language-learning app supplied on 2026-11-14 (not stored in `imports/`), plus the older [`imports/`](./imports/) set. On any conflict between this spec and those images, **this DESIGN.md wins** (per this workflow's spines-win rule). The earlier Focus Indigo design (spines, mockups, Design DNA profile) is kept in [`history/focus-indigo/`](./history/focus-indigo/README.md) for reference only; there are no mockups of Pastel Frame, current screenshots come from the e2e suite (`test-results/screenshots/`).
@@ -277,7 +319,7 @@ All values are in the frontmatter, light first (default), `-dark` variants besid
 - **Content panel** (`{colors.bg}`) — the inset light panel all screens render in. **Card** (`{colors.card}`) is white (light) or one step lifted (dark): review card, modals, Settings cards, secondary buttons. **Elevated** (`{colors.elevated}`) is the switcher track, manual rows, hover chips and loading skeletons.
 - **Text** — `{colors.text}` for reading, `{colors.text-secondary}` for supporting copy, `{colors.text-tertiary}` for metadata and hints.
 - **Accent** — `{colors.accent}` is ink (#15161c) in light and paper (#f1f2f6) in dark; `{colors.on-accent}` is the text on it. Hover is `{colors.accent-hover}`. Primary buttons, the selected option of a switcher, the section bullet, the XP bar fill, a claimed quest's checkbox, the input focus border and the revealed answer on the review card (text) use it. Because the accent is now ink or paper, the answer text reads almost the same as `{colors.text}`; it is kept as an accent role so the answer stays the one emphasised line.
-- **Tints** — five pastel surfaces, each with a border: lavender, sky, mint, butter, rose. Text on a tint is `{colors.text}` or `{colors.text-secondary}`, never an accent. In dark mode the tints are deep, desaturated versions of the same hues. Tints are assigned to Classes (see Components, tint tile) and to the four grades; they have no other use.
+- **Tints** — five pastel surfaces, each with a border: lavender, sky, mint, butter, rose. Text on a tint is `{colors.text}` or `{colors.text-secondary}`, never an accent. In dark mode the tints are deep, desaturated versions of the same hues. Tints are assigned to Classes (see Components, tint tile), to the four grades, and to Task Categories (Planner, Sprint Change 2026-11-16: a Category's tint fills its Task chips, plan-strip focus pills and calendar blocks); they have no other use.
 - **Semantic** — success, warning, error, info. Error is for destructive actions and form errors. The "Again" grade is **no longer error-coloured**; it is the rose tint.
 - **Borders** — `{colors.border}` for inputs and outlines, `{colors.divider}` for hairlines on cards. `{colors.border}` is the 3:1 UI-boundary token (see Accessibility): use it only on `{colors.bg}` or `{colors.card}`, never decoratively. It is also the track of the 4px XP bar on the Empty due-queue state, where it now reads at 3:1 against the panel; the accent fill stays clearly distinct from it.
 
@@ -291,6 +333,8 @@ All values are in the frontmatter, light first (default), `-dark` variants besid
 - **Accepted: XP ring track** on the frame: 2.2 in both themes. Reason: the XP value is always written out beside the ring, so no information depends on the track.
 
 Any new token must be checked against `{colors.card}`, `{colors.bg}` and, where it sits on one, a tint.
+- **Bell badge (Epic 12, Sprint Change 2026-11-17):** no new pair — `on-frame` on `frame-raised` (7.7:1 measured) on the bar; `on-accent` on `accent` (18.1:1) on the panel.
+- **To measure (Epic 10, Sprint Change 2026-11-16): the calendar conflict border** — `{colors.error}` as a 2px non-text border on each of the five tints, both themes. Story 10.1 records the ratios here and either meets 3:1 or accepts in writing; the "Conflict" caption is always present, so no information depends on the border alone.
 
 ## Typography
 
@@ -301,7 +345,7 @@ Any new token must be checked against `{colors.card}`, `{colors.bg}` and, where 
 - `{typography.body}` / `{typography.body-small}` — reading text and labels. Form labels and primary actions are set one step heavier (500–600).
 - `{typography.caption}` — counts, hints, secondary metadata.
 - `{typography.overline}` — section eyebrows and the card context line, uppercase.
-- `{typography.mono}` — numeric displays only: the "7 / 20" counter, XP figures, quest progress, keyboard hints (the grade numbers).
+- `{typography.mono}` — numeric displays only: the "7 / 20" counter, XP figures, quest progress, keyboard hints (the grade numbers), the Task "actual / estimate" figure, and the Pomodoro countdown, which uses mono at display size (2.5rem, 600) (Sprint Change 2026-11-16).
 
 ## Layout & Spacing
 
@@ -367,7 +411,14 @@ Hover on a tile or card draws a darker border; nothing scales or lifts.
 - **Switchers** (`components.mode-switcher`). Pill tracks on `{colors.elevated}`. Study directions and the Add cards Manual | Import switcher select with the accent fill; the Theme toggle and the Import Paste | Upload tabs are neutral (a card chip), so at most one accent pill shows.
 - **Inputs.** `{rounded.md}`, `{colors.border}` outline, `{colors.bg}` fill so they read on white cards and modals; the border turns `{colors.accent}` with a 2px offset outline on focus. Errors turn the border `{colors.error}`.
 - **Empty due-queue state, Cultivation notices, quest row, Breadcrumb, Add cards panel, Manual rows, Import mode.** Behave as before (EXPERIENCE.md). Visual changes only: ready-to-learn rows are a white list with a lavender round chip, the notice strips are `{colors.elevated}` with `{rounded.md}`, and the panel and rows take the new radii and shadows.
-- **Dock** (`components.dock`) — *built (Story 6.3).* The mobile navigation: a pill-shaped bar floating at the bottom of the screen on the frame colour, holding Review, Classes, Cultivation and Settings as round icon buttons. The current destination is a raised pill (`{colors.frame-raised}`). Respects the device's bottom safe area. Hidden in focus mode. **Decision (2026-11-14):** a floating dock, as in the owner's reference screenshots, rather than a full-width bottom bar.
+- **Dock** (`components.dock`) — *built (Story 6.3).* The mobile navigation: a pill-shaped bar floating at the bottom of the screen on the frame colour, holding Review, Classes, Cultivation and Settings as round icon buttons. The current destination is a raised pill (`{colors.frame-raised}`). Respects the device's bottom safe area. Hidden in focus mode. **Decision (2026-11-14):** a floating dock, as in the owner's reference screenshots, rather than a full-width bottom bar. **Sprint Change 2026-11-16:** five buttons (Review, Classes, Planner, Cultivation, Settings; Admin as a sixth), still one row.
+- **Plan strip** (`components.plan-strip`) — *not built (Epic 9).* One pill per session of the Pomodoro plan: focus pills in the Task's Category tint with the minutes in mono, break pills on `{colors.elevated}`; the current pill `{colors.text}`-bordered, done pills ticked, overrun pills marked "+". Read-only. Behaviour in EXPERIENCE.md.
+- **Countdown** (`components.countdown`) — *not built (Epic 9).* The remaining time of the current session in `{typography.mono}` at display size, `{colors.text}`; `{colors.warning}` once the Task is over its estimate. No ring, no animation — the XP ring in the app bar stays the only ring.
+- **Calendar block and grid** (`components.calendar-block`, `components.calendar-grid`) — *not built (Epic 10).* Blocks take the Category tint with its border, `{rounded.sm}`, title and minutes in `{colors.text}`; done blocks at 0.5 opacity; a conflict draws a 2px `{colors.error}` border and a "Conflict" caption on both blocks, placed side by side; a running session fills the block from the top in `{colors.accent}`. The grid draws hour lines in `{colors.divider}`, hour labels in `{typography.caption}`, and a 2px now-line in the accent. The unscheduled tray above each column holds tint chips (`{rounded.full}`).
+- **Music player** (`components.music-player`) — *not built (Epic 11).* A `surface-card` strip under the countdown: title · artist · licence link in `{typography.body-small}`, a pause button and a volume slider. No artwork, no playlist.
+- **Bell** (`components.bell`) — *not built (Epic 12, Sprint Change 2026-11-17).* A round icon button at the app bar's right, before the Realm badge, in `{colors.on-frame}` with a mono count chip (`on-frame` on `frame-raised`) when > 0; below 640px it sits top-right of the content panel in `{colors.text}` with the chip in `{colors.on-accent}` on `{colors.accent}`. Opens an anchored popover on the card surface with `{elevation.medium}` and no scrim. Hidden in focus mode.
+- **Shared Class tile** (`components.shared-label`) — *not built (Epic 12).* The Owner's tint; "{Owner}'s" in `{typography.caption}` `{colors.text-secondary}` under the name; never a different border or icon — the label is the cue.
+- **Share modal** — *not built (Epic 12).* The standard modal with an email field, three list sections (Members, Pending, Declined) and a danger-styled Remove.
 
 ## Do's and Don'ts
 
@@ -389,3 +440,10 @@ Hover on a tile or card draws a darker border; nothing scales or lifts.
 | Show the admin whom they are viewing on every user page, and keep that page free of edit controls | Give the Admin user view an edit, grade or claim control |
 | Make every clickable element `cursor: pointer` (disabled: `not-allowed`) through the global base style | Set the cursor per component, or leave a clickable tile or `role="button"` with the default cursor (Story 5.5) |
 | Reserve mono type for numeric displays and key hints | Use mono for prose or labels |
+| Keep Planner's three segments inside one nav item (Sprint Change 2026-11-16) | Add Tasks / Calendar / Pomodoro as nav items |
+| Show the countdown in mono and derive it from the server | Animate the timer or add a progress ring that competes with the XP ring |
+| Draw calendar conflicts and leave them | Auto-resolve, push, or block on a conflict |
+| Keep the music player to title, licence, pause, volume | Add artwork, playlists or a "now playing" banner elsewhere |
+| Keep the bell for Invitations only (Sprint Change 2026-11-17) | Turn it into a general notification feed |
+| Hide write controls on a Shared Class | Show them disabled |
+| Say how many members a delete affects, in one line | Add a second confirmation step for shared content |

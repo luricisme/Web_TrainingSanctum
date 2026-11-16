@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forge Report — Planner Module</title>
+<style>
+  :root { --bg:#faf7f2; --ink:#2b2520; --muted:#6b625a; --card:#fff; --line:#e6ddd2; --accent:#8a1c2b; --ok:#2f6b3a; --warn:#9a6a00; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#1d1a17; --ink:#efe8df; --muted:#b2a79b; --card:#262220; --line:#3b332d; --accent:#d8616f; --ok:#7fc48c; --warn:#e2b04a; } }
+  :root[data-theme="dark"] { --bg:#1d1a17; --ink:#efe8df; --muted:#b2a79b; --card:#262220; --line:#3b332d; --accent:#d8616f; --ok:#7fc48c; --warn:#e2b04a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 Georgia, "Times New Roman", serif; }
+  main { max-width:860px; margin:0 auto; padding:40px 16px 80px; }
+  header { display:grid; grid-template-columns:1fr auto; gap:24px; align-items:center; margin-bottom:32px; }
+  h1 { font-size:30px; margin:0 0 6px; letter-spacing:.2px; }
+  .sub { color:var(--muted); margin:0; }
+  h2 { font-size:20px; margin:36px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin:10px 0; }
+  ul { padding-left:20px; margin:0; } li { margin:6px 0; }
+  .tag { display:inline-block; font:12px/1 sans-serif; padding:3px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted); margin-right:6px; vertical-align:middle; }
+  .seal { width:150px; height:150px; }
+  .personas { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; }
+  .p { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; }
+  .p b { font-size:15px; } .p i { color:var(--muted); display:block; margin-top:2px; }
+  .why { color:var(--muted); }
+  .crack { border-left:4px solid var(--warn); }
+  @media (max-width:600px) { header { grid-template-columns:1fr; } .seal { width:120px; height:120px; } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div>
+    <h1>Planner Module — Todo · Pomodoro · Calendar · Music</h1>
+    <p class="sub">Forge session · Training Sanctum, module 2 · 16 Nov 2026 · for Luric</p>
+    <p class="sub">12 branches examined, 11 locked, 1 direction kept open with a verification task.</p>
+  </div>
+  <svg class="seal" viewBox="0 0 200 200" role="img" aria-label="Wax seal: HARDENED">
+    <defs>
+      <radialGradient id="wax" cx="40%" cy="35%" r="70%">
+        <stop offset="0" stop-color="#c0303f"/><stop offset="0.7" stop-color="#8a1c2b"/><stop offset="1" stop-color="#5e101b"/>
+      </radialGradient>
+    </defs>
+    <path d="M100 12c14 0 20 10 33 12s26-4 36 6 4 23 8 36 14 20 12 34-12 20-16 32-2 26-12 34-24 2-36 6-22 12-36 12-22-10-36-12-26 4-36-6-4-23-8-36S-3 110 1 96s12-20 16-32 2-26 12-34 24-2 36-6 22-12 35-12z" fill="url(#wax)"/>
+    <circle cx="100" cy="100" r="62" fill="none" stroke="#f3d7d0" stroke-width="2" opacity=".8"/>
+    <circle cx="100" cy="100" r="54" fill="none" stroke="#f3d7d0" stroke-width="1" opacity=".5"/>
+    <text x="100" y="94" text-anchor="middle" font-family="Georgia, serif" font-size="22" font-weight="bold" fill="#fbe9e4" letter-spacing="2">HARDENED</text>
+    <text x="100" y="118" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#fbe9e4" opacity=".85">BMAD · FORGE</text>
+    <text x="100" y="134" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#fbe9e4" opacity=".7">2026-11-16</text>
+  </svg>
+</header>
+
+<h2>Outcome</h2>
+<div class="card">
+  The idea survived. It is now a four-epic module with every mechanism pinned down: tasks are free-form, the pomodoro plan is a binding budget with a bounded overrun, the calendar is a time grid that reports reality once a session starts, the timer is server-truth, XP is passive, and music streams from Jamendo. Hand-off: <code>forged-idea.md</code> → <code>/bmad-correct-course</code>.
+</div>
+
+<h2>Locked decisions</h2>
+<div class="card"><ul>
+  <li><span class="tag">Q1</span><b>Task is free-form.</b> No link to Class/Folder, no auto-estimate from due cards.</li>
+  <li><span class="tag">Q2</span><b>Plan is binding; estimate is a budget.</b> 90 min → 25/25/25/15, last block is the remainder. Timer stops, asks "done?".</li>
+  <li><span class="tag">Q3</span><b>Overrun bounded.</b> "+1 session" at most twice per task (≤ +50 min), then only "not done". Overrun logged, estimate untouched.</li>
+  <li><span class="tag">Q4</span><b>Calendar is a time grid.</b> Tasks have an optional start time; pomodoro occupies a block; conflicts visible.</li>
+  <li><span class="tag">Q5</span><b>Time semantics.</b> Start time optional (unscheduled area). Block = plan incl. breaks (90 → 105 min). Late start moves the block to the actual start.</li>
+  <li><span class="tag">Q6</span><b>Collisions: allow and draw.</b> No auto-push, no blocking.</li>
+  <li><span class="tag">Q7</span><b>Rollover: manual.</b> Overdue badge + one "move all to today" action. Estimate and logged actual survive the move; replanning uses the remainder.</li>
+  <li><span class="tag">Q8</span><b>Timer truth: server.</b> <code>PomodoroSession.startedAt</code> on Start; one running session per user, enforced in DB.</li>
+  <li><span class="tag">Q9</span><b>XP: passive.</b> Session = X XP, task done = Y XP. No quests, no penalties.</li>
+  <li><span class="tag">Q10–11</span><b>Music: full player on Jamendo.</b> Per-category music, remembered, fade per session, CC attribution. <code>MusicSource</code> interface for later sources.</li>
+  <li><span class="tag">Q12</span><b>Build order:</b> Epic 8 Tasks → 9 Pomodoro → 10 Calendar → 11 Music.</li>
+</ul></div>
+
+<h2>Rejected, and why</h2>
+<div class="card"><ul>
+  <li>Task linked to flashcard content — <span class="why">gold-plating; most tasks live outside the app's content.</span></li>
+  <li>Descriptive progress bar instead of a plan — <span class="why">the user wants the budget to cut, not to measure.</span></li>
+  <li>Unlimited "+1 session" — <span class="why">a budget you can exceed with one click is not a budget.</span></li>
+  <li>Auto-rollover or ask-on-open — <span class="why">contradicts the "tool I control" stance taken in every other branch.</span></li>
+  <li>Chain-push or block on collision — <span class="why">pushes hide changes; blocking stops the user from pressing Start.</span></li>
+  <li>Client-only or heartbeat timer — <span class="why">reload and device switches lose the session; heartbeat is the worst of both.</span></li>
+  <li>Pomodoro quests with penalties — <span class="why">exploitable via "+1" and fake tasks; the XP mechanic itself is still unproven.</span></li>
+  <li>Bundled files · YouTube embed · Spotify · uploads — <span class="why">user wants an API; iframe lacks volume control and has ads; Spotify needs Premium + OAuth; uploads need storage the app lacks.</span></li>
+</ul></div>
+
+<h2>Weak points that survived scrutiny</h2>
+<div class="card crack"><ul>
+  <li><b>No use scene for the calendar.</b> The time-grid choice was made without describing the "Sunday night" moment Sally asked for. It is the most expensive branch and the least justified.</li>
+  <li><b>Jamendo unverified.</b> Terms page is dated 2013; lofi catalog quality unchecked. Must be verified before Epic 11.</li>
+  <li><b>Planned time is lost on start.</b> Moving the block to the actual start discards the plan; only estimate-vs-actual minutes survive. Accepted for v1.</li>
+  <li><b>Assumed, not confirmed:</b> task belongs to its start-time day across midnight; expired-on-reconnect sessions count as complete; "+1" sessions earn XP.</li>
+  <li><b>Easy agreement.</b> Seven of twelve answers matched the facilitator's hypothesis verbatim. The user did diverge on Q4, Q5c, Q9, Q10, Q11.</li>
+</ul></div>
+
+<h2>Voices that pressure-tested it</h2>
+<div class="personas">
+  <div class="p"><b>📋 John</b> — Product Manager<i>Interrogated what "study session" and "task" meant; named the control-vs-assistant contradiction.</i></div>
+  <div class="p"><b>🏗️ Winston</b> — System Architect<i>Priced plan-state vs log-only; argued server-truth buys a DB invariant.</i></div>
+  <div class="p"><b>🎨 Sally</b> — UX Designer<i>Demanded the Sunday-night scene; showed only direct audio allows fade.</i></div>
+  <div class="p"><b>🃏 Wildcard</b> — Option Generator<i>Reduced "planPomodoro" to a ceil; offered the data-rich E0 path.</i></div>
+  <div class="p"><b>📏 Level</b> — Claim Checker<i>Questioned whether a dialog creates discipline; flagged XP as unproven.</i></div>
+  <div class="p"><b>😤 Grumbal</b> — The Adversary<i>Predicted the 15-minute block complaint, domino drift, and XP farming.</i></div>
+  <div class="p"><b>🌶️ Boundary</b> — Edge-Case Hunter<i>Midnight crossing, +1 overlapping the next task, laptop asleep mid-session.</i></div>
+  <div class="p"><b>🎯 Yui</b> — The Craftsman<i>Blocked a two-layer calendar; insisted on one music source.</i></div>
+  <div class="p"><b>🚢 Dana</b> — The Pragmatist<i>Ranked what ships in a story vs a month.</i></div>
+  <div class="p"><b>🪵 Splinter</b> — Consensus Challenger<i>Called out verbatim agreement; "not done" is the default, not the exception.</i></div>
+  <div class="p"><b>🛑 Killjoy</b> — Loop Stopper<i>Forced "pick one" on the calendar and closed the session.</i></div>
+  <div class="p"><b>🔒 Vex</b> — Security Engineer<i>Named uploads as an arbitrary-file attack surface.</i></div>
+  <div class="p"><b>🎓 Hà</b> — generated: medical student on Notion + Forest<i>Buyer voice; withdrew once the app was shown to be a personal hub.</i></div>
+  <div class="p"><b>🎓 Minh</b> — generated: five-year Todoist user<i>Why auto-rollover piles up and why a red number works.</i></div>
+</div>
+
+<p class="sub" style="margin-top:32px">Record: <code>.memlog.md</code> · Hand-off: <code>forged-idea.md</code> · Next: <code>/bmad-correct-course</code></p>
+</main>
+</body>
+</html>

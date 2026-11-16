@@ -2,7 +2,7 @@
 title: Training Sanctum — Flashcards PRD
 status: final
 created: 2026-10-29
-updated: 2026-11-14
+updated: 2026-11-17
 ---
 
 # PRD: Training Sanctum — Flashcards
@@ -17,7 +17,7 @@ Training Sanctum's flashcards module is a personal, single-user spaced-repetitio
 
 It matters for two reasons that don't trade off against each other: as a daily tool, it has to survive the test every language app fails — still being open 60 days from now — by removing every piece of friction that causes abandonment. As an engineering artifact, it is the first production-grade, fully-tested application in a longer-term personal platform ("Training Sanctum"), demonstrating correct algorithmic implementation (native SM-2, not approximated), clean domain/API/UI separation, and automated test coverage across all layers.
 
-v1 scope is deliberately narrow: flashcards and spaced repetition only. Future Sanctum modules (Pomodoro timer, task manager) are out of scope and must not leak into this release.
+Flashcards and spaced repetition were module 1 and shipped first (FR-1 … FR-21). Module 2, **Planner** — free-form tasks with time estimates, a Pomodoro timer that turns an estimate into a binding plan, a calendar, and background music — was added by Sprint Change 2026-11-16 as Phase 1b (§4.10, §8.1). It shares the account, the XP ledger and the Pastel Frame with flashcards and nothing else: a task never points at a Card.
 
 ## 2. Target User
 
@@ -28,10 +28,11 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 - I need review sessions fast and frictionless enough (keyboard-only, instant transitions) that I do them daily without the session itself becoming the reason I skip a day.
 - I need to trust the tool with months of study history — lost cultivation progress or a corrupted schedule is a dealbreaker for a daily-dependency habit tool.
 - As a portfolio piece, I need the finished product to demonstrate correct algorithmic implementation and testing discipline I can speak to in an interview or case study.
+- I need a place to write down what I'll study or do today, say how long it should take, and have the app hold me to that number — so that "I'll just do a bit more" stops eating the evening. *(Planner, Sprint Change 2026-11-16.)*
 
 ### 2.2 Non-Users (v1)
 
-- Other learners as a social audience — no sharing, public-set or collaboration functionality exists or is planned for v1. Other people may hold accounts, each isolated from the other users, and an admin can see and manage all of them (FR-21). The admin sees users' study content; users should be told so at registration.
+- Other learners as a *social* audience — no public sets, discovery, comments or collaborative editing. Other people hold their own accounts; an owner may invite a registered user into one of their Classes to **study** it (§4.11, Sprint Change 2026-11-17), and an admin can see and manage all accounts (FR-21). The admin sees users' study content; users should be told so at registration.
 - Learners wanting gamified/social study modes (Quizlet-style Test mode, Match game) — explicitly not this product's model.
 
 ### 2.3 Key User Journeys
@@ -45,6 +46,8 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 - **UJ-3. Bulk import after a study binge.** The user has accumulated 30 new words in a notes app over a week. They open the target Flashcard, choose "Add cards → Import", and paste the list or upload a CSV; the system parses term/definition pairs (and optional extra fields) into the same row editor as manual entry, flagging malformed lines and duplicates. They fix two typos, press Save, and the cards land in that Flashcard in one pass, instead of 30 manual entries. *(realizes FR-6, FR-7)*
 
 - **UJ-4. Learning a Flashcard.** The user opens a Flashcard and flips through its Cards in the viewer (← → to move, Space or click to flip) to get familiar with them, with no grading and no effect on scheduling. When ready, they press "Learn": each Unlearned Card is shown in both directions (studied directions, FR-18) and graded Again/Hard/Good/Easy. From then on those Cards come back on their own in the daily Review (UJ-2). *(realizes FR-16, FR-17)*
+
+- **UJ-5. Planning and running a study evening.** On Sunday evening the user opens Planner → Calendar for the week, drops "Read chapter 3 · 90 min" on Tuesday 19:00 and "Mock test" on Thursday 20:00, and sees the two blocks sit without overlap. On Tuesday they open the task at 19:40, press Start; the block slides to 19:40, the music starts, and four focus sessions (25/25/25/15) run with breaks between. After the last one the app asks "Done?". They aren't, press "+1 session" once, finish, mark it done, and earn the task's XP. *(realizes FR-22 … FR-26; Sprint Change 2026-11-16)*
 
 ## 3. Glossary
 
@@ -65,6 +68,19 @@ v1 scope is deliberately narrow: flashcards and spaced repetition only. Future S
 - **Cultivation Realm / Stage** — The user's rank on a fixed 90-level ladder (Ngưng Khí · Tầng 1 … Đạp Thiên Cảnh), grouped into four Bộ, derived only from total XP (FR-12). Replaces the Streak (Sprint Change 2026-11-14).
 - **XP** — Points gained by claiming Daily Quests and lost through missed-quest penalties. It never goes below 0.
 - **Daily Quest** — One of the two targets for a local calendar day (Learn Flashcards, Clear Review), sized by the user's Bộ at the start of that day (FR-19). Days use the same local-timezone basis as `next_review_date`.
+- **Task** — A free-form item of work the user plans: title, Task Category, a local day, an optional start time, an estimate in minutes, and a status (open, done). A Task never references a Card, Flashcard, Folder or Class. *(Planner, Sprint Change 2026-11-16.)*
+- **Task Category** — A user-defined label with one of the five tint colours, chosen when creating a Task. Carries the default background music (FR-26).
+- **Estimate** — The Task's budget in minutes. It is what the user typed; it is never changed by the app.
+- **Pomodoro Plan** — The ordered list of focus and break sessions derived from a Task's remaining estimate and the user's Pomodoro settings (FR-23). Computed, never stored.
+- **Focus Session / Break** — One timed block of the plan. A Focus Session's actual minutes are logged against the Task; a Break is not.
+- **Overrun Session** — A Focus Session added after the plan ended, at the user's request, at most twice per Task (FR-24).
+- **Unscheduled Task** — A Task with a day but no start time; shown in the calendar's unscheduled tray, not on the grid.
+- **Overdue Task** — An open Task whose day is before today.
+- **Owner** — The user who created a Class (`Class.userId`). Only the Owner changes its content, colour, Folders, Flashcards and Cards, and only the Owner invites or removes Members. *(Sprint Change 2026-11-17.)*
+- **Member** — A user who accepted an Invitation to a Class. A Member studies the Class — viewer, Learn, Review — and can leave it; nothing else.
+- **Learner** — The Owner or a Member of a Class. Every Learner has their own two Scheduling Records per Card in that Class.
+- **Invitation** — The Owner's offer of membership to a registered user, shown in the invitee's bell; pending until accepted, declined or cancelled. Never expires. One pending Invitation per user per Class.
+- **Shared Class** — A Class seen by a Member; labelled with its Owner, read-only in content.
 
 ## 4. Features
 
@@ -135,6 +151,7 @@ A user can create, rename, and delete Classes; create, rename, and delete Folder
 - Folder delete, Flashcard delete and Class delete each complete atomically — no partial moves or partial deletes.
 - Each Class has one of five colours (lavender, sky, mint, butter, rose). A new Class takes the next colour in order, the user can change it at any time, and the Class's Folders and Flashcards show it. The colour is part of export and restore (FR-13, FR-14). *(Sprint Change 2026-11-14b.)*
 - The hierarchy is fixed: a Folder cannot contain Folders or Cards directly, a Flashcard cannot contain Flashcards, and a Class cannot contain Classes, Flashcards or Cards directly (see §5 Non-Goals).
+- A Class, its Folders, Flashcards and Cards are changed only by its Owner. A Member's requests to create, edit, move, rename, recolour, share or delete anything in it are refused (`403`). *(Sprint Change 2026-11-17.)*
 
 ---
 
@@ -213,7 +230,7 @@ The system presents due Scheduling Records of learned Cards (pulled per-directio
 **Consequences (testable):**
 - A Card with both studied directions due in the same session appears as two separate queue entries, gradable independently and in any order.
 - An unlearned Scheduling Record (Glossary) never appears in the Review queue, even when its `next_review_date` has arrived; neither does any record of a direction the user does not study (FR-18).
-- The default session pulls due entries from all Classes. A user can also start a session scoped to one Class ("Review this class") or one Folder ("Review this folder"); a scoped session pulls only that scope's due entries and otherwise follows every rule in FR-9 and FR-11. A Flashcard's graded entry point is Learn (FR-17), not a scoped review. Clearing a scoped session does not complete the Clear Review quest unless the whole due queue is empty (FR-19).
+- The default session pulls due entries from all Classes the user owns or is a Member of (§4.11, Sprint Change 2026-11-17). A user can also start a session scoped to one Class ("Review this class") or one Folder ("Review this folder"); a scoped session pulls only that scope's due entries and otherwise follows every rule in FR-9 and FR-11. A Flashcard's graded entry point is Learn (FR-17), not a scoped review. Clearing a scoped session does not complete the Clear Review quest unless the whole due queue is empty (FR-19).
 - Within the due queue, entries are ordered oldest-due-first (by `next_review_date` ascending); this is the only ordering guarantee required for v1 — no randomization or direction-interleaving rule is required.
 - Flip and grade actions are fully keyboard-operable: Space or a click/tap flips the card either way; 1–4 or J/K/L/; submit a Grade, available once the answer has been shown. No action in the review loop requires the mouse.
 - Grading a card and advancing to the next renders with no perceptible lag under rapid sequential key presses. "Instantaneous" is the standard for architecture: sub-100ms perceived transition latency.
@@ -256,6 +273,7 @@ A "Learn" button directly below the viewer starts a Learn Session for that Flash
 - Within a Learn session, an entry graded Again goes back to the end of the session queue and is shown again until it is graded Hard, Good or Easy. Only the first Grade of the entry in that session is persisted (it sets the SM-2 schedule, e.g. Again → due tomorrow); the in-session repeats are practice and are never sent to the grade route. *(Decision 2026-11-13, Quizlet-style "repeat until correct"; classical SM-2 scheduling is unchanged.)*
 - When nothing is left, the session shows a calm completion line and a way back to the Flashcard. Never confetti or cheer copy (§7).
 - The button label shows what is waiting, e.g. "Learn · 12 new · 3 due"; with nothing waiting it reads "Learn" and opens the completion state.
+- A Member's Learn session in a Shared Class grades the Member's own records; the Owner's and other Members' are untouched (FR-28, Sprint Change 2026-11-17).
 
 #### FR-18: Study directions setting
 
@@ -279,7 +297,7 @@ A user chooses, in Settings, which Recall Directions they study: **Both** (defau
 The system keeps a total XP per user and derives the user's Cultivation Realm and Stage from it using the fixed ladder (addendum: Cultivation realm ladder). The realm and XP progress toward the next stage are shown outside active review (not during, per FR-11).
 
 **Consequences (testable):**
-- XP changes only when a Daily Quest is claimed (+ its XP) or when a past day is settled (−2 × the XP of each unclaimed quest; FR-19).
+- XP changes only when a Daily Quest is claimed (+ its XP), when a past day is settled (−2 × the XP of each unclaimed quest; FR-19), when a Focus Session completes, or when a Task is marked done (FR-22, FR-23). Planner XP is passive: there is no Planner quest and no penalty. Per event, by the user's Bộ (Nhất / Nhị / Tam / Tứ): Focus Session **1 / 2 / 4 / 4** XP, Task done **5 / 10 / 20 / 20** XP — one tenth and one half of that Bộ's quest XP (addendum: Planner XP table). *(Sprint Change 2026-11-16.)*
 - XP is floored at 0. The realm is always recomputed from XP, so a penalty can move the user down by stages or realms; the lowest level is Ngưng Khí · Tầng 1.
 - The ladder has four Bộ and 90 levels. Major realms have four stages (Sơ kỳ, Trung kỳ, Hậu kỳ, Đại viên mãn); Ngưng Khí has Tầng 1–15, Thiên Nhân Ngũ Suy has five suy, Không Kiếp has Đại Tôn, Kim Tôn, Thiên Tôn and Đại Thiên Tôn, and Đạp Thiên Kiều has nine bridges.
 - Đạp Thiên Cảnh is the final level. XP keeps adding up past it.
@@ -301,6 +319,7 @@ XP per quest is 10 in Nhất Bộ, 20 in Nhị Bộ and 40 in Tam Bộ and Tứ 
 - No penalty is charged for days before cultivation started for the user, or for days between an export and its restore (FR-14).
 - No quest or XP rule reads grade values (SM-C1).
 - No vacation pause or streak-freeze equivalent ships in v1.
+- Both quests cover every Class the user learns, owned or shared (§4.11): a Flashcard in a Shared Class counts for a Member once the Member's own records are learned, and the Member's due queue includes it. *(Sprint Change 2026-11-17.)*
 
 #### FR-13: Data export/backup
 
@@ -310,6 +329,8 @@ An **admin** can export the full Card + Scheduling Record + cultivation history 
 - Export completes and produces a file containing every Class, every Folder, every Flashcard (with its Folder), every Card (with its Flashcard), both Scheduling Records per Card, and the cultivation history, sufficient to reconstruct state.
 - The export includes each Scheduling Record's `firstGradedAt`, so a restore (FR-14) preserves which Cards are learned versus unlearned.
 - The export includes the user's study-directions setting (FR-18).
+- The export includes the user's Planner data: Categories, Tasks, Pomodoro sessions and settings (Sprint Change 2026-11-16); FR-14 restores it.
+- The export covers the Classes the user **owns** (content, the user's Scheduling Records, Member emails) and lists the Shared Classes they are a Member of by name and Owner email only; a Member's Scheduling Records in a Shared Class are not exported. *(Sprint Change 2026-11-17.)*
 
 **Feature-specific NFRs:**
 - Data durability for Cards, Scheduling Records, and cultivation history is treated as a hard non-functional requirement, not best-effort — this is addressed system-wide in §6 Cross-Cutting NFRs, since a daily-dependency tool losing history is a stated dealbreaker risk in the brief.
@@ -323,6 +344,7 @@ An **admin** can import a previously-exported FR-13 JSON file **into one selecte
 - After a restore, every day up to yesterday counts as settled, so no penalty is charged for days between the export and the restore (FR-19).
 - Restoring into an account that already has data requires explicit confirmation, naming the target user, before proceeding (default: restore replaces existing data; the system does not silently merge or silently overwrite without confirmation).
 - This closes the loop the brief's durability dealbreaker requires: an export with no restore path is not a backup, so FR-13 and FR-14 ship together in Phase 1 MVP.
+- Restore recreates the owned Classes and the user's records, re-attaches Members whose accounts still exist (with fresh default records), and ignores the shared-Classes list. *(Sprint Change 2026-11-17.)*
 
 #### FR-15: Progress & stats view
 
@@ -358,14 +380,108 @@ An admin has an **Admin** item in the menu, in addition to every feature a norma
 - An admin cannot disable or delete themselves, and the system never ends up with zero admins.
 - Admin accounts exist only through the `ADMIN_EMAILS` seed; no screen or route changes a role.
 
+### 4.10 Planner
+
+**Description:** Module 2. Free-form tasks per local day, a Pomodoro timer that holds the user to the task's estimate, a time-grid calendar, and background music. Reached from one **Planner** item in the Main nav, with Tasks, Calendar and Pomodoro as segments of that page. Realizes UJ-5. *(Added by Sprint Change 2026-11-16; design decisions recorded in `_bmad-output/forge/planner-module-todo-pomodoro-calendar/forged-idea.md`.)*
+
+#### FR-22: Task categories and tasks
+
+A user can create, rename, recolour and delete Task Categories, and create, edit, complete, reopen and delete Tasks. A Task has a title, one Category, a local day, an optional start time, and an estimate in whole minutes.
+
+**Consequences (testable):**
+- Title, Category, day and estimate (≥ 5 minutes) are required; start time is optional.
+- Deleting a Category asks what to do with its Tasks: move them to another Category (default when one exists) or delete them with their sessions. Atomic.
+- The Tasks segment shows one local day at a time (today by default), its Tasks in order, each with Category colour, estimate and logged minutes, and a mono "actual / estimate".
+- Open Tasks on past days are **overdue**. The Tasks segment shows "N overdue" and one action, "Move all to today", which sets each overdue Task's day to today (start time kept if set). Nothing moves on its own, ever.
+- Marking a Task done writes one XP event (FR-12); reopening it does not take the XP back, and marking it done again never awards again.
+- A Task belongs to the local day of its start time even when its plan runs past midnight (`User.timezone`, FR-12).
+
+#### FR-23: Pomodoro plan and timer
+
+From a Task the user starts a Pomodoro. The app builds a **Pomodoro Plan** from the Task's remaining estimate (`max(estimate − logged focus minutes, 0)`) and the user's settings (focus length, short break, long break, long break every N; defaults 25 / 5 / 15 / 4): full focus sessions, then one shorter session for the remainder, breaks between. 90 min → 25 · 5 · 25 · 5 · 25 · 5 · 15.
+
+**Consequences (testable):**
+- The plan is a pure function of (remaining minutes, settings) and is unit-tested at 0, under one session, exact multiples, remainders, and the long-break boundary.
+- Starting a session records its start on the server; the display is derived from it. Reloading, switching device, or sleeping the laptop never resets or drifts the timer. A session already past its end when the client reconnects counts as completed for its planned length.
+- A user has at most one running session at a time; starting another is refused.
+- Each completed Focus Session is logged against the Task (planned and actual minutes) and writes one XP event (FR-12). Breaks are logged for the calendar but earn nothing.
+- The user can stop a session early; the minutes elapsed are logged, the plan does not continue on its own.
+- When the plan's last session ends the timer stops and asks **"Done?"**.
+
+#### FR-24: Overrun and completion
+
+**Consequences (testable):**
+- "Done" marks the Task done (FR-22). "Not yet" offers **"+1 session"**: one more focus session of the full focus length. It can be taken at most **twice per Task**, over the Task's whole life, not per day. After that only "Not yet" remains and the user must edit the estimate to continue.
+- The estimate is never changed by the app; logged minutes above it are the Task's **overrun**, shown on the Task and in the day's summary.
+- A Task restarted on a later day plans from its remaining minutes; if none remain, only the unused overrun sessions are offered.
+
+#### FR-25: Calendar
+
+The Calendar segment shows the week as a time grid, with a day view below 640px.
+
+**Consequences (testable):**
+- A Task with a start time is a block whose length is its **whole plan including breaks** (90 min estimate → 105 min block), so overlaps mean real conflicts. Tasks without a start time sit in an **unscheduled tray** for their day.
+- When a Pomodoro starts, the block moves to the actual start time; when a session is added, it lengthens. The planned time is not kept.
+- Overlapping blocks are drawn as a conflict and left alone: nothing is pushed, nothing is blocked.
+- A block can be dragged to another time or day, and a tray Task onto the grid; both set the Task's day and start time. Done Tasks stay on the grid, muted.
+
+#### FR-26: Background music
+
+Music plays during Focus Sessions from one catalogue, **Jamendo** (Creative Commons, free `client_id`), chosen per Category with an optional override per Task.
+
+**Consequences (testable):**
+- A Category can hold one track or none; a Task can override it. The last choice is remembered.
+- Music fades in at the start of a Focus Session and out at its end; it is silent during Breaks. Volume and pause are the user's.
+- The current track's title, artist and licence are shown while it plays (attribution is a condition of the licence).
+- If Jamendo is unreachable the timer runs without music and says so once; the plan and logging are unaffected.
+- No other source ships in v1; the catalogue is behind one adapter so another can be added later.
+
+### 4.11 Shared Classes
+
+**Description:** An Owner invites registered users into a Class so they can study it. Members get their own schedule on every Card; the Owner keeps sole control of the content. *(Added by Sprint Change 2026-11-17.)*
+
+#### FR-27: Invitations and the bell
+
+An Owner invites a user by the email of an existing account; the invitee accepts or declines from a bell in the app.
+
+**Consequences (testable):**
+- Inviting an email that is not a registered account, the Owner's own, an existing Member's, or one with a pending Invitation for that Class gives a field-level error; nothing is created.
+- The bell shows the number of pending Invitations and, when opened, each as "{Owner} invited you to {Class} ({N} cards)" with **Accept** and **Decline**. It holds Invitations only. No email is sent.
+- Accepting creates the membership and the Member's two Scheduling Records per Card in one transaction; the Class appears in the Member's Classes at once. Declining marks the Invitation declined; the Owner may invite again. An Invitation never expires.
+- The Owner's Share modal lists Members (with Remove), pending Invitations (with Cancel) and declined ones (muted, with Invite again).
+
+#### FR-28: Member study
+
+**Consequences (testable):**
+- A Shared Class appears in the Member's Classes grid with the label "{Owner}'s" and the Owner's colour; its Folders, Flashcards and Cards are browsable; the card viewer, Learn and Review work exactly as on an owned Class and read and write only the Member's own records.
+- No create, edit, move, rename, recolour, share, import or delete control is shown to a Member, and the routes refuse them (FR-5).
+- Flashcard counts ("12 new · 3 due") and Stats are per viewer.
+- A Member can **Leave** the Class; leaving deletes their membership and their records in it.
+
+#### FR-29: Content changes and membership lifecycle
+
+**Consequences (testable):**
+- When the Owner adds a Card by any path, two Scheduling Records are created for **every** Learner of the Class, so the Card appears as new for each Member.
+- Editing a Card changes what every Learner sees; no schedule changes.
+- Deleting a Card, Flashcard, Folder or Class removes every Learner's records with it; the confirmation names the number of Members ("3 members are studying this") when there are any.
+- Removing a Member, or the Member leaving, deletes only that Member's records. Deleting the Owner's account deletes the Class for everyone (FR-21).
+- Moving a Flashcard to a Folder in another Class re-creates records for that Class's Learners and drops the ones of Learners who are not in the target Class; the move confirmation says so when it applies.
+
 ## 5. Non-Goals (Explicit)
 
 - Quizlet-style Test mode or Match game.
-- Public set discovery, sharing, or collaboration. (Account administration by an admin role is in scope, FR-21.)
+- Public or discoverable sets, sharing links, or collaboration on content: a Member never edits (§4.11; account administration by an admin role is in scope, FR-21). *(Sprint Change 2026-11-17.)*
+- Transferring ownership of a Class, nested sharing (a Member inviting others), or sharing a single Folder or Flashcard.
+- Email or push notifications; the bell is in-app only and carries Invitations only.
+- Shared progress, leaderboards, or seeing another Learner's schedule or grades.
 - Native mobile app (responsive web only).
 - Audio/pronunciation playback or recording.
 - Custom card templates/fields beyond the fixed five (the brief's whole point is *not* requiring template setup).
-- Any functionality belonging to future Sanctum modules (Pomodoro timer, task manager) — these must not be scaffolded into this codebase "for later."
+- A Task that links to a Card, Flashcard, Folder or Class, or an estimate derived from due cards. *(Planner, Sprint Change 2026-11-16.)*
+- A Planner quest, penalty, or any Task rule that reads whether a day was "good".
+- Automatic rollover of unfinished Tasks, chain-pushing of calendar blocks, or blocking a start because of a conflict — the user moves things.
+- Recurring tasks, reminders or notifications, time tracking outside a Pomodoro, and sub-tasks.
+- Music from YouTube, Spotify, uploads or bundled files; a second catalogue adapter (additive later).
 - Manual editing of a Scheduling Record's `interval`/`ease_factor`/`next_review_date`, or a "reset this card's progress" action — v1 scheduling state only changes through FR-8's grading flow.
 - A daily new-card cap or settings for it (removed with FR-10; new Cards are introduced only through Learn, FR-17).
 - Hierarchy deeper than Class → Folder → Flashcard → Card (see Glossary and FR-5) — no sub-folders, no sub-flashcards, no sub-classes.
@@ -379,12 +495,16 @@ An admin has an **Admin** item in the menu, in addition to every feature a norma
 - **Accessibility of input.** Full Unicode/special-character input must work reliably across all Card fields (FR-3) — not just common Latin-1 accented characters.
 - **Responsive navigation.** Every destination in the Main nav, including Settings and Log out, is reachable at every viewport width; below 640px a dock replaces the top bar. *(Sprint Change 2026-11-14b.)*
 - **Live deployment.** The product ships to a live, publicly accessible deployment (not local-only), per the brief's portfolio success criteria — this is a release requirement for v1, independent of the Phase 2 architecture-documentation/case-study work in §8.2.
+- **Timer truth.** The server's session start time is the only clock; a client never reports elapsed time (FR-23). *(Sprint Change 2026-11-16.)*
+- **External dependency isolation.** Jamendo (FR-26) is the first outbound call in the product. Its failure degrades music only; no Planner or flashcard feature waits on it. *(Sprint Change 2026-11-16.)*
+- **Per-learner isolation.** A Scheduling Record belongs to exactly one user; no route reads or writes another user's record, whatever the Class. *(Sprint Change 2026-11-17.)*
 
 ## 7. Aesthetic and Tone
 
 - Calm, distraction-free visual language — a dark app frame with a top bar around a light content panel, pastel tint tiles and pill controls ("Pastel Frame"), light by default with a dark-mode toggle. Not gamified or social. *(Sprint Change 2026-11-14b.)*
 - Review Session enforces this most strictly: see FR-11 Focus mode.
 - No sound effects, confetti, or gamification flourishes implied by this direction unless explicitly added later. The cultivation progression (FR-12, FR-19) is the one deliberate exception, added by Sprint Change 2026-11-14; it stays visually quiet (text, a thin XP bar, no animation beyond the bar fill, no modals). The one illustration is the realm avatar, a cultivator that changes with the realm. *(Sprint Change 2026-11-14b.)*
+- The Planner keeps the same quiet: the timer is a mono figure, the "Done?" prompt is an inline card, and the only sound the product makes is the music the user chose (FR-26). *(Sprint Change 2026-11-16.)*
 
 ## 8. MVP Scope
 
@@ -402,6 +522,8 @@ An admin has an **Admin** item in the menu, in addition to every feature a norma
 - Admin role and user management (FR-21) *(Sprint Change 2026-11-14d)*
 - Basic progress/stats view (FR-15) — needed so the portfolio success metric SM-4 (retention curve) is observable in the shipped product, not just in raw data.
 - Live, publicly accessible deployment (minimal hosting, no architecture docs/case study required at this stage — see §8.2) — required for the brief's portfolio success criteria to be met at all.
+- **Phase 1a (Sprint Change 2026-11-17):** Shared Classes (FR-27 … FR-29), built before the Planner.
+- **Phase 1b (Sprint Change 2026-11-16):** Planner — tasks and categories (FR-22), Pomodoro (FR-23, FR-24), calendar (FR-25), music (FR-26), after FR-21 and Shared Classes ship.
 
 ### 8.2 Out of Scope for MVP
 

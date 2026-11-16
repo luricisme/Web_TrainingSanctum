@@ -47,6 +47,17 @@ These two sequences are the minimum unit-test fixtures implied by SM-3's checkli
 
 The penalty for each quest neither claimed nor skipped is 2 × its XP.
 
+### Planner XP table (FR-12 amendment, Sprint Change 2026-11-16)
+
+Passive XP from the Planner module (FR-22, FR-23): no quest, no penalty, no settlement. One tenth and one half of the Bộ's quest XP. Lives in the same constant table (`plannerXp(bộ, kind)` in `packages/domain/pomodoro.ts`, AD-17).
+
+| Bộ | Focus Session completed (`FOCUS_SESSION`) | Task marked done (`TASK_DONE`, once per Task) |
+|---|---|---|
+| Nhất Bộ Tung Hoành | 1 | 5 |
+| Nhị Bộ Phi Thăng | 2 | 10 |
+| Tam Bộ Vô Biên | 4 | 20 |
+| Tứ Bộ Đạp Thiên | 4 | 20 |
+
 ### Quest conditions (local day, studied directions)
 
 | Kind | Done when | Skipped when |

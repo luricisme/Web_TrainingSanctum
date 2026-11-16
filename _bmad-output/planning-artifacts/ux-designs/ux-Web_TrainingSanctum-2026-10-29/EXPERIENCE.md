@@ -1,7 +1,7 @@
 ---
 status: final
 created: 2026-10-29
-updated: 2026-11-14
+updated: 2026-11-17
 sources:
   - ../../prds/prd-Web_TrainingSanctum-2026-10-29/prd.md
   - ../../briefs/brief-Web_TrainingSanctum-2026-10-29/brief.md
@@ -9,11 +9,11 @@ sources:
 
 # Training Sanctum — Experience Spine
 
-> Single-user responsive web app for flashcard-based spaced repetition. Paired with `DESIGN.md`. Protagonist throughout Key Flows is Luric, the real builder and user (QA/Test Automation Engineer) — not a generic persona, per this product's single-operator scope (PRD §2.3).
+> Single-user responsive web app for flashcard-based spaced repetition and, since Sprint Change 2026-11-16, a Planner (tasks, pomodoro, calendar, music) as module 2. Paired with `DESIGN.md`. Protagonist throughout Key Flows is Luric, the real builder and user (QA/Test Automation Engineer) — not a generic persona, per this product's single-operator scope (PRD §2.3).
 
 ## Foundation
 
-Responsive web, no native mobile app (PRD §5 Non-Goals: "Native mobile app (responsive web only)"). Single-user, single-tenant — one real account, though the data model is user-scoped for future-proofing (PRD FR-1).
+Responsive web, no native mobile app (PRD §5 Non-Goals: "Native mobile app (responsive web only)"). Multi-account: each user owns their Classes and may be a Member of other users' Classes (Shared Classes, Sprint Change 2026-11-17); every schedule is per user (PRD FR-1, FR-28).
 
 Training Sanctum's visual identity ("Pastel Frame") and app structure come from three sources, reconciled in `DESIGN.md`:
 - **A language-learning app the owner supplied as reference (2026-11-14)** contributes the app shell: a dark frame with a top app bar around an inset light panel, pastel tint tiles, pill controls, a floating dock, and a quick-search palette.
@@ -29,17 +29,22 @@ Content hierarchy is fixed at four levels: **Class → Folder → Flashcard → 
 | Surface | Reached from | Purpose |
 |---|---|---|
 | Review | App bar / app open (default landing when cards are due) | Daily due-queue review of learned Cards across all Classes (focus mode); never introduces new Cards |
-| Classes | App bar | Grid of Class tiles, each in its own colour, with Folder, Flashcard and Card counts; create / rename / recolour / delete Class (FR-5) |
-| Class detail | Classes → a Class | That Class's Folders (Unsorted first); create / rename / delete Folder; "Review this class" |
-| Folder detail | Class detail → a Folder | That Folder's Flashcards as rows (Card counts); create Flashcard; per-row "..." menu with Rename, Move to…, Delete; "Review this folder" |
-| Flashcard detail | Folder detail → a Flashcard | Card viewer (flip, ← →) on top; **"Learn"** button below it; then that Flashcard's Cards list; "Add cards" (Manual / Import); Edit and Delete on each Card (no Move) |
+| Classes | App bar | Grid of Class tiles, each in its own colour, with Folder, Flashcard and Card counts; create / rename / recolour / delete Class (FR-5); an owned Class's "…" menu also has **Share**; Shared Classes appear with a "{Owner}'s" label and only a Leave action (FR-28, Sprint Change 2026-11-17) |
+| Class detail | Classes → a Class | That Class's Folders (Unsorted first); create / rename / delete Folder; "Review this class". For a Member: read-only — no create / rename / delete (FR-28) |
+| Folder detail | Class detail → a Folder | That Folder's Flashcards as rows (Card counts); create Flashcard; per-row "..." menu with Rename, Move to…, Delete; "Review this folder". For a Member: read-only |
+| Flashcard detail | Folder detail → a Flashcard | Card viewer (flip, ← →) on top; **"Learn"** button below it; then that Flashcard's Cards list; "Add cards" (Manual / Import); Edit and Delete on each Card (no Move). For a Member: viewer and Learn only, no Add cards / Edit / Delete |
+| Share modal | Classes, an owned Class's "…" → Share (Sprint Change 2026-11-17) | Members (Remove), pending Invitations (Cancel), declined (Invite again), email field (FR-27) |
+| Bell | App bar, right of the nav, before the Realm badge (≥ 640px); top-right of the content panel below 640px (decision B1) | Pending Invitations only, with Accept / Decline; badge = count (FR-27) |
 | Learn | Flashcard detail → "Learn" | Graded session for one Flashcard: its unlearned directions (in the studied directions, FR-18), then its due Cards; same session screen and focus mode as Review (FR-17). An entry graded Again comes back at the end of the session until graded Hard/Good/Easy (practice repeats are not saved; the first grade sets the schedule). When it ends, "Study all cards again" runs every Card as unsaved practice (FR-17). |
 | Add cards panel | Flashcard detail → "Add cards", or "+ Add card" on the Empty due-queue state | Manual mode (Quizlet-style row editor, FR-3) or Import mode (Paste / Upload file, FR-6, FR-7), always into one target Flashcard |
 | Cultivation | App bar (replaces Stats, Sprint Change 2026-11-14) | Realm and stage with XP bar, today's Daily Quests, missed-day and breakthrough notices, then card totals, SM-2 retention-curve visualization and XP history (FR-12, FR-15, FR-19) |
 | Settings | App bar | Theme toggle (Light default), Study directions (FR-18), logout |
 | Admin | App bar and dock, admin only (Sprint Change 2026-11-14d) | A table of every user (email, created, status, realm, level, XP). A user page, read-only, shows that user's data as the export payload (Class → Folder → Flashcard → Card tree, scheduling, cultivation) with Export, Restore, Disable/Enable, Reset password and Delete (FR-21) |
+| Planner · Tasks | App bar / dock **Planner** (default segment; Sprint Change 2026-11-16) | One local day's Tasks with Category, estimate and logged minutes; add / edit / done / delete; "N overdue → Move all to today"; Categories modal (FR-22) |
+| Planner · Calendar | Planner segment switcher | Week time grid of scheduled Tasks as plan-length blocks, unscheduled tray per day, conflicts drawn, drag to reschedule; single day below 640px (FR-25) |
+| Planner · Pomodoro | Planner segment switcher, or "Start pomodoro" on a Task | The chosen Task's plan, a server-truth countdown, breaks on demand, the "Done?" card, "+1 session" (max 2), the music player (FR-23, FR-24, FR-26) |
 
-Four-item flat nav (five for an admin, who also gets **Admin**) in the **app bar** (`{components.app-bar}` in `DESIGN.md`): Review, Classes, Cultivation, Settings — no secondary nav level. The brand sits at the left of the bar and the Realm badge (avatar, label, XP) at the right. Below 640px the bar is replaced by the **dock** (see the Mobile dock pattern). **There is no Import item or Import page**: import is the second mode of a Flashcard's "Add cards", so the target Flashcard is always known. Class detail, Folder detail and Flashcard detail are reached by drilling in from Classes and show a breadcrumb ("Classes / IELTS / Speaking" on a Folder, "Classes / IELTS / Speaking / Weather idioms" on a Flashcard); the Classes nav item stays active on all of them. During an active Review or Learn session, the app bar and dock are hidden entirely (focus mode, FR-11) and only the card, an Exit link and the frame remain; exiting (queue cleared, Exit, Esc, or the user navigates away) restores them. When the due queue is empty, Review shows the Empty due-queue state, with the app bar, instead of a review card.
+**Five-item** flat nav (six for an admin, who also gets **Admin**) in the **app bar** (`{components.app-bar}` in `DESIGN.md`): Review, Classes, **Planner**, Cultivation, Settings — no secondary nav level. Planner's three segments are a switcher inside the page, never nav items (decision N1, Sprint Change 2026-11-16), so the dock stays at five round buttons. A running Pomodoro does **not** enter focus mode: the app bar stays, because the user leaves and returns during breaks. The **bell** (Sprint Change 2026-11-17) sits at the right end of the app bar before the Realm badge, and on mobile at the top-right of the content panel on every page; it is not a nav item and is hidden in focus mode. The brand sits at the left of the bar and the Realm badge (avatar, label, XP) at the right. Below 640px the bar is replaced by the **dock** (see the Mobile dock pattern). **There is no Import item or Import page**: import is the second mode of a Flashcard's "Add cards", so the target Flashcard is always known. Class detail, Folder detail and Flashcard detail are reached by drilling in from Classes and show a breadcrumb ("Classes / IELTS / Speaking" on a Folder, "Classes / IELTS / Speaking / Weather idioms" on a Flashcard); the Classes nav item stays active on all of them. During an active Review or Learn session, the app bar and dock are hidden entirely (focus mode, FR-11) and only the card, an Exit link and the frame remain; exiting (queue cleared, Exit, Esc, or the user navigates away) restores them. When the due queue is empty, Review shows the Empty due-queue state, with the app bar, instead of a review card.
 
 → Composition reference: there are no mockups of Pastel Frame; current screenshots are produced by the e2e suite in `test-results/screenshots/`. The earlier Focus Indigo / sidebar design is kept in [`history/focus-indigo/`](./history/focus-indigo/README.md) for reference only. This spine and `DESIGN.md` win over it.
 
@@ -57,6 +62,14 @@ Microcopy. Brand voice and aesthetic posture live in `DESIGN.md`.
 | "Add cards to Weather idioms" | "Import" with no target named |
 | "This will replace all of {email}'s current data." (restore warning) | "⚠️ WARNING: Are you REALLY sure?!" |
 | Direct imperative, short labels: "Add card", "Import", "Grade" | Cheerleading, exclamation marks, mascot voice |
+| "Done?" · "Not yet" · "+1 session (1 of 2 left)" | "Great session! Keep the streak going! 🔥" |
+| "3 overdue — Move all to today" | "You have unfinished business…" |
+| "Music unavailable — the timer continues." | "Oops! Something went wrong with your vibes" |
+| "Edit the estimate to continue." | "You're out of extensions!" |
+| "Luric invited you to IELTS (312 cards)." | "🎉 You've been invited! Join now!" |
+| "3 members are studying this." | "Warning: other people will be affected!!" |
+| "Leave IELTS? Your progress in it will be deleted." | "Are you sure you want to abandon your friends?" |
+| "No account with that email." | "User not found 😕" |
 
 ## Component Patterns
 
@@ -89,6 +102,21 @@ Behavioral. Visual specs live in `DESIGN.md.components`.
 | Realm badge | App bar, right end; outside review only | The realm avatar inside a ring that fills with the stage's XP, then "{realm} · {stage}" (realm names in Vietnamese) over mono "40 / 100 XP". Links to Cultivation. Hidden during focus mode (FR-11) and below 640px. Renders nothing until the realm loads, and on error. |
 | Realm avatar | Realm badge | A cultivator illustration with one look per realm (19), more striking at higher realms (see `DESIGN.md`). Changes when the user enters a new realm, not on every stage. Decorative: never the only carrier of the realm, which is always also written out. No animation except the slow ray turn at Bộ 3 and up, which stops under reduced motion. |
 | Mobile dock | Below 640px, every screen except focus mode — *built (Story 6.3)* | A floating pill at the bottom with Review, Classes, Cultivation and Settings (and Admin for an admin); the current destination is raised. Replaces the app bar so Settings and Log out are reachable on a phone. The Realm badge is not shown on mobile; Cultivation is one tap away. Stays clear of the device's bottom safe area. |
+| Segment switcher | Planner, top (Sprint Change 2026-11-16) | `components.mode-switcher` with Tasks / Calendar / Pomodoro; the segment is in the URL; arrow keys move between options. |
+| Task row | Planner · Tasks | Category chip (tint + name), title, optional "19:00", mono "50 / 90 min" (turns `warning` when logged > estimate), checkbox to mark done (immediate, no confirm; reopen from the "…" menu), "…" menu: Edit, Start pomodoro, Delete. Done rows are muted and sorted last. |
+| Overdue strip | Planner · Tasks, above the list, only when N > 0 | `elevated` strip: "3 overdue" and one secondary button "Move all to today". No per-task prompt, no auto-move, ever. |
+| Category modal | Planner · Tasks → "Categories" | Rows of name + tint swatch radio (reuses the Class-colour picker) + Music field (Epic 11); delete asks "Move tasks to…" (default) / "Delete tasks too" (danger). |
+| Plan strip | Planner · Pomodoro | A row of pills, one per session: focus pills in the Task's tint with "25", break pills neutral with "5"; the current one ink-bordered, done ones ticked, overrun ones marked "+". Read-only; the countdown below is `{typography.display}` in mono. |
+| Done card | Planner · Pomodoro, after the last session | Inline card (not a modal): "Done?" with primary **Done** and secondary **Not yet**; after Not yet it shows "+1 session (n of 2 left)" or "Edit the estimate to continue." with an Edit link. Never a countdown to auto-answer. |
+| Calendar block | Planner · Calendar | Category tint fill, title and "90 min"; length = plan incl. breaks; muted when done; conflict = `error` 2px border + "Conflict" caption on both blocks, drawn side by side; a running session shows a progress fill in the accent. The whole block is the drag handle; keyboard: select, then arrows. |
+| Unscheduled tray | Planner · Calendar, above each day column | Compact chips of that day's timeless Tasks; drag onto the grid to schedule, drag a block back to clear its time. |
+| Music player | Planner · Pomodoro, below the countdown | Title · artist · licence link, pause, volume slider. Fades in / out with the focus session, silent on breaks. One quiet line when unavailable; no artwork, no playlist. |
+| Share modal | Owner's Class "…" → Share (Sprint Change 2026-11-17) | Email field + "Invite"; three lists: Members (name/email, **Remove** → confirm "Remove {email}? Their progress in {Class} will be deleted."), Pending (**Cancel**), Declined (muted, **Invite again**). Field-level errors: no account with that email, your own email, already a member, already invited. |
+| Bell + Invitations panel | App bar right / panel top-right | Round icon button with a mono count badge when > 0; opens a popover list of pending Invitations, each "{Owner} invited you to {Class} ({N} cards)" with **Accept** (primary; navigates to the Class) and **Decline** (quiet). Empty: "No invitations." Esc closes. Nothing else ever appears here. |
+| Shared Class tile | Classes grid | The Owner's tint; "{Owner}'s" in `caption` under the name; the "…" menu holds only **Leave**. |
+| Leave confirm | Shared Class "…" → Leave | Modal: "Leave {Class}? Your progress in it will be deleted." Cancel / danger **Leave**. |
+| Member-count line | Class-, Folder-, Flashcard- and Card-delete modals; move-flashcard modal when the target is another Class | One added line when the Class has Members: "{N} members are studying this." (delete) or "{N} members will lose it." (move). No extra step. |
+| Read-only content (Member) | Class / Folder / Flashcard detail | Write controls are not rendered (no disabled ghosts); the header shows "{Owner}'s class" beside the breadcrumb; viewer, Learn and Review work on the Member's own records. |
 
 ## State Patterns
 
@@ -108,12 +136,26 @@ Behavioral. Visual specs live in `DESIGN.md.components`.
 | Quests missed | Cultivation | At the first visit after settlement charged XP, one quiet notice per settled range: "Nov 12: 2 quests missed, −40 XP. Now Ngưng Khí · Tầng 9." Dismissible; no modal. No vacation pause in v1 (FR-19). |
 | Breakthrough | Cultivation | After a claim moves the user up a stage, a quiet inline notice "Breakthrough: Trúc Cơ · Sơ kỳ." and the XP bar refills. No modal, confetti, sound or animation beyond the bar fill. |
 | Demotion | Cultivation, Realm badge | The realm simply shows its new lower stage; the missed-quests notice names it. No warning colors beyond the notice. |
+| No Tasks today | Planner · Tasks | One line "Nothing planned for {day}." and the primary "+ Add task". *(Sprint Change 2026-11-16.)* |
+| Overdue | Planner · Tasks | The Overdue strip; nothing else changes. |
+| Session running elsewhere | Planner · Pomodoro | "A session is running on {Task} — {m:ss} left." with a link; Start on another Task is disabled. |
+| Over estimate | Task row, Pomodoro | The mono figure turns `warning`; nothing else changes. |
+| Overrun exhausted | Done card | "Edit the estimate to continue." + an Edit link; "+1 session" is gone. |
+| Music unavailable | Music player | One quiet line; the timer is unaffected. |
+| Calendar conflict | Planner · Calendar | Both blocks `error`-bordered with a "Conflict" caption, side by side; no modal, nothing moves. |
+| Invitation pending (invitee) | Bell | Badge count; a row in the panel. *(Sprint Change 2026-11-17.)* |
+| Invitation pending / declined (Owner) | Share modal | Listed under Pending / Declined. |
+| Shared Class, Member view | Classes, detail pages | "{Owner}'s" label; write controls absent. |
+| No invitations | Bell panel | "No invitations." |
 
 ## Interaction Primitives
 
 - **Keyboard (desktop-first, Review and Learn sessions):** Space flips the card either way; 1–4 or J/K/L/; submit a Grade (Again/Hard/Good/Easy respectively) once the answer has been shown. **Card viewer:** Space flips, ← / → move between Cards. Keys are ignored while focus is in a field or a panel/modal is open; Space never scrolls the page. No action in the review loop requires the mouse (FR-9). Reveal/grade/advance renders with no perceptible lag under rapid sequential key presses — sub-100ms perceived transition latency (PRD §6 NFR).
 - **Mobile (touch, Review session):** Tap-to-flip the card (touch equivalent of click), **plus** swipe gestures — left/right/up/down mapped to the 4 grades — as an added interaction layer, alongside ordinary tap targets on the grade buttons themselves. Swipe is additive, not a replacement for tapping the grade buttons. **Card viewer:** tap flips; a horizontal swipe moves ← / → (no grading).
 - **Banned in the review loop:** any affordance implying Hard produces a shorter next interval than Good/Easy at the same repetition count (misrepresents classical SM-2, FR-8); gamified feedback (confetti, badges, mascot animation) on grading.
+- **Pomodoro keys (Sprint Change 2026-11-16):** Space starts / stops the current session when nothing else has focus; Esc closes the Done card. The countdown is derived from the server's `startedAt` and re-synced on focus and visibility change — the client never keeps its own elapsed time.
+- **Calendar keys:** Tab to a block or tray chip, arrows move it 15 min / one day, Enter commits, Esc cancels.
+- **Bell (Sprint Change 2026-11-17):** Enter/Space opens, arrows move between invitations, Enter on a row accepts, Delete declines, Esc closes.
 
 ## Accessibility Floor
 
@@ -169,13 +211,33 @@ Failure: if every row in the file is malformed and he saves without fixing any, 
 
 Failure: he stops halfway — every direction he graded is learned and comes back in Review on its due date; the Cards with an ungraded direction stay in "Learn · 5 new" for next time.
 
+### Flow 5 — Planning and running a study evening (Luric, Sunday night, then Tuesday; Sprint Change 2026-11-16)
+
+1. Sunday evening Luric opens Planner → Calendar for the week ahead. He drops "Read chapter 3 · 90 min" on Tuesday 19:00 and "Mock test · 60 min" on Thursday 20:00. Each block is as long as its whole plan (105 and 70 minutes), so he can see they don't overlap anything.
+2. Tuesday he gets home late. At 19:40 he opens the Task and presses Start. The block slides to 19:40 — the calendar now says what happened, not what he hoped — and the category's lo-fi track fades in.
+3. The Plan strip shows 25 · 5 · 25 · 5 · 25 · 5 · 15. He works the first session; the countdown is the server's clock, so switching to his phone during the break shows the same figure. Each break waits for him to press Start.
+4. After the 15-minute session the Done card asks "Done?". He isn't. He presses "+1 session (1 of 2 left)" and works 25 more minutes.
+5. **Climax:** he marks the Task done. The row reads "140 / 90 min" in `warning`, the task-done XP lands on the Realm badge, and the calendar block is 155 minutes long — exactly what the evening took. Next time he'll estimate 120.
+
+Failure: he answers Not yet twice and the third time sees "Edit the estimate to continue." — the budget held; he edits the estimate to 150 and continues from the remainder.
+
+### Flow 6 — Sharing a Class (Luric invites a friend; Sprint Change 2026-11-17)
+
+1. Luric opens Classes, picks "IELTS" → "…" → **Share**, types his friend's email and presses Invite. The modal lists it under Pending.
+2. The friend opens the app and sees the bell with "1". The panel reads "Luric invited you to IELTS (312 cards)". She presses Accept; the Class appears in her Classes as "Luric's", in his colour.
+3. She opens Speaking → "Weather idioms" and presses "Learn · 12 new". Her grades write her own records; Luric's "3 due" on the same Flashcard doesn't change.
+4. Next week Luric adds 10 cards. Her Flashcard now says "Learn · 10 new"; his says the same, each from their own records.
+5. **Climax:** the same evening both clear Review on IELTS — two different queues, two different Clear Review quests, one set of cards. She never sees an Add cards button; he never sees her progress.
+
+Failure: she declines — Luric sees it under Declined and can Invite again; nothing was created on her side.
+
 ## Responsive & Platform
 
 | Breakpoint | Behavior |
 |---|---|
-| Desktop (`>1024px`) | Frame, app bar with labelled nav items, and a 3-column tile grid; review session centred, single-column, card capped at 640px. Keyboard-first interaction is primary. |
-| Tablet (`640–1024px`) | Same structure; the nav items collapse to icons (the current one keeps its label) and tiles use 2 columns. Review session unaffected. |
-| Mobile (`<640px`) | No frame rim; the panel fills the screen. The app bar is replaced by the dock (built, Story 6.3). Browsing screens use a single-column tile list. Review session: tap-to-flip plus swipe-to-grade, layered on top of the grade buttons' own tap targets — see Interaction Primitives for the full mapping. Grade-button row wraps when needed. |
+| Desktop (`>1024px`) | Frame, app bar with labelled nav items, and a 3-column tile grid; review session centred, single-column, card capped at 640px. Keyboard-first interaction is primary. Planner: 7-day calendar grid; the Pomodoro countdown and player centred. |
+| Tablet (`640–1024px`) | Same structure; the nav items collapse to icons (the current one keeps its label) and tiles use 2 columns. Review session unaffected. Planner: 7-day grid, narrower columns. |
+| Mobile (`<640px`) | No frame rim; the panel fills the screen. The app bar is replaced by the dock (built, Story 6.3). Browsing screens use a single-column tile list. Review session: tap-to-flip plus swipe-to-grade, layered on top of the grade buttons' own tap targets — see Interaction Primitives for the full mapping. Grade-button row wraps when needed. Planner: Calendar shows a single day with ← / →, the tray as a horizontal chip row; the countdown is full-width. |
 
 Training Sanctum is responsive web only — no native mobile app ships in v1 (PRD §5). The mobile review experience is the one surface where interaction diverges meaningfully from desktop (swipe added as a layer), because the review loop is the product's single highest-frequency interaction and must stay fast on whichever device Luric has in hand at the moment of study.
 

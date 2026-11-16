@@ -157,3 +157,19 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-7-6-delete-user.md`
   summary: The API tests that flag every other admin as disabled for a moment (7.4 last-admin disable, 7.6 last-admin delete) race with parallel tests that log in as the shared `admin-e2e@example.test` account.
   evidence: With `fullyParallel`, two full `test:api` runs after 7.6 each failed 2 to 3 admin tests at the login step (`admin-disable.spec.ts` `adminSession`), while one run and four runs of `admin-disable.spec.ts` alone passed. Serialise those tests or give them their own admin account.
+
+- source_spec: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-16.md`
+  summary: Verify Jamendo's API terms and listen to its `tags=lofi,chillout` catalogue before Story 11.1 starts; stop and re-decide the music source if either fails.
+  evidence: The forge session (2026-11-16) locked Jamendo on research alone — its API terms page is dated 2013 and nobody has listened to the catalogue. Epics 8–10 do not depend on it; only Epic 11 (FR-26) is blocked.
+
+- source_spec: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-16.md`
+  summary: Revisit the sleep/offline rule in Story 9.2 — a session found already expired on reconnect counts as completed at its planned length (AD-17).
+  evidence: Recorded in the forge as a proposed assumption, not a lock. A laptop asleep for three hours mid-session logs 25 focus minutes it may not have had; after the first real week, check whether logged minutes look inflated and, if so, cap at the client's last-seen time or mark such sessions as "unverified".
+
+- source_spec: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-17.md`
+  summary: Dry-run the Story 12.1 migration (`SchedulingRecord.userId` backfill + unique-index swap) on a Neon branch and record before/after `scheduling_records` counts in the spec; verify `prisma migrate` keeps the new partial unique on `class_invitations` (`WHERE status = 'PENDING'`).
+  evidence: The repo already carries one unverified partial-index concern (`folders_classId_isUnsorted_key`); 12.1 adds a second raw-SQL partial index and rewrites the unique constraint on the hottest table. A failed backfill must leave the old index in place.
+
+- source_spec: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-17.md`
+  summary: With invitations by email and open, unverified registration, whoever registers an address first receives its invitations; consider email verification before relying on invitations outside a trusted circle.
+  evidence: Same root cause as the existing 7.1 entry (admin seed trusts unverified emails). Not blocking for a personal app shared with known people.
