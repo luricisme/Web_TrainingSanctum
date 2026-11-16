@@ -106,7 +106,9 @@ for (const width of [1280, 390]) {
         "href",
         `/api/admin/users/${user.id}/export`
       );
-      expect(await page.locator("main button, main input, main textarea, main select").count()).toBe(0);
+      // Story 5.3: Restore (a button plus its hidden file input) is the only control besides Export.
+      expect(await page.locator("main button").allTextContents()).toEqual(["Restore"]);
+      expect(await page.locator("main input:not([type=file]), main textarea, main select").count()).toBe(0);
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth
       );
