@@ -7,9 +7,12 @@
  * spec-1-2 Boundaries & Constraints).
  */
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { prisma } from "@training-sanctum/db";
 import { adminEmails, env } from "./env";
+
+export const USER_DISABLED_MESSAGE = "This account is disabled. Contact an administrator.";
 
 const THIRTY_DAYS_IN_SECONDS = 60 * 60 * 24 * 30;
 
@@ -81,6 +84,25 @@ export const auth = betterAuth({
             ? { ...user, role: "admin" }
             : user,
         }),
+      },
+    },
+    session: {
+      create: {
+        // Story 7.4: the single point where a session opens. Runs after the
+        // password check, so a wrong password still answers 401 and the
+        // disabled state is never revealed without the password.
+        before: async (session) => {
+          const user = await prisma.user.findUnique({
+            where: { id: session.userId },
+            select: { disabled: true },
+          });
+          if (user?.disabled) {
+            throw new APIError("FORBIDDEN", {
+              code: "USER_DISABLED",
+              message: USER_DISABLED_MESSAGE,
+            });
+          }
+        },
       },
     },
   },

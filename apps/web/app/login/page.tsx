@@ -65,9 +65,11 @@ export default function LoginPage() {
         setFormError(
           error.status === 401
             ? "Invalid email or password."
-            : error.status === 429
-              ? "Too many attempts. Try again in a moment."
-              : "Something went wrong. Please try again."
+            : error.status === 403
+              ? "This account is disabled. Contact an administrator."
+              : error.status === 429
+                ? "Too many attempts. Try again in a moment."
+                : "Something went wrong. Please try again."
         );
         return;
       }

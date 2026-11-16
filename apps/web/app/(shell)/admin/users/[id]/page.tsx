@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buildBackupTree } from "@training-sanctum/domain";
 import { buildBackupExport } from "@/lib/backup-export";
+import { getUserDisabled } from "@/lib/admin-users";
 import { getServerSession, isAdminRole } from "@/lib/session";
 import { PageHeader } from "../../../page-header";
 import { BackupTreeView } from "./backup-tree-view";
 import { CultivationSummary } from "./cultivation-summary";
 import { ReadOnlyBanner } from "./read-only-banner";
 import { RestorePanel } from "./restore-panel";
+import { StatusPanel } from "./status-panel";
 
 const MAX_ID_LENGTH = 128;
 
@@ -22,6 +24,7 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
   if (!id || id.length > MAX_ID_LENGTH) notFound();
   const payload = await buildBackupExport(id);
   if (!payload) notFound();
+  const disabled = (await getUserDisabled(id)) ?? false;
 
   return (
     <>
@@ -38,12 +41,23 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
             Timezone {payload.user.timezone}. Study directions:{" "}
             {payload.user.studyDirections.toLowerCase().replaceAll("_", " ")}.
           </PageHeader>
+          {disabled ? (
+            <p className="mt-3 inline-flex rounded-full border border-border bg-card px-3 py-1 text-caption text-foreground">
+              Disabled. Login is blocked.
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-start gap-3">
           <a href={`/api/admin/users/${payload.user.id}/export`} download className={linkButton}>
             Export
           </a>
           <RestorePanel userId={payload.user.id} email={payload.user.email} />
+          <StatusPanel
+            userId={payload.user.id}
+            email={payload.user.email}
+            disabled={disabled}
+            isSelf={payload.user.id === session.user.id}
+          />
         </div>
       </div>
       <BackupTreeView tree={buildBackupTree(payload)} />

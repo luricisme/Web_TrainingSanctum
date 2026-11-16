@@ -107,7 +107,11 @@ for (const width of [1280, 390]) {
         `/api/admin/users/${user.id}/export`
       );
       // Story 5.3: Restore (a button plus its hidden file input) is the only control besides Export.
-      expect(await page.locator("main button").allTextContents()).toEqual(["Restore"]);
+      // Story 7.4 adds Disable (or Enable, for a disabled account).
+      const buttons = await page.locator("main button").allTextContents();
+      expect(buttons[0]).toBe("Restore");
+      expect(buttons.slice(1)).toHaveLength(1);
+      expect(buttons[1]).toMatch(/^(Disable|Enable)$/);
       expect(await page.locator("main input:not([type=file]), main textarea, main select").count()).toBe(0);
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth
