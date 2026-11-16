@@ -55,7 +55,7 @@ test("an admin disables a user through the modal, the user is refused, then enab
   try {
     await registerOrLogin(page, ADMIN_EMAIL);
     await page.goto(`/admin/users/${user.id}`);
-    await page.getByRole("button", { name: "Disable" }).click();
+    await page.getByRole("button", { name: "Disable", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toContainText(email);
     await expect(dialog).toContainText("signs");
@@ -67,10 +67,10 @@ test("an admin disables a user through the modal, the user is refused, then enab
     await expect(dialog).toHaveCount(0);
     expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).disabled).toBe(false);
 
-    await page.getByRole("button", { name: "Disable" }).click();
+    await page.getByRole("button", { name: "Disable", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Confirm" }).click();
     await expect(page.getByText("Disabled. Login is blocked.")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Enable" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Enable", exact: true })).toBeVisible();
     expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).disabled).toBe(true);
     await shoot(page, "admin-disable-done");
 
@@ -87,9 +87,9 @@ test("an admin disables a user through the modal, the user is refused, then enab
     await shoot(userPage, "login-disabled");
 
     // Enable acts at once and login works again.
-    await page.getByRole("button", { name: "Enable" }).click();
+    await page.getByRole("button", { name: "Enable", exact: true }).click();
     await expect(page.getByText("Disabled. Login is blocked.")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Disable" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Disable", exact: true })).toBeVisible();
     await userPage.getByRole("button", { name: "Log in" }).click();
     await userPage.waitForURL("/review");
     await other.close();
@@ -105,14 +105,14 @@ test("an admin's own page has no Disable button; the control fits at 390px", asy
   await registerOrLogin(page, ADMIN_EMAIL);
   const me = await prisma.user.findUniqueOrThrow({ where: { email: ADMIN_EMAIL } });
   await page.goto(`/admin/users/${me.id}`);
-  await expect(page.getByRole("button", { name: "Disable" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Disable", exact: true })).toHaveCount(0);
   await expect(page.getByText("You cannot disable it.")).toBeVisible();
 
   const user = await seedLoginUser(browser, `e2e-disable-mob-${randomUUID()}@example.test`);
   try {
     await page.setViewportSize({ width: 390, height: 800 });
     await page.goto(`/admin/users/${user.id}`);
-    await page.getByRole("button", { name: "Disable" }).click();
+    await page.getByRole("button", { name: "Disable", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
