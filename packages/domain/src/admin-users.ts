@@ -56,3 +56,21 @@ export interface AdminUserStatus {
   id: string;
   disabled: boolean;
 }
+
+/** Story 7.5: `PUT /api/admin/users/{id}/password` body (limits match Better Auth's). */
+export const ADMIN_PASSWORD_MIN = 8;
+export const ADMIN_PASSWORD_MAX = 128;
+
+export const adminPasswordResetSchema = z.object({
+  password: z
+    .string({ error: "Password must be text." })
+    .min(ADMIN_PASSWORD_MIN, `Password must be at least ${ADMIN_PASSWORD_MIN} characters.`)
+    .max(ADMIN_PASSWORD_MAX, `Password must be ${ADMIN_PASSWORD_MAX} characters or fewer.`),
+});
+
+export type AdminPasswordResetInput = z.infer<typeof adminPasswordResetSchema>;
+
+/** Story 7.5: the response names the user only; it never echoes the password or a hash. */
+export interface AdminPasswordReset {
+  id: string;
+}
