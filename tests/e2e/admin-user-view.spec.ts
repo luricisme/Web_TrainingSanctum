@@ -111,9 +111,11 @@ for (const width of [1280, 390]) {
       const buttons = await page.locator("main button").allTextContents();
       expect(buttons[0]).toBe("Restore");
       // Story 7.5 adds Reset password.
-      expect(buttons.slice(1)).toHaveLength(2);
+      // Story 7.6 adds Delete.
+      expect(buttons.slice(1)).toHaveLength(3);
       expect(buttons[1]).toMatch(/^(Disable|Enable)$/);
       expect(buttons[2]).toBe("Reset password");
+      expect(buttons[3]).toBe("Delete");
       expect(await page.locator("main input:not([type=file]), main textarea, main select").count()).toBe(0);
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth

@@ -74,3 +74,18 @@ export type AdminPasswordResetInput = z.infer<typeof adminPasswordResetSchema>;
 export interface AdminPasswordReset {
   id: string;
 }
+
+/** Story 7.6: `DELETE /api/admin/users/{id}` body. The email must equal the target's exactly. */
+export const adminUserDeleteSchema = z.object({
+  email: z
+    .string({ error: "Email must be text." })
+    .min(1, "Enter the user's email.")
+    .max(320, "Email must be 320 characters or fewer."),
+});
+
+export type AdminUserDeleteInput = z.infer<typeof adminUserDeleteSchema>;
+
+/** Story 7.6: names the removed user only; never echoes data. */
+export interface AdminUserDeleted {
+  id: string;
+}

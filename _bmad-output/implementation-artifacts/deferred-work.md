@@ -153,3 +153,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-7-1-roles-admin-seed-and-guard.md`
   summary: Require a verified email (or another proof of ownership) before an `ADMIN_EMAILS` account is promoted to admin.
   evidence: Sign-up has no email verification, so anyone who registers a listed address before its owner gets admin. Register the owner's account right after deploying, until this is closed.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-7-6-delete-user.md`
+  summary: The API tests that flag every other admin as disabled for a moment (7.4 last-admin disable, 7.6 last-admin delete) race with parallel tests that log in as the shared `admin-e2e@example.test` account.
+  evidence: With `fullyParallel`, two full `test:api` runs after 7.6 each failed 2 to 3 admin tests at the login step (`admin-disable.spec.ts` `adminSession`), while one run and four runs of `admin-disable.spec.ts` alone passed. Serialise those tests or give them their own admin account.
