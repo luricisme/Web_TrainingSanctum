@@ -28,4 +28,5 @@ export * from "./settings";
 export * from "./cultivation";
 export * from "./admin-users";
 export * from "./backup";
+export * from "./backup-restore";
 export * from "./backup-tree";

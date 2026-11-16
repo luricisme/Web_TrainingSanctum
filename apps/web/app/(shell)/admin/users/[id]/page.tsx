@@ -7,6 +7,7 @@ import { PageHeader } from "../../../page-header";
 import { BackupTreeView } from "./backup-tree-view";
 import { CultivationSummary } from "./cultivation-summary";
 import { ReadOnlyBanner } from "./read-only-banner";
+import { RestorePanel } from "./restore-panel";
 
 const MAX_ID_LENGTH = 128;
 
@@ -38,9 +39,12 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
             {payload.user.studyDirections.toLowerCase().replaceAll("_", " ")}.
           </PageHeader>
         </div>
-        <a href={`/api/admin/users/${payload.user.id}/export`} download className={linkButton}>
-          Export
-        </a>
+        <div className="flex flex-wrap items-start gap-3">
+          <a href={`/api/admin/users/${payload.user.id}/export`} download className={linkButton}>
+            Export
+          </a>
+          <RestorePanel userId={payload.user.id} email={payload.user.email} />
+        </div>
       </div>
       <BackupTreeView tree={buildBackupTree(payload)} />
       <CultivationSummary cultivation={payload.cultivation} />
