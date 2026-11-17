@@ -207,7 +207,7 @@ test.describe("DELETE /api/admin/users/[id]", () => {
       const category = await prisma.taskCategory.create({
         data: { userId: target.id, name: "Study", color: "SKY" },
       });
-      await prisma.task.create({
+      const task = await prisma.task.create({
         data: {
           userId: target.id,
           categoryId: category.id,
@@ -216,10 +216,14 @@ test.describe("DELETE /api/admin/users/[id]", () => {
           estimateMinutes: 25,
         },
       });
+      await prisma.pomodoroSession.create({
+        data: { userId: target.id, taskId: task.id, kind: "FOCUS", plannedMinutes: 25, startedAt: new Date() },
+      });
       const res = await del(admin, base, target.id, { email: target.email });
       expect(res.status()).toBe(200);
       expect(await prisma.taskCategory.count({ where: { userId: target.id } })).toBe(0);
       expect(await prisma.task.count({ where: { userId: target.id } })).toBe(0);
+      expect(await prisma.pomodoroSession.count({ where: { userId: target.id } })).toBe(0);
     } finally {
       await prisma.user.deleteMany({ where: { id: target.id } });
     }

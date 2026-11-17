@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { backupRestoreSchema, findBackupIssues } from "@training-sanctum/domain";
+import { backupRestoreSchema, buildBackupPlannerTree, findBackupIssues } from "@training-sanctum/domain";
 
 const ts = "2026-11-14T10:00:00.000Z";
 
@@ -141,5 +141,76 @@ describe("findBackupIssues", () => {
     const f = valid();
     f.classes.push({ ...f.classes[0] });
     expect(findBackupIssues(parse(f))[0]).toMatch(/share the id/);
+  });
+});
+
+const withPlanner = () => ({
+  ...valid(),
+  planner: {
+    settings: { focus: 30, shortBreak: 5, longBreak: 15, longBreakEvery: 4 },
+    categories: [{ id: "pc1", name: "Study", color: "SKY", createdAt: ts, updatedAt: ts }],
+    tasks: [
+      {
+        id: "pt1",
+        categoryId: "pc1",
+        title: "Read",
+        localDay: "2026-11-14",
+        startAt: null,
+        estimateMinutes: 60,
+        done: false,
+        xpAwardedAt: null,
+        loggedMinutes: 25,
+        createdAt: ts,
+        updatedAt: ts,
+      },
+    ],
+    sessions: [
+      { id: "ps1", taskId: "pt1", kind: "FOCUS", plannedMinutes: 25, actualMinutes: 25, startedAt: ts, endedAt: ts, overrun: false },
+      { id: "ps2", taskId: "pt1", kind: "BREAK", plannedMinutes: 5, actualMinutes: null, startedAt: ts, endedAt: null, overrun: false },
+    ],
+  },
+});
+
+describe("planner in backups", () => {
+  it("accepts a file without planner and a consistent one with one open session", () => {
+    expect(findBackupIssues(parse(valid()))).toEqual([]);
+    expect(findBackupIssues(parse(withPlanner()))).toEqual([]);
+  });
+
+  it("flags duplicate planner ids", () => {
+    const f = withPlanner();
+    f.planner.categories.push({ ...f.planner.categories[0] });
+    f.planner.tasks.push({ ...f.planner.tasks[0] });
+    f.planner.sessions.push({ ...f.planner.sessions[0] });
+    const issues = findBackupIssues(parse(f));
+    expect(issues).toContain('Two Task categories share the id "pc1".');
+    expect(issues.filter((i) => /share the id/.test(i))).toHaveLength(3);
+  });
+
+  it("flags two categories whose names differ only by case", () => {
+    const f = withPlanner();
+    f.planner.categories.push({ ...f.planner.categories[0], id: "pc2", name: "STUDY" });
+    expect(findBackupIssues(parse(f))).toEqual(['Two Task categories share the name "study".']);
+  });
+
+  it("flags a Task with a missing category and a session with a missing Task", () => {
+    const f = withPlanner();
+    f.planner.tasks[0].categoryId = "nope";
+    f.planner.sessions[0].taskId = "nope";
+    const issues = findBackupIssues(parse(f));
+    expect(issues[0]).toMatch(/category that is not in the file/);
+    expect(issues[1]).toMatch(/Task that is not in the file/);
+  });
+
+  it("flags two open sessions", () => {
+    const f = withPlanner();
+    f.planner.sessions[0].endedAt = null;
+    expect(findBackupIssues(parse(f))[0]).toMatch(/2 Pomodoro sessions are still open/);
+  });
+
+  it("groups category -> Task -> session", () => {
+    const tree = buildBackupPlannerTree(parse(withPlanner()).planner!);
+    expect(tree).toHaveLength(1);
+    expect(tree[0].tasks[0].sessions.map((s) => s.id)).toEqual(["ps1", "ps2"]);
   });
 });

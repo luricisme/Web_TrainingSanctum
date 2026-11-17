@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pomodoroSettingsSchema } from "./pomodoro";
 
 /** Story 5.2: one shared shape for the backup file (export now, restore in 5.3, view in 7.3). */
 export const BACKUP_VERSION = 1;
@@ -35,6 +36,47 @@ export const backupCardSchema = z.object({
   createdAt: isoTimestamp,
   updatedAt: isoTimestamp,
   schedulingRecords: z.array(backupSchedulingRecordSchema),
+});
+
+/** Spec 9-4: the Planner section (settings, Task categories, Tasks, Pomodoro sessions). */
+export const backupPlannerSchema = z.object({
+  settings: pomodoroSettingsSchema,
+  categories: z.array(
+    z.object({
+      id,
+      name: z.string(),
+      color: z.enum(["LAVENDER", "SKY", "MINT", "BUTTER", "ROSE"]),
+      createdAt: isoTimestamp,
+      updatedAt: isoTimestamp,
+    })
+  ),
+  tasks: z.array(
+    z.object({
+      id,
+      categoryId: id,
+      title: z.string(),
+      localDay,
+      startAt: isoTimestamp.nullable(),
+      estimateMinutes: z.number().int(),
+      done: z.boolean(),
+      xpAwardedAt: isoTimestamp.nullable(),
+      loggedMinutes: z.number().int(),
+      createdAt: isoTimestamp,
+      updatedAt: isoTimestamp,
+    })
+  ),
+  sessions: z.array(
+    z.object({
+      id,
+      taskId: id,
+      kind: z.enum(["FOCUS", "BREAK"]),
+      plannedMinutes: z.number().int(),
+      actualMinutes: z.number().int().nullable(),
+      startedAt: isoTimestamp,
+      endedAt: isoTimestamp.nullable(),
+      overrun: z.boolean(),
+    })
+  ),
 });
 
 export const backupExportSchema = z.object({
@@ -102,6 +144,7 @@ export const backupExportSchema = z.object({
       })
     ),
   }),
+  planner: backupPlannerSchema,
 });
 
 export type BackupExport = z.infer<typeof backupExportSchema>;

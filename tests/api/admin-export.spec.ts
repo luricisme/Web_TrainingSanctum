@@ -192,7 +192,12 @@ test.describe("GET /api/admin/users/[id]/export", () => {
       for (const otherId of other.ids) expect(text).not.toContain(otherId);
 
       // No auth or admin fields.
-      for (const key of ["password", "role", "disabled", "sessions", "accounts", "token"]) {
+      for (const key of ["password", "role", "disabled", "accounts", "token"]) {
+        expect(text).not.toContain(`"${key}"`);
+      }
+      // Login sessions are never exported; `planner.sessions` is the only "sessions" key.
+      expect(Object.keys(body)).not.toContain("sessions");
+      for (const key of ["sessionToken", "ipAddress", "userAgent"]) {
         expect(text).not.toContain(`"${key}"`);
       }
     } finally {
@@ -297,6 +302,65 @@ test.describe("GET /api/admin/users/[id]/export", () => {
       await prisma.user.deleteMany({
         where: { id: { in: [owner.user.id, zed.user.id, amy.user.id, hostB.user.id, hostA.user.id] } },
       });
+    }
+  });
+
+  test("exports planner settings, categories, tasks and sessions of that user only", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const request = await adminSession(playwright, base);
+    const user = await prisma.user.create({
+      data: {
+        name: "Planner",
+        email: `export-planner-${randomUUID()}@example.test`,
+        timezone: "UTC",
+        pomodoroSettings: { focus: 30, shortBreak: 10, longBreak: 20, longBreakEvery: 3 },
+      },
+    });
+    const other = await prisma.user.create({
+      data: { name: "Other", email: `export-planner-o-${randomUUID()}@example.test`, timezone: "UTC" },
+    });
+    try {
+      const category = await prisma.taskCategory.create({ data: { userId: user.id, name: "Study", color: "SKY" } });
+      const otherCategory = await prisma.taskCategory.create({ data: { userId: other.id, name: "Nope", color: "ROSE" } });
+      const task = await prisma.task.create({
+        data: {
+          userId: user.id,
+          categoryId: category.id,
+          title: "Read",
+          localDay: new Date("2026-11-17T00:00:00.000Z"),
+          estimateMinutes: 50,
+          loggedMinutes: 25,
+        },
+      });
+      await prisma.task.create({
+        data: {
+          userId: other.id,
+          categoryId: otherCategory.id,
+          title: "Not mine",
+          localDay: new Date("2026-11-17T00:00:00.000Z"),
+          estimateMinutes: 5,
+        },
+      });
+      await prisma.pomodoroSession.create({
+        data: {
+          userId: user.id,
+          taskId: task.id,
+          kind: "FOCUS",
+          plannedMinutes: 25,
+          actualMinutes: 25,
+          startedAt: new Date("2026-11-17T08:00:00.000Z"),
+          endedAt: new Date("2026-11-17T08:25:00.000Z"),
+        },
+      });
+      const res = await request.get(`${base}/api/admin/users/${user.id}/export`);
+      expect(res.status()).toBe(200);
+      const parsed = backupExportSchema.parse(await res.json());
+      expect(parsed.planner.settings).toEqual({ focus: 30, shortBreak: 10, longBreak: 20, longBreakEvery: 3 });
+      expect(parsed.planner.categories.map((c) => c.name)).toEqual(["Study"]);
+      expect(parsed.planner.tasks.map((t) => [t.title, t.localDay, t.loggedMinutes])).toEqual([["Read", "2026-11-17", 25]]);
+      expect(parsed.planner.sessions.map((x) => [x.kind, x.endedAt])).toEqual([["FOCUS", "2026-11-17T08:25:00.000Z"]]);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: { in: [user.id, other.id] } } });
     }
   });
 });

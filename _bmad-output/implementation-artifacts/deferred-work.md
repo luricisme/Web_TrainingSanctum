@@ -208,3 +208,10 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-9-3-pomodoro-screen.md`
   summary: Countdown subtracts the server's startedAt from the browser clock, so a skewed device shows a different remaining time (unverified, medium if real).
   evidence: remainingMs uses Date.now(); settling it needs a server-time offset (e.g. the response Date header) and a test with a skewed clock.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-9-4-planner-in-export-and-restore.md`
+  summary: No automated test renders the admin Planner section (`PlannerSummary`).
+  evidence: Only screenshots and the unit-tested `buildBackupPlannerTree` cover it; dropping the component or swapping settings would not fail a test.
+- source_spec: `_bmad-output/implementation-artifacts/spec-9-4-planner-in-export-and-restore.md`
+  summary: `tests/api/admin-delete.spec.ts` is flaky ("last enabled admin cannot be deleted", or an admin login failing in the Member/Owner test).
+  evidence: Fails intermittently across runs on this branch with different tests each time and does not touch Planner data; likely a race on shared admin accounts in the shared test DB. Not confirmed on the base commit.

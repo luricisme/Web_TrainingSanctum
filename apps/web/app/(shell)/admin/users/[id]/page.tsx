@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { buildBackupTree } from "@training-sanctum/domain";
+import { buildBackupPlannerTree, buildBackupTree } from "@training-sanctum/domain";
 import { buildBackupExport } from "@/lib/backup-export";
 import { getUserDisabled } from "@/lib/admin-users";
 import { getServerSession, isAdminRole } from "@/lib/session";
@@ -9,6 +9,7 @@ import { BackupTreeView } from "./backup-tree-view";
 import { CultivationSummary } from "./cultivation-summary";
 import { DeletePanel } from "./delete-panel";
 import { PasswordPanel } from "./password-panel";
+import { PlannerSummary } from "./planner-summary";
 import { ReadOnlyBanner } from "./read-only-banner";
 import { RestorePanel } from "./restore-panel";
 import { StatusPanel } from "./status-panel";
@@ -79,6 +80,7 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
       ) : null}
       <BackupTreeView tree={buildBackupTree(payload)} />
       <CultivationSummary cultivation={payload.cultivation} />
+      <PlannerSummary planner={payload.planner} tree={buildBackupPlannerTree(payload.planner)} />
     </>
   );
 }
