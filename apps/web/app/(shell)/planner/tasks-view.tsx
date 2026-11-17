@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { OverdueSummary, TaskSummary } from "@training-sanctum/domain";
 import { apiFetch } from "@/lib/api-client";
@@ -215,6 +216,7 @@ function TaskRow({
   onDelete: () => void;
 }) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   // Set in the change handler itself: the mutation state arrives a tick late and React would revert the box.
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
   const toggle = useMutation({
@@ -289,6 +291,10 @@ function TaskRow({
         name={task.title}
         items={[
           { label: "Edit", onSelect: onEdit },
+          {
+            label: "Start pomodoro",
+            onSelect: () => router.push(`/planner/pomodoro?task=${task.id}`),
+          },
           { label: "Delete", danger: true, onSelect: onDelete },
         ]}
       />

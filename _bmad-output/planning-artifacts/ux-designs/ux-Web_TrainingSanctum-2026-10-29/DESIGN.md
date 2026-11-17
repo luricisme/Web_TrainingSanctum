@@ -255,13 +255,13 @@ components:
     active-background: '{colors.frame-raised}'
     radius: '{rounded.full}'
   plan-strip:
-    status: 'not built (Epic 9, Sprint Change 2026-11-16)'
+    status: 'built (Story 9.3)'
     pill-radius: '{rounded.full}'
     focus-background: '{colors.tint-*}'
     break-background: '{colors.elevated}'
     current-border: '{colors.text}'
   countdown:
-    status: 'not built (Epic 9)'
+    status: 'built (Story 9.3)'
     font: '{typography.mono} at display size'
     foreground: '{colors.text}'
     over-foreground: '{colors.warning}'
@@ -412,8 +412,8 @@ Hover on a tile or card draws a darker border; nothing scales or lifts.
 - **Inputs.** `{rounded.md}`, `{colors.border}` outline, `{colors.bg}` fill so they read on white cards and modals; the border turns `{colors.accent}` with a 2px offset outline on focus. Errors turn the border `{colors.error}`.
 - **Empty due-queue state, Cultivation notices, quest row, Breadcrumb, Add cards panel, Manual rows, Import mode.** Behave as before (EXPERIENCE.md). Visual changes only: ready-to-learn rows are a white list with a lavender round chip, the notice strips are `{colors.elevated}` with `{rounded.md}`, and the panel and rows take the new radii and shadows.
 - **Dock** (`components.dock`) — *built (Story 6.3).* The mobile navigation: a pill-shaped bar floating at the bottom of the screen on the frame colour, holding Review, Classes, Cultivation and Settings as round icon buttons. The current destination is a raised pill (`{colors.frame-raised}`). Respects the device's bottom safe area. Hidden in focus mode. **Decision (2026-11-14):** a floating dock, as in the owner's reference screenshots, rather than a full-width bottom bar. **Sprint Change 2026-11-16:** five buttons (Review, Classes, Planner, Cultivation, Settings; Admin as a sixth), still one row.
-- **Plan strip** (`components.plan-strip`) — *not built (Epic 9).* One pill per session of the Pomodoro plan: focus pills in the Task's Category tint with the minutes in mono, break pills on `{colors.elevated}`; the current pill `{colors.text}`-bordered, done pills ticked, overrun pills marked "+". Read-only. Behaviour in EXPERIENCE.md.
-- **Countdown** (`components.countdown`) — *not built (Epic 9).* The remaining time of the current session in `{typography.mono}` at display size, `{colors.text}`; `{colors.warning}` once the Task is over its estimate. No ring, no animation — the XP ring in the app bar stays the only ring.
+- **Plan strip** (`components.plan-strip`) — *built (Story 9.3).* One pill per session of the Pomodoro plan: focus pills in the Task's Category tint with the minutes in mono, break pills on `{colors.elevated}`; the current pill `{colors.text}`-bordered, done pills ticked, overrun pills marked "+". Read-only. Behaviour in EXPERIENCE.md.
+- **Countdown** (`components.countdown`) — *built (Story 9.3).* The remaining time of the current session in `{typography.mono}` at display size, `{colors.text}`; `{colors.warning}` once the Task is over its estimate. No ring, no animation — the XP ring in the app bar stays the only ring.
 - **Calendar block and grid** (`components.calendar-block`, `components.calendar-grid`) — *not built (Epic 10).* Blocks take the Category tint with its border, `{rounded.sm}`, title and minutes in `{colors.text}`; done blocks at 0.5 opacity; a conflict draws a 2px `{colors.error}` border and a "Conflict" caption on both blocks, placed side by side; a running session fills the block from the top in `{colors.accent}`. The grid draws hour lines in `{colors.divider}`, hour labels in `{typography.caption}`, and a 2px now-line in the accent. The unscheduled tray above each column holds tint chips (`{rounded.full}`).
 - **Music player** (`components.music-player`) — *not built (Epic 11).* A `surface-card` strip under the countdown: title · artist · licence link in `{typography.body-small}`, a pause button and a volume slider. No artwork, no playlist.
 - **Bell** (`components.bell`) — *not built (Epic 12, Sprint Change 2026-11-17).* A round icon button at the app bar's right, before the Realm badge, in `{colors.on-frame}` with a mono count chip (`on-frame` on `frame-raised`) when > 0; below 640px it sits top-right of the content panel in `{colors.text}` with the chip in `{colors.on-accent}` on `{colors.accent}`. Opens an anchored popover on the card surface with `{elevation.medium}` and no scrim. Hidden in focus mode.

@@ -201,3 +201,10 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-9-2-server-truth-sessions.md`
   summary: Planner sweep credits XP only when a `/api/planner/**` route is called, so `cultivationXp` and the level can lag the ledger until then.
   evidence: Review (edge case) noted an expired session's XP stays unwritten while the user only visits non-planner pages. It matches AD-17 as written. Revisit in Story 9.3 if the lag shows in the shell level display.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-9-3-pomodoro-screen.md`
+  summary: Add a UI assertion that the Realm badge updates after Done, and an e2e that drives two overrun sessions to the "Edit the estimate to continue." cap.
+  evidence: The e2e only checks cultivationXp in the DB and stops at "+1 session (2 of 2 left)"; the cap path is covered at domain level only.
+- source_spec: `_bmad-output/implementation-artifacts/spec-9-3-pomodoro-screen.md`
+  summary: Countdown subtracts the server's startedAt from the browser clock, so a skewed device shows a different remaining time (unverified, medium if real).
+  evidence: remainingMs uses Date.now(); settling it needs a server-time offset (e.g. the response Date header) and a test with a skewed clock.
