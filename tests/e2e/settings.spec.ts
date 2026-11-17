@@ -169,3 +169,92 @@ for (const theme of ["dark", "light"] as const) {
     });
   }
 }
+
+// spec-9-1: the Pomodoro card on Settings.
+const pomodoroField = (page: Page, name: string) => page.getByLabel(name, { exact: true });
+const storedPomodoro = async (email: string) =>
+  (await prisma.user.findUniqueOrThrow({ where: { email } })).pomodoroSettings;
+
+test("Pomodoro: saves on blur and on Enter, and survives a reload", async ({ page }) => {
+  const email = await register(page);
+  await page.goto("/settings");
+  const focus = pomodoroField(page, "Focus (min)");
+  await expect(focus).toHaveValue("25");
+  await expect(pomodoroField(page, "Long break every (sessions)")).toHaveValue("4");
+
+  await focus.fill("30");
+  await focus.blur();
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await expect.poll(() => storedPomodoro(email)).toMatchObject({ focus: 30, shortBreak: 5 });
+
+  const every = pomodoroField(page, "Long break every (sessions)");
+  await every.fill("3");
+  await every.press("Enter");
+  await expect.poll(() => storedPomodoro(email)).toMatchObject({ focus: 30, longBreakEvery: 3 });
+
+  await page.reload();
+  await expect(pomodoroField(page, "Focus (min)")).toHaveValue("30");
+  await expect(pomodoroField(page, "Long break every (sessions)")).toHaveValue("3");
+});
+
+test("Pomodoro: an out-of-range value shows a field error and sends nothing", async ({ page }) => {
+  const email = await register(page);
+  await page.goto("/settings");
+  let patches = 0;
+  await page.route("**/api/planner/settings", (route) => {
+    if (route.request().method() === "PATCH") patches++;
+    return route.continue();
+  });
+  const focus = pomodoroField(page, "Focus (min)");
+  await focus.fill("4");
+  await focus.blur();
+  await expect(page.getByText("Focus must be between 5 and 90 minutes.")).toBeVisible();
+  await expect(focus).toHaveAttribute("aria-invalid", "true");
+  await focus.fill("25.5");
+  await focus.blur();
+  await expect(page.getByText("Focus must be a whole number.")).toBeVisible();
+  expect(patches).toBe(0);
+  expect(await storedPomodoro(email)).toMatchObject({ focus: 25 });
+});
+
+test("Pomodoro: a failed save returns the field to the server value with an alert", async ({ page }) => {
+  const email = await register(page);
+  await page.goto("/settings");
+  await page.route("**/api/planner/settings", (route) =>
+    route.request().method() === "PATCH" ? route.fulfill({ status: 500, body: "" }) : route.continue()
+  );
+  const focus = pomodoroField(page, "Focus (min)");
+  await focus.fill("40");
+  await focus.blur();
+  await expect(page.getByRole("alert").filter({ hasText: "Could not save your Pomodoro settings." })).toBeVisible();
+  await expect(focus).toHaveValue("25");
+  await expect(page.getByText("Saved", { exact: true })).toBeHidden();
+  expect(await storedPomodoro(email)).toMatchObject({ focus: 25 });
+});
+
+for (const theme of ["dark", "light"] as const) {
+  for (const width of [1280, 390] as const) {
+    test(`pomodoro settings screenshot (${theme}, ${width}px)`, async ({ page }) => {
+      mkdirSync("test-results/screenshots", { recursive: true });
+      await page.setViewportSize({ width, height: 900 });
+      await register(page);
+      await page.goto("/settings");
+      await page.getByRole("radio", { name: theme === "light" ? "Light" : "Dark" }).click();
+      await expect(pomodoroField(page, "Focus (min)")).toHaveValue("25");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      await page.screenshot({
+        path: `test-results/screenshots/pomodoro-settings-${theme}-${width}.png`,
+        animations: "disabled",
+        fullPage: true,
+      });
+      const focus = pomodoroField(page, "Focus (min)");
+      await focus.fill("4");
+      await focus.blur();
+      await page.screenshot({
+        path: `test-results/screenshots/pomodoro-settings-${theme}-${width}-error.png`,
+        animations: "disabled",
+        fullPage: true,
+      });
+    });
+  }
+}

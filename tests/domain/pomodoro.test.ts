@@ -2,13 +2,86 @@ import { describe, expect, it } from "vitest";
 import {
   compareTasks,
   createTaskSchema,
+  DEFAULT_POMODORO_SETTINGS,
   localDateTimeToInstant,
+  overrunSessionsUsed,
+  parsePomodoroSettings,
+  planLengthMinutes,
+  planPomodoro,
   plannerXp,
+  pomodoroSettingsSchema,
+  remainingMinutes,
+  updatePomodoroSettingsSchema,
   updateTaskSchema,
 } from "@training-sanctum/domain";
 
 type Bo = 1 | 2 | 3 | 4;
 const BOS: Bo[] = [1, 2, 3, 4];
+
+describe("planPomodoro (spec-9-1)", () => {
+  const D = DEFAULT_POMODORO_SETTINGS;
+  const shape = (remaining: number, settings = D) =>
+    planPomodoro(remaining, settings).map((i) => i.plannedMinutes);
+
+  it("plans 90 minutes as 25-5-25-5-25-5-15", () => {
+    expect(planPomodoro(90, D)).toEqual([
+      { kind: "FOCUS", plannedMinutes: 25 },
+      { kind: "BREAK", plannedMinutes: 5 },
+      { kind: "FOCUS", plannedMinutes: 25 },
+      { kind: "BREAK", plannedMinutes: 5 },
+      { kind: "FOCUS", plannedMinutes: 25 },
+      { kind: "BREAK", plannedMinutes: 5 },
+      { kind: "FOCUS", plannedMinutes: 15 },
+    ]);
+    expect(planLengthMinutes(planPomodoro(90, D))).toBe(105);
+  });
+  it("handles the edges", () => {
+    expect(shape(0)).toEqual([]);
+    expect(shape(-5)).toEqual([]);
+    expect(shape(10)).toEqual([10]);
+    expect(shape(25)).toEqual([25]);
+    expect(shape(50)).toEqual([25, 5, 25]);
+    expect(shape(100)).toEqual([25, 5, 25, 5, 25, 5, 25]);
+  });
+  it("puts the long break after every longBreakEvery-th focus session", () => {
+    // Rule: a long break after every 2nd focus (the spec matrix row lists a short break after the 4th; see report).
+    expect(shape(125, { ...D, longBreakEvery: 2 })).toEqual([25, 5, 25, 15, 25, 5, 25, 15, 25]);
+    expect(shape(125, { ...D, longBreakEvery: 4 })).toEqual([25, 5, 25, 5, 25, 5, 25, 15, 25]);
+  });
+});
+
+describe("remainingMinutes / overrunSessionsUsed (spec-9-1)", () => {
+  const f = (actualMinutes: number | null, overrun = false) => ({ kind: "FOCUS" as const, actualMinutes, overrun });
+  it("subtracts focus minutes only", () => {
+    const sessions = [f(25), f(20), { kind: "BREAK" as const, actualMinutes: 5, overrun: false }];
+    expect(remainingMinutes({ estimateMinutes: 90 }, sessions)).toBe(45);
+  });
+  it("never goes below zero", () => {
+    expect(remainingMinutes({ estimateMinutes: 30 }, [f(25), f(25)])).toBe(0);
+  });
+  it("counts overrun focus sessions", () => {
+    expect(overrunSessionsUsed([f(25, true), f(10), f(5, true)])).toBe(2);
+  });
+});
+
+describe("pomodoro settings schema (spec-9-1)", () => {
+  it("accepts the bounds", () => {
+    expect(pomodoroSettingsSchema.safeParse({ focus: 5, shortBreak: 90, longBreak: 5, longBreakEvery: 8 }).success).toBe(true);
+    expect(pomodoroSettingsSchema.safeParse({ focus: 25, shortBreak: 5, longBreak: 15, longBreakEvery: 2 }).success).toBe(true);
+  });
+  it("rejects out-of-range, fractional and unknown", () => {
+    for (const bad of [{ focus: 4 }, { focus: 91 }, { longBreakEvery: 1 }, { longBreakEvery: 9 }, { focus: 25.5 }, { nope: 1 }, {}]) {
+      expect(updatePomodoroSettingsSchema.safeParse(bad).success).toBe(false);
+    }
+    expect(updatePomodoroSettingsSchema.safeParse({ focus: 30 }).success).toBe(true);
+  });
+  it("reads invalid stored JSON as the defaults", () => {
+    expect(parsePomodoroSettings({})).toEqual(DEFAULT_POMODORO_SETTINGS);
+    expect(parsePomodoroSettings(null)).toEqual(DEFAULT_POMODORO_SETTINGS);
+    expect(parsePomodoroSettings({ focus: 1, shortBreak: 5, longBreak: 15, longBreakEvery: 4 })).toEqual(DEFAULT_POMODORO_SETTINGS);
+    expect(parsePomodoroSettings({ focus: 30, shortBreak: 5, longBreak: 15, longBreakEvery: 4 }).focus).toBe(30);
+  });
+});
 
 describe("plannerXp (spec-8-3)", () => {
   it("awards 5 / 10 / 20 / 20 for a done Task at Bo 1-4", () => {

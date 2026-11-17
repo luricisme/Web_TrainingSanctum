@@ -110,8 +110,8 @@ development_status:
   8-4-overdue-tasks-and-move-to-today: review
   epic-8-retrospective: optional
 
-  epic-9: backlog # Sprint Change 2026-11-16 (Planner — Pomodoro)
-  9-1-pomodoro-plan-engine-and-settings: backlog # migration: PomodoroSession, User.pomodoroSettings, partial unique (userId) WHERE endedAt IS NULL
+  epic-9: in-progress # Sprint Change 2026-11-16 (Planner — Pomodoro)
+  9-1-pomodoro-plan-engine-and-settings: in-progress # migration: PomodoroSession, User.pomodoroSettings, partial unique (userId) WHERE endedAt IS NULL
   9-2-server-truth-sessions: backlog # FOCUS_SESSION XP; 409 on second start / overrun cap
   9-3-pomodoro-screen: backlog
   9-4-planner-in-export-and-restore: backlog # extends backupExportSchema (touches 5-2, 5-3, 7-3)
