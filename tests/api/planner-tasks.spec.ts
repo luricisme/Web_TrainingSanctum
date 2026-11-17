@@ -140,6 +140,44 @@ test.describe("/api/planner/tasks", () => {
     expect(missing.status()).toBe(404);
   });
 
+  // spec-10-2: drag-to-reschedule saves localDay + startTime through this PATCH and nothing else.
+  test("a move keeps estimate, sessions and done; startTime null clears startAt", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    const t = await add(s, base, { estimateMinutes: 50, startTime: "19:00" });
+    const started = await s.request.post(`${base}/api/planner/sessions`, {
+      data: { taskId: t.id, kind: "FOCUS" },
+    });
+    expect(started.status()).toBe(201);
+    const sessionId = (await started.json()).data.id as string;
+    const before = await prisma.pomodoroSession.findUniqueOrThrow({ where: { id: sessionId } });
+
+    const moved = await s.request.patch(`${base}/api/planner/tasks/${t.id}`, {
+      data: { localDay: "2026-11-18", startTime: "20:00" },
+    });
+    expect(moved.status()).toBe(200);
+    expect((await moved.json()).data).toMatchObject({
+      title: "Read",
+      localDay: "2026-11-18",
+      startTime: "20:00",
+      estimateMinutes: 50,
+      done: false,
+    });
+    const after = await prisma.pomodoroSession.findUniqueOrThrow({ where: { id: sessionId } });
+    expect(after).toEqual(before);
+
+    const cleared = await s.request.patch(`${base}/api/planner/tasks/${t.id}`, {
+      data: { localDay: "2026-11-19", startTime: null },
+    });
+    expect((await cleared.json()).data).toMatchObject({ localDay: "2026-11-19", startTime: null, estimateMinutes: 50 });
+    const row = await prisma.task.findUniqueOrThrow({ where: { id: t.id } });
+    expect(row.startAt).toBeNull();
+    expect(await prisma.pomodoroSession.count({ where: { taskId: t.id } })).toBe(1);
+  });
+
   test("a 23:30 start with 90 minutes stays on its day in the user timezone", async ({
     playwright,
     baseURL,

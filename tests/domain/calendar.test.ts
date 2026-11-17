@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   layoutCalendarDay,
   layoutWeek,
+  snapStartMinutes,
+  stepSlot,
+  formatStartTime,
   weekDays,
   weekQuerySchema,
   type CalendarTask,
@@ -126,5 +129,55 @@ describe("layoutWeek", () => {
   it("leaves a no-start Task out of the grid", () => {
     const layout = layoutWeek(days, [task("a", null, 60)]);
     expect(Object.values(layout).flat()).toEqual([]);
+  });
+});
+
+describe("snapStartMinutes", () => {
+  it("rounds to 15 minutes", () => {
+    expect(snapStartMinutes(20 * 60 + 7)).toBe(20 * 60);
+    expect(snapStartMinutes(9 * 60 + 20)).toBe(9 * 60 + 15);
+    expect(snapStartMinutes(9 * 60 + 23)).toBe(9 * 60 + 30);
+  });
+  it("returns 0 for non-finite input", () => {
+    expect(snapStartMinutes(Number.NaN)).toBe(0);
+    expect(snapStartMinutes(Infinity)).toBe(0);
+  });
+  it("clamps to 00:00 and 23:45", () => {
+    expect(snapStartMinutes(23 * 60 + 58)).toBe(1425);
+    expect(snapStartMinutes(-30)).toBe(0);
+  });
+});
+
+describe("formatStartTime", () => {
+  it("pads HH:MM", () => {
+    expect(formatStartTime(0)).toBe("00:00");
+    expect(formatStartTime(9 * 60 + 15)).toBe("09:15");
+    expect(formatStartTime(1425)).toBe("23:45");
+  });
+});
+
+describe("stepSlot", () => {
+  const days = weekDays("2026-11-17");
+  it("moves 15 minutes and one day", () => {
+    let s = { day: "2026-11-17", startMin: 1140 as number | null };
+    s = stepSlot(s, "ArrowDown", days);
+    s = stepSlot(s, "ArrowDown", days);
+    s = stepSlot(s, "ArrowRight", days);
+    expect(s).toEqual({ day: "2026-11-18", startMin: 1170 });
+  });
+  it("snaps an off-grid start to the 15-minute grid before stepping", () => {
+    expect(stepSlot({ day: "2026-11-17", startMin: 1145 }, "ArrowDown", days).startMin).toBe(1155);
+    expect(stepSlot({ day: "2026-11-17", startMin: 1145 }, "ArrowUp", days).startMin).toBe(1125);
+  });
+  it("stays at the week edges and day bounds", () => {
+    expect(stepSlot({ day: "2026-11-22", startMin: 60 }, "ArrowRight", days).day).toBe("2026-11-22");
+    expect(stepSlot({ day: "2026-11-16", startMin: 60 }, "ArrowLeft", days).day).toBe("2026-11-16");
+    expect(stepSlot({ day: "2026-11-16", startMin: 0 }, "ArrowUp", days).startMin).toBeNull();
+    expect(stepSlot({ day: "2026-11-16", startMin: 1425 }, "ArrowDown", days).startMin).toBe(1425);
+  });
+  it("moves a tray slot between days and into the grid at 09:00", () => {
+    expect(stepSlot({ day: "2026-11-16", startMin: null }, "ArrowDown", days).startMin).toBe(540);
+    expect(stepSlot({ day: "2026-11-16", startMin: null }, "ArrowUp", days).startMin).toBeNull();
+    expect(stepSlot({ day: "2026-11-16", startMin: null }, "ArrowRight", days)).toEqual({ day: "2026-11-17", startMin: null });
   });
 });

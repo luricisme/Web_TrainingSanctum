@@ -158,3 +158,51 @@ export function layoutWeek(
   }
   return result;
 }
+
+/** The last 15-minute start that fits in a day (23:45). */
+export const MAX_START_MINUTES = MINUTES_PER_DAY - 15;
+
+/** Snap a raw minute of day to the nearest 15 and clamp to 00:00-23:45 (spec-10-2). */
+export function snapStartMinutes(rawMin: number): number {
+  if (!Number.isFinite(rawMin)) return 0;
+  const snapped = Math.round(rawMin / 15) * 15;
+  return Math.min(MAX_START_MINUTES, Math.max(0, snapped));
+}
+
+/** `HH:MM` for a minute of day. */
+export function formatStartTime(min: number): string {
+  const m = Math.min(MINUTES_PER_DAY - 1, Math.max(0, Math.round(min)));
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
+export interface CalendarSlot {
+  day: string;
+  /** Minutes after 00:00, or null for the day's tray (no start). */
+  startMin: number | null;
+}
+
+/** Where a tray Task lands on its first ArrowDown (09:00). */
+export const DEFAULT_START_MINUTES = 540;
+
+/**
+ * One keyboard step of a move: up/down is 15 minutes, left/right one shown day.
+ * Stays put at the first/last shown day and at 23:45. The tray sits above the
+ * grid: ArrowUp from 00:00 goes to the tray (no start), and ArrowDown from the
+ * tray gives a start of 09:00. Other keys return the slot unchanged.
+ */
+export function stepSlot(slot: CalendarSlot, key: string, days: readonly string[]): CalendarSlot {
+  if (key === "ArrowUp" || key === "ArrowDown") {
+    const down = key === "ArrowDown";
+    if (slot.startMin === null) return down ? { day: slot.day, startMin: DEFAULT_START_MINUTES } : slot;
+    if (!down && slot.startMin === 0) return { day: slot.day, startMin: null };
+    const next = snapStartMinutes(slot.startMin) + (down ? 15 : -15);
+    return { day: slot.day, startMin: Math.min(MAX_START_MINUTES, Math.max(0, next)) };
+  }
+  if (key === "ArrowLeft" || key === "ArrowRight") {
+    const i = days.indexOf(slot.day);
+    const j = i + (key === "ArrowRight" ? 1 : -1);
+    if (i === -1 || j < 0 || j >= days.length) return slot;
+    return { day: days[j]!, startMin: slot.startMin };
+  }
+  return slot;
+}
