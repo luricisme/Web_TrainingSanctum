@@ -5,7 +5,7 @@ import {
   createTaskCategorySchema,
   nextClassColor,
 } from "@training-sanctum/domain";
-import { requireSession } from "@/lib/session";
+import { requirePlannerSession } from "@/lib/planner-sessions";
 import { isUniqueViolation } from "@/lib/prisma-errors";
 import { fail, ok, readJson, validationFailure } from "@/lib/api-response";
 
@@ -15,7 +15,7 @@ const nameTaken = () =>
   });
 
 export async function GET(request: Request): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
   const userId = result.session.user.id;
 
@@ -39,7 +39,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
   const userId = result.session.user.id;
 

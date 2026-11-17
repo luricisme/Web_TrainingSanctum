@@ -1,6 +1,6 @@
 import { prisma } from "@training-sanctum/db";
 import { compareTasks, createTaskSchema, taskDayQuerySchema } from "@training-sanctum/domain";
-import { requireSession } from "@/lib/session";
+import { requirePlannerSession } from "@/lib/planner-sessions";
 import { logOperation } from "@/lib/log";
 import { fail, ok, readJson, validationFailure } from "@/lib/api-response";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/lib/planner-tasks";
 
 export async function GET(request: Request): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
   const userId = result.session.user.id;
 
@@ -30,7 +30,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
   const userId = result.session.user.id;
 

@@ -1,6 +1,6 @@
 import { prisma } from "@training-sanctum/db";
 import { applyXpDelta, levelForXp, plannerXp, toLocalDate } from "@training-sanctum/domain";
-import { requireSession } from "@/lib/session";
+import { requirePlannerSession } from "@/lib/planner-sessions";
 import { logOperation } from "@/lib/log";
 import { HttpError, ok } from "@/lib/api-response";
 import { taskInclude, toTaskSummary } from "@/lib/planner-tasks";
@@ -14,7 +14,7 @@ type Context = { params: Promise<{ id: string }> };
  * repeated or concurrent calls (and reopen then done) award once.
  */
 export async function POST(request: Request, { params }: Context): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
   const userId = result.session.user.id;
   const { id } = await params;

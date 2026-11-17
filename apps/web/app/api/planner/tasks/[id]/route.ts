@@ -1,6 +1,6 @@
 import { prisma, type Prisma } from "@training-sanctum/db";
 import { formatLocalTime, updateTaskSchema } from "@training-sanctum/domain";
-import { requireSession } from "@/lib/session";
+import { requirePlannerSession } from "@/lib/planner-sessions";
 import { logOperation } from "@/lib/log";
 import { fail, ok, readJson, validationFailure } from "@/lib/api-response";
 import {
@@ -16,7 +16,7 @@ type Context = { params: Promise<{ id: string }> };
 const notFound = () => fail(404, "NOT_FOUND", "Task not found.");
 
 export async function PATCH(request: Request, { params }: Context): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
   const userId = result.session.user.id;
   const { id } = await params;
@@ -60,7 +60,7 @@ export async function PATCH(request: Request, { params }: Context): Promise<Resp
 }
 
 export async function DELETE(request: Request, { params }: Context): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
   const userId = result.session.user.id;
   const { id } = await params;
