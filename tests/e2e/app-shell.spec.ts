@@ -16,7 +16,7 @@ async function register(page: Page): Promise<string> {
 test("sidebar links open each placeholder page", async ({ page }) => {
   await register(page);
   const nav = page.getByRole("navigation", { name: "Main" });
-  for (const name of ["Review", "Classes", "Cultivation", "Settings"]) {
+  for (const name of ["Review", "Classes", "Planner", "Cultivation", "Settings"]) {
     await nav.getByRole("link", { name }).click();
     await expect(page).toHaveURL(new RegExp(`/${name.toLowerCase()}$`));
     await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
@@ -196,7 +196,7 @@ test("the dock replaces the app bar below 640px", async ({ page }) => {
   const nav = page.getByRole("navigation", { name: "Main" });
   await expect(nav).toBeVisible();
   await expect(dock).toBeVisible();
-  await expect(nav.getByRole("link")).toHaveCount(4);
+  await expect(nav.getByRole("link")).toHaveCount(5);
   await expect(nav.getByRole("link", { name: "Review" })).toHaveAttribute("aria-current", "page");
 
   for (const name of ["Cultivation", "Settings"]) {
