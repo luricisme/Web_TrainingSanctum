@@ -4,13 +4,13 @@ import {
   parsePomodoroSettings,
   updatePomodoroSettingsSchema,
 } from "@training-sanctum/domain";
-import { requireSession } from "@/lib/session";
+import { requirePlannerSession } from "@/lib/planner-sessions";
 import { fail, ok, readJson, zodFields } from "@/lib/api-response";
 import { logOperation } from "@/lib/log";
 
 /** spec-9-1: the user's Pomodoro settings. A bad stored value reads as the defaults. */
 export async function GET(request: Request): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
 
   const user = await prisma.user.findUniqueOrThrow({
@@ -26,7 +26,7 @@ export async function GET(request: Request): Promise<Response> {
  * `users` row lock, so concurrent patches of different keys both land.
  */
 export async function PATCH(request: Request): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
 
   const body = await readJson(request);

@@ -112,3 +112,68 @@ export function overrunSessionsUsed(sessions: readonly PomodoroSessionFacts[]): 
 export function planLengthMinutes(plan: readonly PomodoroPlanItem[]): number {
   return plan.reduce((sum, item) => sum + item.plannedMinutes, 0);
 }
+
+export const startSessionSchema = z.object({
+  taskId: z.string({ error: "Task is required." }).min(1, "Task is required."),
+  kind: z.enum(["FOCUS", "BREAK"], { error: "Kind must be FOCUS or BREAK." }),
+  overrun: z.boolean({ error: "Overrun must be true or false." }).default(false),
+});
+
+export type StartSessionInput = z.infer<typeof startSessionSchema>;
+
+/** A Pomodoro session as the API returns it (spec-9-2). */
+export interface SessionSummary {
+  id: string;
+  taskId: string;
+  kind: "FOCUS" | "BREAK";
+  plannedMinutes: number;
+  actualMinutes: number | null;
+  startedAt: string;
+  endedAt: string | null;
+  overrun: boolean;
+}
+
+export const MAX_OVERRUN_SESSIONS = 2;
+
+export type PlanNextSessionResult =
+  | { plannedMinutes: number; refusal?: undefined }
+  | { refusal: string; plannedMinutes?: undefined };
+
+/**
+ * What a start request may run next: the planned length, or the reason it is
+ * refused. Facts come from the route; `sessions` are the Task's sessions.
+ */
+export function planNextSession(
+  input: {
+    task: { estimateMinutes: number; done: boolean };
+    kind: "FOCUS" | "BREAK";
+    overrun: boolean;
+    sessions: readonly PomodoroSessionFacts[];
+  },
+  settings: PomodoroSettings
+): PlanNextSessionResult {
+  const { task, kind, overrun, sessions } = input;
+  if (task.done) return { refusal: "This Task is done." };
+  const remaining = remainingMinutes(task, sessions);
+  const endedFocus = sessions.filter(
+    (s) => s.kind === "FOCUS" && s.actualMinutes !== null
+  ).length;
+
+  if (kind === "BREAK") {
+    if (overrun) return { refusal: "A break cannot be an overrun session." };
+    if (remaining <= 0) return { refusal: "No time left on this Task. Edit the estimate to continue." };
+    if (endedFocus < 1) return { refusal: "Finish a focus session before a break." };
+    const long = endedFocus % settings.longBreakEvery === 0;
+    return { plannedMinutes: long ? settings.longBreak : settings.shortBreak };
+  }
+
+  if (overrun) {
+    if (remaining > 0) return { refusal: "The Task still has time left; this is not an overrun." };
+    if (overrunSessionsUsed(sessions) >= MAX_OVERRUN_SESSIONS) {
+      return { refusal: "No overrun sessions left. Edit the estimate to continue." };
+    }
+    return { plannedMinutes: settings.focus };
+  }
+  if (remaining <= 0) return { refusal: "No time left on this Task. Edit the estimate to continue." };
+  return { plannedMinutes: Math.min(settings.focus, remaining) };
+}

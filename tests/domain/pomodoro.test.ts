@@ -7,7 +7,9 @@ import {
   overrunSessionsUsed,
   parsePomodoroSettings,
   planLengthMinutes,
+  planNextSession,
   planPomodoro,
+  startSessionSchema,
   plannerXp,
   pomodoroSettingsSchema,
   remainingMinutes,
@@ -145,5 +147,49 @@ describe("task day and order (spec-8-3)", () => {
       [false, 2],
       [true, 1],
     ]);
+  });
+});
+
+describe("planNextSession (spec-9-2)", () => {
+  const S = DEFAULT_POMODORO_SETTINGS;
+  const f = (kind: "FOCUS" | "BREAK", actualMinutes: number | null, overrun = false) => ({
+    kind,
+    actualMinutes,
+    overrun,
+  });
+  const task = (estimateMinutes: number, done = false) => ({ estimateMinutes, done });
+
+  it("plans a full focus, then the remainder", () => {
+    expect(planNextSession({ task: task(90), kind: "FOCUS", overrun: false, sessions: [] }, S)).toEqual({ plannedMinutes: 25 });
+    expect(
+      planNextSession({ task: task(35), kind: "FOCUS", overrun: false, sessions: [f("FOCUS", 25)] }, S)
+    ).toEqual({ plannedMinutes: 10 });
+  });
+  it("picks short or long breaks at the boundary", () => {
+    const focus = (n: number) => Array.from({ length: n }, () => f("FOCUS", 25));
+    expect(planNextSession({ task: task(200), kind: "BREAK", overrun: false, sessions: focus(3) }, S)).toEqual({ plannedMinutes: 5 });
+    expect(planNextSession({ task: task(200), kind: "BREAK", overrun: false, sessions: focus(4) }, S)).toEqual({ plannedMinutes: 15 });
+  });
+  it("refuses a break with no ended focus, no remaining time, or as overrun", () => {
+    expect(planNextSession({ task: task(50), kind: "BREAK", overrun: false, sessions: [] }, S).refusal).toBeTruthy();
+    expect(planNextSession({ task: task(25), kind: "BREAK", overrun: false, sessions: [f("FOCUS", 25)] }, S).refusal).toBeTruthy();
+    expect(planNextSession({ task: task(50), kind: "BREAK", overrun: true, sessions: [f("FOCUS", 25)] }, S).refusal).toBeTruthy();
+  });
+  it("allows at most two overrun sessions, only when nothing remains", () => {
+    const base = [f("FOCUS", 25)];
+    const run = (sessions: ReturnType<typeof f>[], overrun: boolean) =>
+      planNextSession({ task: task(25), kind: "FOCUS", overrun, sessions }, S);
+    expect(run(base, true)).toEqual({ plannedMinutes: 25 });
+    expect(run([...base, f("FOCUS", 25, true)], true)).toEqual({ plannedMinutes: 25 });
+    expect(run([...base, f("FOCUS", 25, true), f("FOCUS", 25, true)], true).refusal).toBeTruthy();
+    expect(run(base, false).refusal).toBeTruthy();
+    expect(planNextSession({ task: task(50), kind: "FOCUS", overrun: true, sessions: base }, S).refusal).toBeTruthy();
+  });
+  it("starts nothing on a done Task", () => {
+    expect(planNextSession({ task: task(50, true), kind: "FOCUS", overrun: false, sessions: [] }, S).refusal).toBeTruthy();
+  });
+  it("validates the start body and defaults overrun", () => {
+    expect(startSessionSchema.parse({ taskId: "a", kind: "FOCUS" }).overrun).toBe(false);
+    expect(startSessionSchema.safeParse({ taskId: "a", kind: "NAP" }).success).toBe(false);
   });
 });

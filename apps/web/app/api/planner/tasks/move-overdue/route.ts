@@ -1,6 +1,6 @@
 import { prisma } from "@training-sanctum/db";
 import { formatLocalTime, toLocalDate } from "@training-sanctum/domain";
-import { requireSession } from "@/lib/session";
+import { requirePlannerSession } from "@/lib/planner-sessions";
 import { logOperation } from "@/lib/log";
 import { ok } from "@/lib/api-response";
 import { overdueWhere, startAtFor, userTimezone } from "@/lib/planner-tasks";
@@ -11,7 +11,7 @@ import { overdueWhere, startAtFor, userTimezone } from "@/lib/planner-tasks";
  * estimate and logged minutes are untouched.
  */
 export async function PATCH(request: Request): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
   const userId = result.session.user.id;
 

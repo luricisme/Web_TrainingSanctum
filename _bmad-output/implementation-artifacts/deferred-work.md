@@ -197,3 +197,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-8-4-overdue-tasks-and-move-to-today.md`
   summary: Add e2e tests for the Move-overdue failure alert (500 keeps the strip) and for the strip count changing after marking done, deleting or rescheduling a past-day Task.
   evidence: Verification-gap review of 8.4; both behaviours are implemented but no test reads them.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-9-2-server-truth-sessions.md`
+  summary: Planner sweep credits XP only when a `/api/planner/**` route is called, so `cultivationXp` and the level can lag the ledger until then.
+  evidence: Review (edge case) noted an expired session's XP stays unwritten while the user only visits non-planner pages. It matches AD-17 as written. Revisit in Story 9.3 if the lag shows in the shell level display.

@@ -6,7 +6,7 @@ import {
   deleteTaskCategorySchema,
   updateTaskCategorySchema,
 } from "@training-sanctum/domain";
-import { requireSession } from "@/lib/session";
+import { requirePlannerSession } from "@/lib/planner-sessions";
 import { isUniqueViolation } from "@/lib/prisma-errors";
 import { logOperation } from "@/lib/log";
 import {
@@ -29,7 +29,7 @@ export async function PATCH(
   request: Request,
   { params }: Context
 ): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
   const userId = result.session.user.id;
   const { id } = await params;
@@ -85,7 +85,7 @@ export async function DELETE(
   request: Request,
   { params }: Context
 ): Promise<Response> {
-  const result = await requireSession(request);
+  const result = await requirePlannerSession(request);
   if (result.response) return result.response;
   const userId = result.session.user.id;
   const { id } = await params;
