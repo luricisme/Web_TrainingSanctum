@@ -27,6 +27,10 @@ test("an admin sees Admin in the app bar and reaches /admin", async ({ page }) =
   await registerOrLogin(page, ADMIN_EMAIL);
   const nav = page.getByRole("navigation", { name: "Main" }).first();
   await expect(nav.getByRole("link", { name: "Admin" })).toBeVisible();
+  // Planner is fifth, Admin sixth and last.
+  await expect(nav.getByRole("link")).toHaveCount(6);
+  await expect(nav.getByRole("link").nth(4)).toHaveAccessibleName("Planner");
+  await expect(nav.getByRole("link").last()).toHaveAccessibleName("Admin");
   await nav.getByRole("link", { name: "Admin" }).click();
   await page.waitForURL("/admin");
   await expect(page.getByRole("heading", { name: "Admin", level: 1 })).toBeVisible();
@@ -35,6 +39,7 @@ test("an admin sees Admin in the app bar and reaches /admin", async ({ page }) =
 test("an admin sees Admin in the dock on a phone and it opens /admin", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 });
   await registerOrLogin(page, ADMIN_EMAIL);
+  await expect(page.locator("[data-dock]").getByRole("link")).toHaveCount(6);
   await page.locator("[data-dock]").getByRole("link", { name: "Admin" }).click();
   await page.waitForURL("/admin");
 });

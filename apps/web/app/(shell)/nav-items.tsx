@@ -53,6 +53,16 @@ export const navItems: { href: string; label: string; icon: ReactNode }[] = [
       </svg>
     ),
   },
+  {
+    href: "/planner",
+    label: "Planner",
+    icon: (
+      <svg {...iconProps}>
+        <rect x="4" y="5" width="16" height="15" rx="2" />
+        <path d="M8 3v4M16 3v4M4 10h16M8 14h3" />
+      </svg>
+    ),
+  },
 ];
 
 /** Shown to admins only (Story 7.1), after the Main destinations. */

@@ -185,3 +185,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-12-4-member-experience.md`
   summary: Assert `isOwner` and `ownerName` in the `POST /api/classes` and `PATCH /api/classes/[id]` response bodies (and owner-only Move/Delete-class pickers) in tests.
   evidence: Verification-gap review found the new fields only asserted from `GET /api/classes`; low risk, cheap to add.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-8-1-planner-shell-and-navigation.md`
+  summary: The build workflow's UI facts point at `ux-designs/.../.working/design-dna-profile.json` and `mockups/key-screens.html`, which are not in the repo (only `history/focus-indigo/working/design-dna-profile.json` exists).
+  evidence: The implementer and the design-fidelity reviewer could not read them for story 8.1; they fell back to DESIGN.md and `globals.css`. Restore the files or repoint the persistent facts.

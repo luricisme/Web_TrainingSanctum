@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-07-2026 00:00
-last_updated: 11-17-2026 16:00
+last_updated: 11-17-2026 18:00
 project: Web_TrainingSanctum
 project_key: NOKEY
 tracking_system: file-system
@@ -103,8 +103,8 @@ development_status:
   # build order (Sprint Change 2026-11-17): ... 7-6 -> 12-1 ... 12-5 -> 8-1 ... 11-3 -> 5-5 (Epic 12 before Epic 8)
   epic-7-retrospective: optional
 
-  epic-8: backlog # Sprint Change 2026-11-16 (Planner — Tasks & Categories); forge: _bmad-output/forge/planner-module-todo-pomodoro-calendar/forged-idea.md
-  8-1-planner-shell-and-navigation: backlog
+  epic-8: in-progress # Sprint Change 2026-11-16 (Planner — Tasks & Categories); forge: _bmad-output/forge/planner-module-todo-pomodoro-calendar/forged-idea.md
+  8-1-planner-shell-and-navigation: review
   8-2-task-categories: backlog # migration: TaskCategory, Task, XpEvent.questKind nullable + FOCUS_SESSION/TASK_DONE; deploy to Neon with the code
   8-3-tasks-per-day: backlog # TASK_DONE XP
   8-4-overdue-tasks-and-move-to-today: backlog
