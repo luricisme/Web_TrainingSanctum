@@ -8,9 +8,12 @@ import {
   detectDuplicates,
   importCardLineSchema,
   validateCardRows,
+  classLearnerIds,
   validateImportCard,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
+import { requireClassOwner, type Tx } from "@/lib/class-access";
+import { logOperation } from "@/lib/log";
 import {
   HttpError,
   fail,
@@ -20,39 +23,55 @@ import {
 } from "@/lib/api-response";
 
 function logBatch(entry: Record<string, unknown>): void {
-  console.info(JSON.stringify({ operation: "cards.batch", ...entry }));
+  logOperation("cards.batch", entry);
 }
 
-type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
-
-/** Creates the Cards and each learner's two Scheduling Records (AD-9); the Owner is the only learner until Story 12.2. */
+/**
+ * Creates the Cards and every learner's two Scheduling Records (AD-9): the
+ * Owner plus the Members of the Flashcard's Class, read inside the
+ * transaction so a Member who joins concurrently is not missed.
+ */
 async function createCards(
   tx: Tx,
   inputs: readonly CardInput[],
   flashcardId: string,
-  userId: string
+  userId: string,
+  classId: string
 ): Promise<void> {
   if (inputs.length === 0) return;
+  const members = await tx.classMember.findMany({
+    where: { classId },
+    select: { userId: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const learnerIds = classLearnerIds({ userId }, members);
   const user = await tx.user.findUniqueOrThrow({
     where: { id: userId },
     select: { timezone: true },
   });
   const now = new Date();
   const built = inputs.map((input) =>
-    createCardWithSchedulingRecords(input, [userId], { now, timezone: user.timezone })
+    createCardWithSchedulingRecords(input, learnerIds, { now, timezone: user.timezone })
   );
   const cards = await tx.card.createManyAndReturn({
     data: built.map(({ card }) => ({ ...card, flashcardId, userId })),
     select: { id: true },
   });
-  await tx.schedulingRecord.createMany({
-    data: cards.flatMap((card, i) =>
-      built[i].schedulingRecords.map((record) => ({
-        ...record,
-        cardId: card.id,
-      }))
-    ),
-  });
+  const records = cards.flatMap((card, i) =>
+    built[i].schedulingRecords.map((record) => ({
+      ...record,
+      cardId: card.id,
+    }))
+  );
+  await tx.schedulingRecord.createMany({ data: records });
+  if (learnerIds.length > 1) {
+    logOperation("cards.fanout", {
+      classId,
+      learners: learnerIds.length,
+      cards: cards.length,
+      records: records.length,
+    });
+  }
 }
 
 /**
@@ -78,10 +97,14 @@ async function commitImport(
     else errors.push({ line: lineOf(row), reason: checked.problem.message });
   }
 
+  const guard = await requireClassOwner(userId, { kind: "flashcard", id: flashcardId });
+  if (guard.response) return guard.response;
+  const classId = guard.access.cls.id;
+
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const flashcard = await tx.flashcard.findFirst({
-        where: { id: flashcardId, userId },
+      const flashcard = await tx.flashcard.findUnique({
+        where: { id: flashcardId },
         select: { id: true },
       });
       if (!flashcard) {
@@ -106,7 +129,7 @@ async function commitImport(
         else toCreate.push(v.card);
       });
 
-      await createCards(tx, toCreate, flashcard.id, userId);
+      await createCards(tx, toCreate, flashcard.id, userId, classId);
       return { created: toCreate.length, duplicates, errors };
     });
 
@@ -201,16 +224,20 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  const guard = await requireClassOwner(userId, { kind: "flashcard", id: flashcardId });
+  if (guard.response) return guard.response;
+  const classId = guard.access.cls.id;
+
   try {
     const created = await prisma.$transaction(async (tx) => {
-      const flashcard = await tx.flashcard.findFirst({
-        where: { id: flashcardId, userId },
+      const flashcard = await tx.flashcard.findUnique({
+        where: { id: flashcardId },
         select: { id: true },
       });
       if (!flashcard) {
         throw new HttpError(404, "NOT_FOUND", "Flashcard not found.");
       }
-      await createCards(tx, validated.cards, flashcard.id, userId);
+      await createCards(tx, validated.cards, flashcard.id, userId, classId);
       return validated.cards.length;
     });
 

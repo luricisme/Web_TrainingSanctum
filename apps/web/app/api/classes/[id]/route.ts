@@ -7,6 +7,8 @@ import {
   uniqueFolderName,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
+import { reseedCardRecords, requireClassOwner } from "@/lib/class-access";
+import { logOperation } from "@/lib/log";
 import {
   HttpError,
   fail,
@@ -18,7 +20,7 @@ import {
 type Context = { params: Promise<{ id: string }> };
 
 function logDelete(entry: Record<string, unknown>): void {
-  console.info(JSON.stringify({ operation: "class.delete", ...entry }));
+  logOperation("class.delete", entry);
 }
 
 export async function PATCH(
@@ -37,8 +39,11 @@ export async function PATCH(
   const parsed = renameClassSchema.safeParse(body);
   if (!parsed.success) return validationFailure(parsed.error);
 
+  const guard = await requireClassOwner(userId, { kind: "class", id });
+  if (guard.response) return guard.response;
+
   const { count } = await prisma.class.updateMany({
-    where: { id, userId },
+    where: { id },
     data: {
       ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
       ...(parsed.data.color !== undefined ? { color: parsed.data.color } : {}),
@@ -46,13 +51,13 @@ export async function PATCH(
   });
   if (count === 0) return fail(404, "NOT_FOUND", "Class not found.");
   const updated = await prisma.class.findFirst({
-    where: { id, userId },
-    select: { name: true, color: true },
+    where: { id },
+    select: { name: true, color: true, _count: { select: { members: true } } },
   });
   if (!updated) return fail(404, "NOT_FOUND", "Class not found.");
 
   const folders = await prisma.folder.findMany({
-    where: { classId: id, userId },
+    where: { classId: id },
     select: {
       flashcards: { select: { _count: { select: { cards: true } } } },
     },
@@ -67,6 +72,7 @@ export async function PATCH(
       (sum, f) => sum + f.flashcards.reduce((n, fc) => n + fc._count.cards, 0),
       0
     ),
+    memberCount: updated._count.members,
   };
   return ok(data);
 }
@@ -87,6 +93,9 @@ export async function DELETE(
   const parsed = deleteClassSchema.safeParse(body);
   if (!parsed.success) return validationFailure(parsed.error);
   const input = parsed.data;
+
+  const guard = await requireClassOwner(userId, { kind: "class", id });
+  if (guard.response) return guard.response;
 
   try {
     // AD-11: every row changes or none do.
@@ -152,6 +161,7 @@ export async function DELETE(
       // clashing name gets " (2)", " (3)".
       let flashcardsMerged = 0;
       let cardsMerged = 0;
+      const mergedFlashcardIds: string[] = [];
       const sourceUnsorted = source.folders.find((f) => f.isUnsorted);
       if (sourceUnsorted) {
         const takenFlashcards = (
@@ -172,6 +182,7 @@ export async function DELETE(
             where: { id: flashcard.id },
             data: { folderId: targetUnsorted.id, name },
           });
+          mergedFlashcardIds.push(flashcard.id);
           flashcardsMerged += 1;
           cardsMerged += flashcard._count.cards;
         }
@@ -189,6 +200,31 @@ export async function DELETE(
         });
       }
       const movingIds = moving.map((f) => f.id);
+
+      // The moved Cards now belong to the target's learners (AD-11).
+      const targetMembers = await tx.classMember.findMany({
+        where: { classId: target.id },
+        select: { userId: true },
+        orderBy: { createdAt: "asc" },
+      });
+      const sourceMemberCount = await tx.classMember.count({ where: { classId: id } });
+      if (sourceMemberCount > 0 || targetMembers.length > 0) {
+        const owner = await tx.user.findUniqueOrThrow({
+          where: { id: userId },
+          select: { timezone: true },
+        });
+        await reseedCardRecords(
+          tx,
+          {
+            OR: [
+              { flashcardId: { in: mergedFlashcardIds } },
+              { flashcard: { folderId: { in: movingIds } } },
+            ],
+          },
+          [userId, ...targetMembers.map((m) => m.userId)],
+          { classId: target.id, timezone: owner.timezone, operation: "class.delete.move.reseed" }
+        );
+      }
       const flashcardsMoved = await tx.flashcard.count({
         where: { folderId: { in: movingIds } },
       });

@@ -73,7 +73,7 @@ function toEntry(row: EntryRow): ReviewQueueEntry {
   };
 }
 
-/** What a Flashcard's Learn session holds now. The caller has checked ownership. */
+/** What a Flashcard's Learn session holds now. The caller has checked class access. */
 export async function countLearn(
   userId: string,
   flashcardId: string,
@@ -81,15 +81,15 @@ export async function countLearn(
   now: Date
 ): Promise<LearnCounts> {
   const [newCards, due] = await Promise.all([
-    prisma.card.count({ where: { userId, flashcardId, ...unlearnedCardWhere(userId, dirs) } }),
+    prisma.card.count({ where: { flashcardId, ...unlearnedCardWhere(userId, dirs) } }),
     prisma.schedulingRecord.count({ where: flashcardDueWhere(userId, flashcardId, dirs, now) }),
   ]);
   return { newCards, due };
 }
 
 /**
- * The Learn session for an owned Flashcard, or null when the user has no
- * such Flashcard. Unlearned records in the studied directions come first,
+ * The Learn session for a Flashcard the caller can access (the route has
+ * checked), or null when it does not exist. Unlearned records in the studied directions come first,
  * oldest-created Card first, each Card's directions together (Postgres
  * orders the direction enum by declaration, so Term → Definition sorts
  * first); then learned, due records in the studied directions,
@@ -102,7 +102,7 @@ export async function buildLearnQueue(
   now: Date
 ): Promise<LearnQueueResponse | null> {
   const flashcard = await prisma.flashcard.findFirst({
-    where: { id: flashcardId, userId },
+    where: { id: flashcardId },
     select: { id: true, name: true },
   });
   if (!flashcard) return null;

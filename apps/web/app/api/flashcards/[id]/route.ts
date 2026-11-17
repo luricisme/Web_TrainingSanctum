@@ -7,6 +7,8 @@ import {
   renameFlashcardSchema,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
+import { requireClassAccess, requireClassOwner } from "@/lib/class-access";
+import { logOperation } from "@/lib/log";
 import {
   HttpError,
   fail,
@@ -21,7 +23,7 @@ import { getStudiedDirections } from "@/lib/study-directions";
 type Context = { params: Promise<{ id: string }> };
 
 function logDelete(entry: Record<string, unknown>): void {
-  console.info(JSON.stringify({ operation: "flashcard.delete", ...entry }));
+  logOperation("flashcard.delete", entry);
 }
 
 /**
@@ -38,8 +40,11 @@ export async function GET(
   const userId = result.session.user.id;
   const { id } = await params;
 
+  const guard = await requireClassAccess(userId, { kind: "flashcard", id });
+  if (guard.response) return guard.response;
+
   const flashcard = await prisma.flashcard.findFirst({
-    where: { id, userId },
+    where: { id },
     select: {
       id: true,
       name: true,
@@ -94,6 +99,9 @@ export async function PATCH(
   }
   const parsed = renameFlashcardSchema.safeParse(body);
   if (!parsed.success) return validationFailure(parsed.error);
+
+  const guard = await requireClassOwner(userId, { kind: "flashcard", id });
+  if (guard.response) return guard.response;
 
   try {
     const data = await prisma.$transaction(async (tx) => {
@@ -151,6 +159,9 @@ export async function DELETE(
   if (result.response) return result.response;
   const userId = result.session.user.id;
   const { id } = await params;
+
+  const guard = await requireClassOwner(userId, { kind: "flashcard", id });
+  if (guard.response) return guard.response;
 
   try {
     // AD-11: every row changes or none do.

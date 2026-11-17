@@ -2,7 +2,8 @@
  * The optional Class or Folder scope of a Review (spec-4-3), shared by
  * `GET /api/review/queue` and `GET /api/review/unlearned` (spec-4-5): one
  * parse of `?classId=` / `?folderId=` (a `flashcardId` is a 400, since
- * Flashcard review moved to Learn), and one ownership check (404).
+ * Flashcard review moved to Learn), and one class-access check (404): the
+ * Owner and Members of the Class may scope a review to it (spec-12-2).
  */
 import { prisma } from "@training-sanctum/db";
 import {
@@ -11,19 +12,24 @@ import {
   reviewQueueQuerySchema,
 } from "@training-sanctum/domain";
 import { fail, validationFailure } from "@/lib/api-response";
+import { loadClassAccess } from "@/lib/class-access";
 
-/** Resolves the requested scope to an owned, named entity, or null if absent. */
+/** Resolves the requested scope to an accessible, named entity, or null if absent. */
 async function resolveScope(
   userId: string,
   query: { classId?: string; folderId?: string }
 ): Promise<ReviewScope | null | undefined> {
-  const select = { id: true, name: true } as const;
   if (query.classId) {
-    const row = await prisma.class.findFirst({ where: { id: query.classId, userId }, select });
-    return row ? { kind: "class", ...row } : null;
+    const access = await loadClassAccess(userId, { kind: "class", id: query.classId });
+    return access ? { kind: "class", id: access.cls.id, name: access.cls.name } : null;
   }
   if (query.folderId) {
-    const row = await prisma.folder.findFirst({ where: { id: query.folderId, userId }, select });
+    const access = await loadClassAccess(userId, { kind: "folder", id: query.folderId });
+    if (!access) return null;
+    const row = await prisma.folder.findUnique({
+      where: { id: query.folderId },
+      select: { id: true, name: true },
+    });
     return row ? { kind: "folder", ...row } : null;
   }
   return undefined;

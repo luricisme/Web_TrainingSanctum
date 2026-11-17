@@ -8,6 +8,7 @@ import {
   previewImportTable,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
+import { requireClassOwner } from "@/lib/class-access";
 import { fail, ok, readJson, zodFields } from "@/lib/api-response";
 
 function firstIssueFailure(error: ZodError): Response {
@@ -28,13 +29,22 @@ function isFileBody(body: unknown): boolean {
   );
 }
 
-/** Terms already in the user's Flashcard, or null when it is not theirs. */
-async function existingTerms(flashcardId: string, userId: string): Promise<string[] | null> {
-  const flashcard = await prisma.flashcard.findFirst({
-    where: { id: flashcardId, userId },
+/**
+ * Terms already in the Flashcard, or the guard's error response when the
+ * caller does not own its Class (a preview is part of importing: Owner only).
+ */
+async function existingTerms(
+  flashcardId: string,
+  userId: string
+): Promise<{ terms: string[]; response?: undefined } | { response: Response }> {
+  const guard = await requireClassOwner(userId, { kind: "flashcard", id: flashcardId });
+  if (guard.response) return { response: guard.response };
+  const flashcard = await prisma.flashcard.findUnique({
+    where: { id: flashcardId },
     select: { cards: { select: { term: true } } },
   });
-  return flashcard ? flashcard.cards.map((card) => card.term) : null;
+  if (!flashcard) return { response: fail(404, "NOT_FOUND", "Flashcard not found.") };
+  return { terms: flashcard.cards.map((card) => card.term) };
 }
 
 /**
@@ -57,10 +67,10 @@ export async function POST(request: Request): Promise<Response> {
     const parsed = importFileParseSchema.safeParse(body);
     if (!parsed.success) return firstIssueFailure(parsed.error);
     const { flashcardId, grid, hasHeader, mapping } = parsed.data;
-    const terms = await existingTerms(flashcardId, userId);
-    if (!terms) return fail(404, "NOT_FOUND", "Flashcard not found.");
+    const existing = await existingTerms(flashcardId, userId);
+    if (existing.response) return existing.response;
     const data: ImportParseResponse = {
-      rows: previewImportTable(grid, { hasHeader, mapping }, terms),
+      rows: previewImportTable(grid, { hasHeader, mapping }, existing.terms),
     };
     return ok(data);
   }
@@ -69,11 +79,11 @@ export async function POST(request: Request): Promise<Response> {
   if (!parsed.success) return firstIssueFailure(parsed.error);
   const { flashcardId, termSeparator, cardSeparator, text } = parsed.data;
 
-  const terms = await existingTerms(flashcardId, userId);
-  if (!terms) return fail(404, "NOT_FOUND", "Flashcard not found.");
+  const existing = await existingTerms(flashcardId, userId);
+  if (existing.response) return existing.response;
 
   const data: ImportParseResponse = {
-    rows: previewImport(text, { termSeparator, cardSeparator }, terms),
+    rows: previewImport(text, { termSeparator, cardSeparator }, existing.terms),
   };
   return ok(data);
 }

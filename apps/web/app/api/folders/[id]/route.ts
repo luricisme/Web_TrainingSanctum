@@ -8,6 +8,8 @@ import {
   uniqueFlashcardName,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
+import { requireClassAccess, requireClassOwner } from "@/lib/class-access";
+import { logOperation } from "@/lib/log";
 import {
   HttpError,
   fail,
@@ -19,7 +21,7 @@ import {
 type Context = { params: Promise<{ id: string }> };
 
 function logDelete(entry: Record<string, unknown>): void {
-  console.info(JSON.stringify({ operation: "folder.delete", ...entry }));
+  logOperation("folder.delete", entry);
 }
 
 const UNSORTED_LOCKED = "The Unsorted folder cannot be changed.";
@@ -34,8 +36,11 @@ export async function GET(
   const userId = result.session.user.id;
   const { id } = await params;
 
+  const guard = await requireClassAccess(userId, { kind: "folder", id });
+  if (guard.response) return guard.response;
+
   const folder = await prisma.folder.findFirst({
-    where: { id, userId },
+    where: { id },
     select: {
       id: true,
       name: true,
@@ -77,6 +82,9 @@ export async function PATCH(
   }
   const parsed = renameFolderSchema.safeParse(body);
   if (!parsed.success) return validationFailure(parsed.error);
+
+  const guard = await requireClassOwner(userId, { kind: "folder", id });
+  if (guard.response) return guard.response;
 
   try {
     const data = await prisma.$transaction(async (tx) => {
@@ -143,6 +151,9 @@ export async function DELETE(
   const parsed = deleteFolderSchema.safeParse(body);
   if (!parsed.success) return validationFailure(parsed.error);
   const { mode } = parsed.data;
+
+  const guard = await requireClassOwner(userId, { kind: "folder", id });
+  if (guard.response) return guard.response;
 
   try {
     // AD-11: every row changes or none do.

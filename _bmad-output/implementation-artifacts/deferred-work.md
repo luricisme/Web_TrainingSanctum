@@ -177,3 +177,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-12-1-scheduling-records-per-learner.md`
   summary: Card-level counts and flashcard lookups (stats, countLearn, unlearned, cultivation-day) still scope Cards by `Card.userId` (the Owner), so a Member's counts would be zero.
   evidence: Correct for the Owner today, since `learnerIds` is always `[ownerId]`; Story 12.2 (access guards) and 12.4 (member experience) must scope Cards by Class access instead. Add two-learner tests for cultivation-day and cultivation-settle then.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-12-2-class-membership-and-access-guards.md`
+  summary: `reseedCardRecords` builds cards x learners x 2 rows for one `createMany` inside a single transaction, which may exceed the Postgres bind limit or the interactive-transaction timeout for a very large Flashcard or Class (unverified, would be medium).
+  evidence: Review found no chunking; settle by moving a 3,000-card Flashcard (or deleting such a Class in move mode) and checking whether Prisma chunks `createMany`.

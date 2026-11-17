@@ -1,6 +1,7 @@
 import { prisma } from "@training-sanctum/db";
 import { type CardSummary, cardInputSchema } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
+import { requireClassOwner } from "@/lib/class-access";
 import { fail, ok, readJson, validationFailure } from "@/lib/api-response";
 
 type Context = { params: Promise<{ id: string }> };
@@ -22,9 +23,12 @@ export async function PATCH(
   const parsed = cardInputSchema.safeParse(body);
   if (!parsed.success) return validationFailure(parsed.error);
 
+  const guard = await requireClassOwner(userId, { kind: "card", id });
+  if (guard.response) return guard.response;
+
   const { term, definition, example, context, partOfSpeech } = parsed.data;
   const { count } = await prisma.card.updateMany({
-    where: { id, userId },
+    where: { id },
     data: { term, definition, example, context, partOfSpeech },
   });
   if (count === 0) return fail(404, "NOT_FOUND", "Card not found.");
@@ -43,7 +47,10 @@ export async function DELETE(
   const userId = result.session.user.id;
   const { id } = await params;
 
-  const { count } = await prisma.card.deleteMany({ where: { id, userId } });
+  const guard = await requireClassOwner(userId, { kind: "card", id });
+  if (guard.response) return guard.response;
+
+  const { count } = await prisma.card.deleteMany({ where: { id } });
   if (count === 0) return fail(404, "NOT_FOUND", "Card not found.");
   return ok({ id });
 }

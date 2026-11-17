@@ -1,11 +1,13 @@
 import { prisma } from "@training-sanctum/db";
 import {
   type ClassFoldersResponse,
+  type ClassColor,
   type FolderSummary,
   createFolderSchema,
   isFolderNameTaken,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
+import { requireClassAccess, requireClassOwner } from "@/lib/class-access";
 import { fail, ok, readJson, validationFailure } from "@/lib/api-response";
 
 type Context = { params: Promise<{ id: string }> };
@@ -19,14 +21,13 @@ export async function GET(
   const userId = result.session.user.id;
   const { id } = await params;
 
-  const cls = await prisma.class.findFirst({
-    where: { id, userId },
-    select: { id: true, name: true, color: true },
-  });
-  if (!cls) return fail(404, "NOT_FOUND", "Class not found.");
+  const guard = await requireClassAccess(userId, { kind: "class", id });
+  if (guard.response) return guard.response;
+  const { id: classId, name, color } = guard.access.cls;
+  const cls = { id: classId, name, color: color as ClassColor };
 
   const rows = await prisma.folder.findMany({
-    where: { classId: id, userId },
+    where: { classId: id },
     select: {
       id: true,
       name: true,
@@ -70,14 +71,11 @@ export async function POST(
   const parsed = createFolderSchema.safeParse(body);
   if (!parsed.success) return validationFailure(parsed.error);
 
-  const cls = await prisma.class.findFirst({
-    where: { id, userId },
-    select: { id: true },
-  });
-  if (!cls) return fail(404, "NOT_FOUND", "Class not found.");
+  const guard = await requireClassOwner(userId, { kind: "class", id });
+  if (guard.response) return guard.response;
 
   const existing = await prisma.folder.findMany({
-    where: { classId: id, userId },
+    where: { classId: id },
     select: { name: true },
   });
   if (
