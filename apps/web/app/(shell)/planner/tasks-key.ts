@@ -1,6 +1,9 @@
 /** React Query key prefix for Planner Tasks; the day (`YYYY-MM-DD`) follows. */
 export const PLANNER_TASKS_KEY = ["planner-tasks"] as const;
 
+/** React Query key for the Overdue count. */
+export const PLANNER_OVERDUE_KEY = ["planner-overdue"] as const;
+
 export const plannerTasksKey = (day: string) => [...PLANNER_TASKS_KEY, day] as const;
 
 /** `YYYY-MM-DD` of the browser's local calendar date. */

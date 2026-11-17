@@ -86,6 +86,11 @@ export interface TaskSummary {
   done: boolean;
 }
 
+/** Shape returned by `GET /api/planner/tasks/overdue`. */
+export interface OverdueSummary {
+  count: number;
+}
+
 /** `HH:MM` that `instant` shows in `timeZone`. */
 export function formatLocalTime(instant: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat("en-GB", {

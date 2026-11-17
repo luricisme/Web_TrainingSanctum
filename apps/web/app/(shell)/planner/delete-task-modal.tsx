@@ -7,7 +7,7 @@ import { ApiError, apiFetch } from "@/lib/api-client";
 import { buttonDanger, buttonSecondary, fieldErrorClass } from "@/app/components/ui";
 import { Modal } from "../classes/modal";
 import { PLANNER_CATEGORIES_KEY } from "./categories-key";
-import { PLANNER_TASKS_KEY } from "./tasks-key";
+import { PLANNER_OVERDUE_KEY, PLANNER_TASKS_KEY } from "./tasks-key";
 
 /** Delete confirmation that names the Task (EXPERIENCE.md). */
 export function DeleteTaskModal({ task, onClose }: { task: TaskSummary; onClose: () => void }) {
@@ -18,6 +18,7 @@ export function DeleteTaskModal({ task, onClose }: { task: TaskSummary; onClose:
     mutationFn: () => apiFetch<unknown>(`/api/planner/tasks/${task.id}`, { method: "DELETE" }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: PLANNER_TASKS_KEY });
+      void queryClient.invalidateQueries({ queryKey: PLANNER_OVERDUE_KEY });
       void queryClient.invalidateQueries({ queryKey: PLANNER_CATEGORIES_KEY });
       onClose();
     },

@@ -20,7 +20,7 @@ import {
 } from "@/app/components/ui";
 import { Modal } from "../classes/modal";
 import { PLANNER_CATEGORIES_KEY } from "./categories-key";
-import { PLANNER_TASKS_KEY } from "./tasks-key";
+import { PLANNER_OVERDUE_KEY, PLANNER_TASKS_KEY } from "./tasks-key";
 
 type Fields = Partial<Record<"title" | "categoryId" | "localDay" | "startTime" | "estimateMinutes", string>>;
 
@@ -171,6 +171,7 @@ function TaskForm({
     onSuccess: async (task) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: PLANNER_TASKS_KEY }),
+        queryClient.invalidateQueries({ queryKey: PLANNER_OVERDUE_KEY }),
         queryClient.invalidateQueries({ queryKey: PLANNER_CATEGORIES_KEY }),
       ]);
       onSaved(task.localDay);
