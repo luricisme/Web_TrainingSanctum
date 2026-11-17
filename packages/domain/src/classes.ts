@@ -87,4 +87,6 @@ export interface ClassSummary {
   folderCount: number;
   flashcardCount: number;
   cardCount: number;
+  /** Story 12.2: Members of the Class, excluding the Owner. */
+  memberCount: number;
 }

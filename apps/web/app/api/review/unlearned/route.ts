@@ -26,27 +26,30 @@ export async function GET(request: Request): Promise<Response> {
   const read = await readReviewScope(request, userId);
   if (read.response) return read.response;
   const flashcard = scopeFlashcardWhere(read.scope);
+  // Scoped: the scope check already granted access to the Class, so Cards are
+  // not filtered by their (Owner's) userId. Unscoped stays the caller's own.
   const inScope = flashcard ? { flashcard } : {};
+  const ownCards = flashcard ? {} : { userId };
 
   const { dirs } = await getStudiedDirections(userId);
   const [groups, newestCard] = await Promise.all([
     prisma.card.groupBy({
       by: ["flashcardId"],
-      where: { userId, ...unlearnedCardWhere(userId, dirs), ...inScope },
+      where: { ...ownCards, ...unlearnedCardWhere(userId, dirs), ...inScope },
       _count: { _all: true },
       _max: { createdAt: true },
       orderBy: [{ _max: { createdAt: "desc" } }, { flashcardId: "asc" }],
       take: LIMIT,
     }),
     prisma.card.findFirst({
-      where: { userId, ...inScope },
+      where: { ...ownCards, ...inScope },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       select: { flashcard: { select: { id: true, name: true } } },
     }),
   ]);
 
   const names = await prisma.flashcard.findMany({
-    where: { id: { in: groups.map((g) => g.flashcardId) }, userId },
+    where: { id: { in: groups.map((g) => g.flashcardId) } },
     select: { id: true, name: true },
   });
   const nameOf = new Map(names.map((f) => [f.id, f.name]));
@@ -54,7 +57,7 @@ export async function GET(request: Request): Promise<Response> {
   const addCardTarget =
     newestCard?.flashcard ??
     (await prisma.flashcard.findFirst({
-      where: { userId, ...(flashcard ?? {}) },
+      where: { ...ownCards, ...(flashcard ?? {}) },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       select: { id: true, name: true },
     }));

@@ -7,6 +7,7 @@ import {
   isFlashcardNameTaken,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
+import { requireClassAccess, requireClassOwner } from "@/lib/class-access";
 import { fail, ok, readJson, validationFailure } from "@/lib/api-response";
 import { isUniqueViolation } from "@/lib/prisma-errors";
 
@@ -21,8 +22,11 @@ export async function GET(
   const userId = result.session.user.id;
   const { id } = await params;
 
+  const guard = await requireClassAccess(userId, { kind: "folder", id });
+  if (guard.response) return guard.response;
+
   const folder = await prisma.folder.findFirst({
-    where: { id, userId },
+    where: { id },
     select: {
       id: true,
       name: true,
@@ -61,14 +65,11 @@ export async function POST(
   const parsed = createFlashcardSchema.safeParse(body);
   if (!parsed.success) return validationFailure(parsed.error);
 
-  const folder = await prisma.folder.findFirst({
-    where: { id, userId },
-    select: { id: true },
-  });
-  if (!folder) return fail(404, "NOT_FOUND", "Folder not found.");
+  const guard = await requireClassOwner(userId, { kind: "folder", id });
+  if (guard.response) return guard.response;
 
   const existing = await prisma.flashcard.findMany({
-    where: { folderId: id, userId },
+    where: { folderId: id },
     select: { name: true },
   });
   if (

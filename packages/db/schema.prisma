@@ -57,6 +57,7 @@ model User {
   sessions          Session[]
   accounts          Account[]
   classes           Class[]
+  classMemberships  ClassMember[]
   folders           Folder[]
   flashcards        Flashcard[]
   cards             Card[]
@@ -137,9 +138,25 @@ model Class {
   updatedAt DateTime   @updatedAt
 
   folders Folder[]
+  members ClassMember[]
 
   @@index([userId, name])
   @@map("classes")
+}
+
+/// Story 12.2: a registered user who studies another user's Class. The Owner
+/// is never a row here (`Class.userId` is the Owner).
+model ClassMember {
+  id        String   @id @default(cuid())
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([classId, userId])
+  @@index([userId])
+  @@map("class_members")
 }
 
 model Folder {

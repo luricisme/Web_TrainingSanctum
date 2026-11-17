@@ -5,6 +5,7 @@ import {
   gradeRequestSchema,
 } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
+import { logOperation } from "@/lib/log";
 import {
   HttpError,
   fail,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/api-response";
 
 function logGrade(entry: Record<string, unknown>): void {
-  console.info(JSON.stringify({ operation: "review.grade", ...entry }));
+  logOperation("review.grade", entry);
 }
 
 /**
@@ -52,7 +53,7 @@ export async function POST(request: Request): Promise<Response> {
           easeFactor: true,
           nextReviewDate: true,
           firstGradedAt: true,
-          card: { select: { user: { select: { timezone: true } } } },
+          user: { select: { timezone: true } },
         },
       });
       if (!record) {
@@ -70,7 +71,7 @@ export async function POST(request: Request): Promise<Response> {
 
       const next = applyGrade(record, grade, {
         now,
-        timeZone: record.card.user.timezone,
+        timeZone: record.user.timezone,
       });
       const updated = await tx.schedulingRecord.update({
         where: { id: schedulingRecordId },

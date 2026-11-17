@@ -1,6 +1,7 @@
 import { prisma } from "@training-sanctum/db";
 import {
   type MoveFlashcardResponse,
+  classLearnerIds,
   moveFlashcardSchema,
   uniqueFlashcardName,
 } from "@training-sanctum/domain";
@@ -13,6 +14,11 @@ import {
   validationFailure,
 } from "@/lib/api-response";
 import { isUniqueViolation } from "@/lib/prisma-errors";
+import {
+  loadClassAccess,
+  reseedCardRecords,
+  requireClassOwner,
+} from "@/lib/class-access";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -38,14 +44,25 @@ export async function POST(
   if (!parsed.success) return validationFailure(parsed.error);
   const { folderId } = parsed.data;
 
+  const source = await requireClassOwner(userId, { kind: "flashcard", id });
+  if (source.response) return source.response;
+  // Moving into a Folder is a write there too: only its Class's Owner may.
+  const targetAccess = await loadClassAccess(userId, { kind: "folder", id: folderId });
+  if (!targetAccess) {
+    return fail(404, "FOLDER_NOT_FOUND", "Folder not found.");
+  }
+  if (targetAccess.role !== "owner") {
+    return fail(403, "FORBIDDEN", "Only the class owner can change this.");
+  }
+
   try {
     const data = await prisma.$transaction(async (tx) => {
-      const flashcard = await tx.flashcard.findFirst({ where: { id, userId } });
+      const flashcard = await tx.flashcard.findUnique({ where: { id } });
       if (!flashcard) {
         throw new HttpError(404, "NOT_FOUND", "Flashcard not found.");
       }
-      const folder = await tx.folder.findFirst({
-        where: { id: folderId, userId },
+      const folder = await tx.folder.findUnique({
+        where: { id: folderId },
         select: { id: true },
       });
       if (!folder) {
@@ -60,7 +77,7 @@ export async function POST(
         return same;
       }
       const targets = await tx.flashcard.findMany({
-        where: { folderId: folder.id, userId },
+        where: { folderId: folder.id },
         select: { name: true },
       });
       const name = uniqueFlashcardName(
@@ -72,6 +89,28 @@ export async function POST(
         data: { folderId: folder.id, name },
         select: { id: true, folderId: true, name: true },
       });
+      if (targetAccess.cls.id !== source.access.cls.id) {
+        // The Cards now belong to another Class: realign learners' records.
+        const owner = await tx.user.findUniqueOrThrow({
+          where: { id: userId },
+          select: { timezone: true },
+        });
+        const targetMembers = await tx.classMember.findMany({
+          where: { classId: targetAccess.cls.id },
+          select: { userId: true },
+          orderBy: { createdAt: "asc" },
+        });
+        await reseedCardRecords(
+          tx,
+          { flashcardId: id },
+          classLearnerIds(targetAccess.cls, targetMembers),
+          {
+            classId: targetAccess.cls.id,
+            timezone: owner.timezone,
+            operation: "flashcard.move.reseed",
+          }
+        );
+      }
       const moved: MoveFlashcardResponse = updated;
       return moved;
     });

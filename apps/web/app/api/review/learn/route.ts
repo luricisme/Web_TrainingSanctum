@@ -1,5 +1,6 @@
 import { learnQueueQuerySchema } from "@training-sanctum/domain";
 import { requireSession } from "@/lib/session";
+import { requireClassAccess } from "@/lib/class-access";
 import { fail, ok, validationFailure } from "@/lib/api-response";
 import { buildLearnQueue } from "@/lib/learn-queue";
 import { getStudiedDirections } from "@/lib/study-directions";
@@ -19,6 +20,12 @@ export async function GET(request: Request): Promise<Response> {
     flashcardId: params.get("flashcardId") ?? undefined,
   });
   if (!parsed.success) return validationFailure(parsed.error);
+
+  const guard = await requireClassAccess(userId, {
+    kind: "flashcard",
+    id: parsed.data.flashcardId,
+  });
+  if (guard.response) return guard.response;
 
   const { dirs } = await getStudiedDirections(userId);
   const data = await buildLearnQueue(userId, parsed.data.flashcardId, dirs, new Date());

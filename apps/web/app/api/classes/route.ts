@@ -17,7 +17,12 @@ export async function GET(request: Request): Promise<Response> {
     prisma.class.findMany({
       where: { userId },
       orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, color: true },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        _count: { select: { members: true } },
+      },
     }),
     prisma.folder.findMany({
       where: { userId },
@@ -52,6 +57,7 @@ export async function GET(request: Request): Promise<Response> {
       folderCount: counts.get(c.id)?.folders ?? 0,
       flashcardCount: counts.get(c.id)?.flashcards ?? 0,
       cardCount: counts.get(c.id)?.cards ?? 0,
+      memberCount: c._count.members,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -96,6 +102,7 @@ export async function POST(request: Request): Promise<Response> {
     folderCount: 1,
     flashcardCount: 0,
     cardCount: 0,
+    memberCount: 0,
   };
   return ok(data, 201);
 }
