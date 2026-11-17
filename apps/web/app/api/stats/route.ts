@@ -35,8 +35,8 @@ export async function GET(request: Request): Promise<Response> {
   const { dirs } = await getStudiedDirections(userId);
 
   const [learned, unlearned, learnedGroups, newGroups, events] = await Promise.all([
-    prisma.card.count({ where: { userId, ...learnedCardWhere(userId, dirs) } }),
-    prisma.card.count({ where: { userId, ...unlearnedCardWhere(userId, dirs) } }),
+    prisma.card.count({ where: learnedCardWhere(userId, dirs) }),
+    prisma.card.count({ where: unlearnedCardWhere(userId, dirs) }),
     prisma.schedulingRecord.groupBy({
       by: ["direction", "interval"],
       where: { userId, firstGradedAt: { not: null }, direction: { in: dirs } },

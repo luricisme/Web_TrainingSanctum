@@ -38,6 +38,9 @@ export async function GET(
 
   const guard = await requireClassAccess(userId, { kind: "folder", id });
   if (guard.response) return guard.response;
+  const isOwner = guard.access.role === "owner";
+  const ownerName = guard.access.ownerName;
+  const memberCount = guard.access.members.length;
 
   const folder = await prisma.folder.findFirst({
     where: { id },
@@ -63,6 +66,9 @@ export async function GET(
     flashcards: folder.flashcards
       .map((f) => ({ id: f.id, name: f.name, cardCount: f._count.cards }))
       .sort((a, b) => a.name.localeCompare(b.name)),
+    isOwner,
+    ownerName,
+    memberCount,
   };
   return ok(data);
 }

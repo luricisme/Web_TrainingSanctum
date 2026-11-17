@@ -45,6 +45,9 @@ export async function GET(
     flashcards: folder.flashcards
       .map((f) => ({ id: f.id, name: f.name, cardCount: f._count.cards }))
       .sort((a, b) => a.name.localeCompare(b.name)),
+    isOwner: guard.access.role === "owner",
+    ownerName: guard.access.ownerName,
+    memberCount: guard.access.members.length,
   };
   return ok(data);
 }

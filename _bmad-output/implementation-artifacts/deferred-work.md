@@ -181,3 +181,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-12-2-class-membership-and-access-guards.md`
   summary: `reseedCardRecords` builds cards x learners x 2 rows for one `createMany` inside a single transaction, which may exceed the Postgres bind limit or the interactive-transaction timeout for a very large Flashcard or Class (unverified, would be medium).
   evidence: Review found no chunking; settle by moving a 3,000-card Flashcard (or deleting such a Class in move mode) and checking whether Prisma chunks `createMany`.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-12-4-member-experience.md`
+  summary: Assert `isOwner` and `ownerName` in the `POST /api/classes` and `PATCH /api/classes/[id]` response bodies (and owner-only Move/Delete-class pickers) in tests.
+  evidence: Verification-gap review found the new fields only asserted from `GET /api/classes`; low risk, cheap to add.

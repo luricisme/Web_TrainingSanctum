@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ClassFoldersResponse, FolderSummary } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { Modal } from "../modal";
-import { buttonDanger, buttonPrimary, fieldErrorClass, pluralize } from "../ui";
+import { buttonDanger, buttonPrimary, fieldErrorClass, membersStudying, pluralize } from "../ui";
 
 type Mode = "move" | "delete";
 
@@ -17,10 +17,12 @@ type Mode = "move" | "delete";
 export function DeleteFolderModal({
   classId,
   target,
+  memberCount = 0,
   onClose,
 }: {
   classId: string;
   target: FolderSummary;
+  memberCount?: number;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -71,6 +73,11 @@ export function DeleteFolderModal({
           : `This folder has ${pluralize(target.flashcardCount, "flashcard")} and ${pluralize(target.cardCount, "card")}.`}{" "}
         Choose what happens to them.
       </p>
+      {memberCount > 0 ? (
+        <p className="mt-2 text-body font-semibold text-foreground">
+          {membersStudying(memberCount)}
+        </p>
+      ) : null}
 
       {error ? (
         <p role="alert" className={`mt-6 ${fieldErrorClass}`}>

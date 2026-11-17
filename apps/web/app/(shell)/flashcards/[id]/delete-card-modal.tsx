@@ -6,7 +6,7 @@ import type { CardSummary } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { formErrorClass } from "@/app/components/ui";
 import { Modal } from "../../classes/modal";
-import { buttonDanger, buttonSecondary } from "../../classes/ui";
+import { buttonDanger, buttonSecondary, membersStudying } from "../../classes/ui";
 
 /**
  * Delete a Card (spec-2-5): small confirmation naming the Term. Cancel has
@@ -15,10 +15,12 @@ import { buttonDanger, buttonSecondary } from "../../classes/ui";
  */
 export function DeleteCardModal({
   card,
+  memberCount = 0,
   onClose,
   onDeleted,
 }: {
   card: CardSummary;
+  memberCount?: number;
   onClose: () => void;
   onDeleted: (id: string) => void;
 }) {
@@ -65,6 +67,11 @@ export function DeleteCardModal({
         Delete <span className="break-words font-semibold text-foreground">{card.term}</span>? Its
         scheduling history is deleted too. This cannot be undone.
       </p>
+      {memberCount > 0 ? (
+        <p className="mt-2 text-body font-semibold text-foreground">
+          {membersStudying(memberCount)}
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className={`mt-4 ${formErrorClass}`}>
           {error}

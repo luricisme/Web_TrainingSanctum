@@ -13,6 +13,7 @@ import {
   inputClass,
   labelClass,
   overlineClass,
+  membersStudying,
   pluralize,
 } from "./ui";
 
@@ -77,6 +78,11 @@ export function DeleteClassModal({
         {pluralize(target.flashcardCount, "flashcard")} and{" "}
         {pluralize(target.cardCount, "card")}.
       </p>
+      {target.memberCount > 0 ? (
+        <p className="mt-2 text-body font-semibold text-foreground">
+          {membersStudying(target.memberCount)}
+        </p>
+      ) : null}
 
       {others.length > 0 ? (
         <section className="mt-6 flex flex-col gap-3">

@@ -27,9 +27,10 @@ type Dialog =
   | { kind: "delete"; id: string }
   | null;
 
-function Breadcrumb({ name }: { name?: string }) {
+function Breadcrumb({ name, ownerName }: { name?: string; ownerName?: string }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 text-body-sm font-medium text-foreground-secondary">
+    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+    <nav aria-label="Breadcrumb" className="text-body-sm font-medium text-foreground-secondary">
       <Link
         href="/classes"
         className="rounded-sm underline-offset-2 hover:text-foreground hover:underline focus-ring"
@@ -45,6 +46,10 @@ function Breadcrumb({ name }: { name?: string }) {
         </>
       ) : null}
     </nav>
+    {ownerName ? (
+      <p className="text-caption text-foreground-secondary">{ownerName}&apos;s class</p>
+    ) : null}
+    </div>
   );
 }
 
@@ -105,7 +110,7 @@ export function ClassDetailView({ classId }: { classId: string }) {
 
   return (
     <>
-      <Breadcrumb name={data.class.name} />
+      <Breadcrumb name={data.class.name} ownerName={data.isOwner ? undefined : data.ownerName} />
       <PageHeader title={data.class.name}>
         {pluralize(folders.length, "folder")} · {pluralize(totalFlashcards, "flashcard")} ·{" "}
         {pluralize(totalCards, "card")}
@@ -120,13 +125,15 @@ export function ClassDetailView({ classId }: { classId: string }) {
             <Link href={`/review?classId=${classId}`} className={buttonSecondary}>
               Review this class
             </Link>
-            <button
-              type="button"
-              onClick={() => setDialog({ kind: "create" })}
-              className={buttonPrimary}
-            >
-              Create folder
-            </button>
+            {data.isOwner ? (
+              <button
+                type="button"
+                onClick={() => setDialog({ kind: "create" })}
+                className={buttonPrimary}
+              >
+                Create folder
+              </button>
+            ) : null}
           </div>
         </div>
         <ul className={tileGridClass}>
@@ -135,12 +142,13 @@ export function ClassDetailView({ classId }: { classId: string }) {
               key={folder.id}
               folder={folder}
               color={data.class.color}
+              canEdit={data.isOwner}
               onRename={() => setDialog({ kind: "rename", id: folder.id })}
               onDelete={() => setDialog({ kind: "delete", id: folder.id })}
             />
           ))}
         </ul>
-        {customCount === 0 ? (
+        {customCount === 0 && data.isOwner ? (
           <p className="mt-6 max-w-sm text-body text-foreground-secondary">
             Create a folder to group flashcards by topic.
           </p>
@@ -164,6 +172,7 @@ export function ClassDetailView({ classId }: { classId: string }) {
           key={selected.id}
           classId={classId}
           target={selected}
+          memberCount={data.memberCount}
           onClose={close}
         />
       ) : null}
@@ -175,12 +184,15 @@ export function ClassDetailView({ classId }: { classId: string }) {
 function FolderRow({
   folder,
   color,
+  canEdit,
   onRename,
   onDelete,
 }: {
   folder: FolderSummary;
   /** The Class's colour; picks the tile's tint. */
   color: ClassColor;
+  /** False for a Member: no menu. */
+  canEdit: boolean;
   onRename: () => void;
   onDelete: () => void;
 }) {
@@ -214,7 +226,7 @@ function FolderRow({
           </p>
         </div>
       </Link>
-      {folder.isUnsorted ? null : (
+      {folder.isUnsorted || !canEdit ? null : (
         <RowMenu
           name={folder.name}
           items={[

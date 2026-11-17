@@ -68,7 +68,7 @@ export async function gatherQuestFacts(
     candidates.length === 0
       ? 0
       : await db.flashcard.count({
-          where: { userId, id: { in: candidates }, cards: { none: unlearnedCardWhere(userId, dirs) } },
+          where: { id: { in: candidates }, cards: { none: unlearnedCardWhere(userId, dirs) } },
         });
 
   return { flashcardsLearnedToday, reviewedToday, dueCount };
@@ -94,7 +94,7 @@ export async function ensureToday(
   });
   if (!row) {
     const [flashcardsWithUnlearned, dueCount] = await Promise.all([
-      prisma.flashcard.count({ where: { userId, cards: { some: unlearnedCardWhere(userId, dirs) } } }),
+      prisma.flashcard.count({ where: { cards: { some: unlearnedCardWhere(userId, dirs) } } }),
       countDue(prisma, userId, dirs, now),
     ]);
     const snapshot: DaySnapshot = buildDaySnapshot(levelForXp(cultivationXp).bo, {

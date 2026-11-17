@@ -39,12 +39,15 @@ const crumbLink =
 function Breadcrumb({
   cls,
   folder,
+  ownerName,
 }: {
   cls?: { id: string; name: string };
   folder?: string;
+  ownerName?: string;
 }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 text-body-sm font-medium text-foreground-secondary">
+    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+    <nav aria-label="Breadcrumb" className="text-body-sm font-medium text-foreground-secondary">
       <Link href="/classes" className={crumbLink}>
         Classes
       </Link>
@@ -65,6 +68,10 @@ function Breadcrumb({
         </>
       ) : null}
     </nav>
+    {ownerName ? (
+      <p className="text-caption text-foreground-secondary">{ownerName}&apos;s class</p>
+    ) : null}
+    </div>
   );
 }
 
@@ -125,7 +132,11 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
 
   return (
     <>
-      <Breadcrumb cls={data.class} folder={data.folder.name} />
+      <Breadcrumb
+        cls={data.class}
+        folder={data.folder.name}
+        ownerName={data.isOwner ? undefined : data.ownerName}
+      />
       <PageHeader title={data.folder.name}>
         {pluralize(flashcards.length, "flashcard")} · {pluralize(totalCards, "card")}
       </PageHeader>
@@ -139,7 +150,7 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
             <Link href={`/review?folderId=${data.folder.id}`} className={buttonSecondary}>
               Review this folder
             </Link>
-            {empty ? null : (
+            {empty || !data.isOwner ? null : (
               <button
                 type="button"
                 onClick={() => setDialog({ kind: "create" })}
@@ -153,15 +164,19 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
         {empty ? (
           <div className="flex flex-col items-start gap-4 pt-3">
             <p className="max-w-sm text-body text-foreground-secondary">
-              Create a flashcard to start adding cards.
+              {data.isOwner
+                ? "Create a flashcard to start adding cards."
+                : "This folder has no flashcards yet."}
             </p>
-            <button
-              type="button"
-              onClick={() => setDialog({ kind: "create" })}
-              className={buttonPrimary}
-            >
-              Create flashcard
-            </button>
+            {data.isOwner ? (
+              <button
+                type="button"
+                onClick={() => setDialog({ kind: "create" })}
+                className={buttonPrimary}
+              >
+                Create flashcard
+              </button>
+            ) : null}
           </div>
         ) : (
           <ul className={tileGridClass}>
@@ -170,6 +185,7 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
                 key={flashcard.id}
                 flashcard={flashcard}
                 color={data.class.color}
+                canEdit={data.isOwner}
                 onRename={() => setDialog({ kind: "rename", id: flashcard.id })}
                 onMove={() => setDialog({ kind: "move", id: flashcard.id })}
                 onDelete={() => setDialog({ kind: "delete", id: flashcard.id })}
@@ -196,6 +212,7 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
           key={selected.id}
           folderId={folderId}
           classId={data.class.id}
+          memberCount={data.memberCount}
           target={selected}
           onClose={close}
         />
@@ -205,6 +222,7 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
           key={selected.id}
           folderId={folderId}
           target={selected}
+          memberCount={data.memberCount}
           onClose={close}
         />
       ) : null}
@@ -216,6 +234,7 @@ export function FolderDetailView({ folderId }: { folderId: string }) {
 function FlashcardRow({
   flashcard,
   color,
+  canEdit,
   onRename,
   onMove,
   onDelete,
@@ -223,6 +242,8 @@ function FlashcardRow({
   flashcard: FlashcardSummary;
   /** The Class's colour; picks the tile's tint. */
   color: ClassColor;
+  /** False for a Member: no menu. */
+  canEdit: boolean;
   onRename: () => void;
   onMove: () => void;
   onDelete: () => void;
@@ -260,14 +281,16 @@ function FlashcardRow({
           </p>
         </div>
       </Link>
-      <RowMenu
-        name={flashcard.name}
-        items={[
-          { label: "Rename", onSelect: onRename },
-          { label: "Move to…", onSelect: onMove },
-          { label: "Delete", onSelect: onDelete, danger: true },
-        ]}
-      />
+      {canEdit ? (
+        <RowMenu
+          name={flashcard.name}
+          items={[
+            { label: "Rename", onSelect: onRename },
+            { label: "Move to…", onSelect: onMove },
+            { label: "Delete", onSelect: onDelete, danger: true },
+          ]}
+        />
+      ) : null}
     </li>
   );
 }

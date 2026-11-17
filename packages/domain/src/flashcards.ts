@@ -92,6 +92,10 @@ export interface FolderFlashcardsResponse {
   folder: { id: string; name: string; isUnsorted: boolean };
   class: { id: string; name: string; color: ClassColor };
   flashcards: FlashcardSummary[];
+  /** Story 12.4: viewer role and Members, excluding the Owner. */
+  isOwner: boolean;
+  ownerName: string;
+  memberCount: number;
 }
 
 /** Shape returned by `GET /api/flashcards/:id`. */
@@ -104,4 +108,8 @@ export interface FlashcardCardsResponse {
   learn: LearnCounts;
   /** spec-4-9: the account's study directions, for the viewer and the practice run. */
   studyDirections: StudyDirections;
+  /** Story 12.4: viewer role and Members, excluding the Owner. */
+  isOwner: boolean;
+  ownerName: string;
+  memberCount: number;
 }
