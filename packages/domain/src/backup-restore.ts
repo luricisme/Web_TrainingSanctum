@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { backupExportSchema } from "./backup";
+import { backupExportSchema, backupPlannerSchema } from "./backup";
 import { classColorSchema } from "./classes";
 
 /**
@@ -15,6 +15,8 @@ export const backupRestoreSchema = backupExportSchema.extend({
     })
   ),
   sharedClasses: backupExportSchema.shape.sharedClasses.default([]),
+  /** Spec 9-4: older files have no Planner section; they restore with none. */
+  planner: backupPlannerSchema.optional(),
 });
 
 export type BackupRestore = z.infer<typeof backupRestoreSchema>;
@@ -93,6 +95,31 @@ export function findBackupIssues(payload: BackupRestore): string[] {
     add(`Cultivation day ${day} appears twice.`);
   }
   if (payload.cultivation.xp < 0) add("Cultivation XP is negative.");
+
+  const planner = payload.planner;
+  if (planner) {
+    for (const [label, ids] of [
+      ["Task categories", planner.categories.map((c) => c.id)],
+      ["Tasks", planner.tasks.map((t) => t.id)],
+      ["Pomodoro sessions", planner.sessions.map((s) => s.id)],
+    ] as const) {
+      for (const id of duplicates([...ids])) add(`Two ${label} share the id "${id}".`);
+    }
+    // The database keeps category names unique per user, case-insensitively.
+    for (const name of duplicates(planner.categories.map((c) => c.name.toLowerCase()))) {
+      add(`Two Task categories share the name "${name}".`);
+    }
+    const categoryIds = new Set(planner.categories.map((c) => c.id));
+    const taskIds = new Set(planner.tasks.map((t) => t.id));
+    for (const t of planner.tasks) {
+      if (!categoryIds.has(t.categoryId)) add(`Task "${t.title}" points to a category that is not in the file.`);
+    }
+    for (const s of planner.sessions) {
+      if (!taskIds.has(s.taskId)) add(`Pomodoro session "${s.id}" points to a Task that is not in the file.`);
+    }
+    const open = planner.sessions.filter((s) => s.endedAt === null).length;
+    if (open > 1) add(`${open} Pomodoro sessions are still open; at most one is allowed.`);
+  }
 
   return issues;
 }

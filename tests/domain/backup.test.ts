@@ -12,6 +12,12 @@ const empty = () => ({
   flashcards: [],
   cards: [],
   cultivation: { xp: 0, settledThrough: null, days: [], xpEvents: [] },
+  planner: {
+    settings: { focus: 25, shortBreak: 5, longBreak: 15, longBreakEvery: 4 },
+    categories: [],
+    tasks: [],
+    sessions: [],
+  },
 });
 
 const record = (direction: string, firstGradedAt: string | null) => ({
@@ -70,6 +76,14 @@ describe("backupExportSchema", () => {
     const noMembers = full();
     delete (noMembers.classes[0] as { members?: string[] }).members;
     expect(backupExportSchema.safeParse(noMembers).success).toBe(false);
+  });
+
+  it("requires a valid planner section", () => {
+    const { planner: _p, ...rest } = full();
+    expect(backupExportSchema.safeParse(rest).success).toBe(false);
+    const bad = full();
+    bad.planner.settings.focus = 1;
+    expect(backupExportSchema.safeParse(bad).success).toBe(false);
   });
 
   it("rejects a missing section", () => {

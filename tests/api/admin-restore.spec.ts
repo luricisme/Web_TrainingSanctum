@@ -471,3 +471,156 @@ test.describe("POST /api/admin/users/[id]/restore", () => {
     }
   });
 });
+
+async function seedPlanner(userId: string) {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { pomodoroSettings: { focus: 30, shortBreak: 10, longBreak: 20, longBreakEvery: 3 } },
+  });
+  const study = await prisma.taskCategory.create({
+    data: { userId, name: "Study", color: "SKY", createdAt: new Date("2026-11-01T00:00:00Z") },
+  });
+  await prisma.taskCategory.create({
+    data: { userId, name: "Home", color: "MINT", createdAt: new Date("2026-11-02T00:00:00Z") },
+  });
+  const task = await prisma.task.create({
+    data: {
+      userId,
+      categoryId: study.id,
+      title: "Read",
+      localDay: new Date("2026-11-17T00:00:00.000Z"),
+      estimateMinutes: 60,
+      loggedMinutes: 25,
+      done: true,
+      xpAwardedAt: new Date("2026-11-17T09:00:00.000Z"),
+    },
+  });
+  await prisma.pomodoroSession.createMany({
+    data: [
+      {
+        userId,
+        taskId: task.id,
+        kind: "FOCUS",
+        plannedMinutes: 25,
+        actualMinutes: 25,
+        startedAt: new Date("2026-11-17T08:00:00.000Z"),
+        endedAt: new Date("2026-11-17T08:25:00.000Z"),
+      },
+      {
+        userId,
+        taskId: task.id,
+        kind: "BREAK",
+        plannedMinutes: 5,
+        startedAt: new Date("2026-11-17T08:25:00.000Z"),
+      },
+    ],
+  });
+}
+
+test.describe("restore with Planner data", () => {
+  test("round trip restores settings, categories, tasks and sessions with new ids", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const admin = await adminSession(playwright, base);
+    const user = await seedUser(`restore-planner-${randomUUID()}@example.test`);
+    try {
+      await seedPlanner(user.id);
+      const before = await exportOf(admin, base, user.id);
+      expect(before.planner.sessions).toHaveLength(2);
+
+      await prisma.task.deleteMany({ where: { userId: user.id } });
+      await prisma.taskCategory.create({ data: { userId: user.id, name: "Added later", color: "ROSE" } });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { pomodoroSettings: { focus: 50, shortBreak: 5, longBreak: 15, longBreakEvery: 4 } },
+      });
+
+      const res = await post(admin, base, user.id, { confirm: true, backup: before });
+      expect(res.status()).toBe(200);
+      expect((await res.json()).data).toMatchObject({ taskCategories: 2, tasks: 1, pomodoroSessions: 2 });
+
+      const after = await exportOf(admin, base, user.id);
+      expect(shape(after)).toEqual(shape(before));
+      const oldIds = new Set([
+        ...before.planner.categories.map((c) => c.id),
+        ...before.planner.tasks.map((t) => t.id),
+        ...before.planner.sessions.map((x) => x.id),
+      ]);
+      for (const row of [...after.planner.categories, ...after.planner.tasks, ...after.planner.sessions]) {
+        expect(oldIds.has(row.id)).toBe(false);
+      }
+      expect(after.cultivation.xp).toBe(120);
+      expect(after.cultivation.xpEvents).toHaveLength(1);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: user.id } });
+    }
+  });
+
+  test("an old file without planner clears Planner data and resets settings", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const admin = await adminSession(playwright, base);
+    const user = await seedUser(`restore-noplanner-${randomUUID()}@example.test`);
+    try {
+      const backup = await exportOf(admin, base, user.id);
+      await seedPlanner(user.id);
+      const old: Partial<BackupExport> = structuredClone(backup);
+      delete old.planner;
+      const res = await post(admin, base, user.id, { confirm: true, backup: old });
+      expect(res.status()).toBe(200);
+      expect(await prisma.taskCategory.count({ where: { userId: user.id } })).toBe(0);
+      expect(await prisma.task.count({ where: { userId: user.id } })).toBe(0);
+      expect(await prisma.pomodoroSession.count({ where: { userId: user.id } })).toBe(0);
+      const after = await exportOf(admin, base, user.id);
+      expect(after.planner.settings).toEqual({ focus: 25, shortBreak: 5, longBreak: 15, longBreakEvery: 4 });
+    } finally {
+      await prisma.user.deleteMany({ where: { id: user.id } });
+    }
+  });
+
+  test("broken planner links and two open sessions are 422 and change nothing", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const admin = await adminSession(playwright, base);
+    const user = await seedUser(`restore-planner422-${randomUUID()}@example.test`);
+    try {
+      await seedPlanner(user.id);
+      const backup = await exportOf(admin, base, user.id);
+      const noCategory = structuredClone(backup);
+      noCategory.planner.tasks[0].categoryId = "missing";
+      const noTask = structuredClone(backup);
+      noTask.planner.sessions[0].taskId = "missing";
+      const twoOpen = structuredClone(backup);
+      twoOpen.planner.sessions[0].endedAt = null;
+      for (const bad of [noCategory, noTask, twoOpen]) {
+        const res = await post(admin, base, user.id, { confirm: true, backup: bad });
+        expect(res.status()).toBe(422);
+        expect((await res.json()).error.code).toBe("BACKUP_INVALID");
+      }
+      expect(await prisma.task.count({ where: { userId: user.id } })).toBe(1);
+      expect(await prisma.pomodoroSession.count({ where: { userId: user.id } })).toBe(2);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: user.id } });
+    }
+  });
+
+  test("a planner write failure rolls back, keeping the previous Planner data", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const admin = await adminSession(playwright, base);
+    const user = await seedUser(`restore-planner-nul-${randomUUID()}@example.test`);
+    try {
+      await seedPlanner(user.id);
+      const backup = await exportOf(admin, base, user.id);
+      backup.planner.tasks[0].title = "bad\u0000title";
+      const res = await post(admin, base, user.id, { confirm: true, backup });
+      expect(res.status()).toBe(500);
+      expect((await res.json()).error.code).toBe("RESTORE_FAILED");
+      const after = await exportOf(admin, base, user.id);
+      expect(after.planner.tasks.map((t) => t.title)).toEqual(["Read"]);
+      expect(after.planner.sessions).toHaveLength(2);
+      expect(after.planner.settings.focus).toBe(30);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: user.id } });
+    }
+  });
+});

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { prisma, type Prisma } from "@training-sanctum/db";
 import {
   DAY_MS,
+  DEFAULT_POMODORO_SETTINGS,
   backupRestoreSchema,
   createDefaultSchedulingRecords,
   findBackupIssues,
@@ -208,6 +209,44 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
     createdAt: at(e.createdAt),
   }));
 
+  const planner = backup.planner;
+  const categoryId = new Map((planner?.categories ?? []).map((c) => [c.id, randomUUID()]));
+  const taskId = new Map((planner?.tasks ?? []).map((t) => [t.id, randomUUID()]));
+  const categoryRows = (planner?.categories ?? []).map((c) => ({
+    id: categoryId.get(c.id)!,
+    userId,
+    name: c.name,
+    color: c.color,
+    createdAt: at(c.createdAt),
+    updatedAt: at(c.updatedAt),
+  }));
+  const taskRows = (planner?.tasks ?? []).map((t) => ({
+    id: taskId.get(t.id)!,
+    userId,
+    categoryId: categoryId.get(t.categoryId)!,
+    title: t.title,
+    localDay: onDay(t.localDay),
+    startAt: t.startAt ? at(t.startAt) : null,
+    estimateMinutes: t.estimateMinutes,
+    done: t.done,
+    xpAwardedAt: t.xpAwardedAt ? at(t.xpAwardedAt) : null,
+    loggedMinutes: t.loggedMinutes,
+    createdAt: at(t.createdAt),
+    updatedAt: at(t.updatedAt),
+  }));
+  const sessionRows = (planner?.sessions ?? []).map((s) => ({
+    id: randomUUID(),
+    userId,
+    taskId: taskId.get(s.taskId)!,
+    kind: s.kind,
+    plannedMinutes: s.plannedMinutes,
+    actualMinutes: s.actualMinutes,
+    startedAt: at(s.startedAt),
+    endedAt: s.endedAt ? at(s.endedAt) : null,
+    overrun: s.overrun,
+  }));
+  const pomodoroSettings = { ...(planner?.settings ?? DEFAULT_POMODORO_SETTINGS) };
+
   try {
     await prisma.$transaction(
       async (tx) => {
@@ -218,10 +257,13 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
             studyDirections: backup.user.studyDirections,
             cultivationXp: backup.cultivation.xp,
             cultivationSettledThrough: settledThrough,
+            pomodoroSettings,
           },
         });
         if (locked.count === 0) throw new HttpError(404, "NOT_FOUND", "User not found.");
 
+        await tx.task.deleteMany({ where: { userId } }); // cascades Pomodoro sessions
+        await tx.taskCategory.deleteMany({ where: { userId } }); // after Tasks: Task.categoryId is Restrict
         await tx.class.deleteMany({ where: { userId } }); // cascades Members, invitations and every learner's records
         await tx.cultivationDay.deleteMany({ where: { userId } });
         await tx.xpEvent.deleteMany({ where: { userId } });
@@ -234,6 +276,9 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
         for (const rows of chunks(recordRows)) await tx.schedulingRecord.createMany({ data: rows });
         for (const rows of chunks(dayRows)) await tx.cultivationDay.createMany({ data: rows });
         for (const rows of chunks(eventRows)) await tx.xpEvent.createMany({ data: rows });
+        for (const rows of chunks(categoryRows)) await tx.taskCategory.createMany({ data: rows });
+        for (const rows of chunks(taskRows)) await tx.task.createMany({ data: rows });
+        for (const rows of chunks(sessionRows)) await tx.pomodoroSession.createMany({ data: rows });
       },
       { timeout: TX_TIMEOUT_MS, maxWait: 10_000 }
     );
@@ -258,6 +303,9 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
     members: memberRows.length,
     cultivationDays: dayRows.length,
     xpEvents: eventRows.length,
+    taskCategories: categoryRows.length,
+    tasks: taskRows.length,
+    pomodoroSessions: sessionRows.length,
   };
   log("info", {
     outcome: "success",

@@ -1,5 +1,5 @@
 import { prisma } from "@training-sanctum/db";
-import { BACKUP_VERSION, type BackupExport } from "@training-sanctum/domain";
+import { BACKUP_VERSION, parsePomodoroSettings, type BackupExport } from "@training-sanctum/domain";
 
 const iso = (d: Date) => d.toISOString();
 const day = (d: Date) => d.toISOString().slice(0, 10);
@@ -11,7 +11,7 @@ const byCreated = [{ createdAt: "asc" as const }, { id: "asc" as const }];
  * Every query is scoped by `userId`; no auth, role or disabled data is read.
  */
 export async function buildBackupExport(userId: string): Promise<BackupExport | null> {
-  const [user, classes, members, memberships, folders, flashcards, cards, days, xpEvents] = await prisma.$transaction([
+  const [user, classes, members, memberships, folders, flashcards, cards, days, xpEvents, categories, tasks, sessions] = await prisma.$transaction([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -21,6 +21,7 @@ export async function buildBackupExport(userId: string): Promise<BackupExport | 
         timezone: true,
         cultivationXp: true,
         cultivationSettledThrough: true,
+        pomodoroSettings: true,
       },
     }),
     prisma.class.findMany({ where: { userId }, orderBy: byCreated }),
@@ -41,6 +42,9 @@ export async function buildBackupExport(userId: string): Promise<BackupExport | 
     }),
     prisma.cultivationDay.findMany({ where: { userId }, orderBy: byCreated }),
     prisma.xpEvent.findMany({ where: { userId }, orderBy: byCreated }),
+    prisma.taskCategory.findMany({ where: { userId }, orderBy: byCreated }),
+    prisma.task.findMany({ where: { userId }, orderBy: byCreated }),
+    prisma.pomodoroSession.findMany({ where: { userId }, orderBy: [{ startedAt: "asc" }, { id: "asc" }] }),
   ], { isolationLevel: "RepeatableRead" });
   if (!user) return null;
 
@@ -127,6 +131,39 @@ export async function buildBackupExport(userId: string): Promise<BackupExport | 
         delta: e.delta,
         reason: e.reason,
         createdAt: iso(e.createdAt),
+      })),
+    },
+    planner: {
+      settings: parsePomodoroSettings(user.pomodoroSettings),
+      categories: categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        color: c.color,
+        createdAt: iso(c.createdAt),
+        updatedAt: iso(c.updatedAt),
+      })),
+      tasks: tasks.map((t) => ({
+        id: t.id,
+        categoryId: t.categoryId,
+        title: t.title,
+        localDay: day(t.localDay),
+        startAt: t.startAt ? iso(t.startAt) : null,
+        estimateMinutes: t.estimateMinutes,
+        done: t.done,
+        xpAwardedAt: t.xpAwardedAt ? iso(t.xpAwardedAt) : null,
+        loggedMinutes: t.loggedMinutes,
+        createdAt: iso(t.createdAt),
+        updatedAt: iso(t.updatedAt),
+      })),
+      sessions: sessions.map((s) => ({
+        id: s.id,
+        taskId: s.taskId,
+        kind: s.kind,
+        plannedMinutes: s.plannedMinutes,
+        actualMinutes: s.actualMinutes,
+        startedAt: iso(s.startedAt),
+        endedAt: s.endedAt ? iso(s.endedAt) : null,
+        overrun: s.overrun,
       })),
     },
   };

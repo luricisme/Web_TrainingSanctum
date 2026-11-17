@@ -54,6 +54,7 @@ describe("backup schema with Planner XP events (spec-8-2)", () => {
     flashcards: [],
     cards: [],
     cultivation: { xp: 5, settledThrough: null, days: [], xpEvents: events },
+    planner: { settings: { focus: 25, shortBreak: 5, longBreak: 15, longBreakEvery: 4 }, categories: [], tasks: [], sessions: [] },
   });
 
   it("round-trips a null questKind and the new reasons", () => {

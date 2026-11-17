@@ -20,6 +20,23 @@ function groupBy<T, K extends string>(items: readonly T[], key: (item: T) => K):
   return map;
 }
 
+type Planner = BackupExport["planner"];
+export type BackupTaskNode = Planner["tasks"][number] & { sessions: Planner["sessions"] };
+export type BackupCategoryNode = Planner["categories"][number] & { tasks: BackupTaskNode[] };
+
+/** Spec 9-4: groups the Planner section into category -> Task -> session, keeping payload order. Pure. */
+export function buildBackupPlannerTree(planner: Planner): BackupCategoryNode[] {
+  const sessionsByTask = groupBy(planner.sessions, (s) => s.taskId);
+  const tasksByCategory = groupBy(planner.tasks, (t) => t.categoryId);
+  return planner.categories.map((category) => ({
+    ...category,
+    tasks: (tasksByCategory.get(category.id) ?? []).map((task) => ({
+      ...task,
+      sessions: sessionsByTask.get(task.id) ?? [],
+    })),
+  }));
+}
+
 /**
  * Story 7.3: groups the flat backup payload into Class -> Folder -> Flashcard -> Card,
  * keeping payload order at every level. Pure; rows whose parent is missing are dropped.
