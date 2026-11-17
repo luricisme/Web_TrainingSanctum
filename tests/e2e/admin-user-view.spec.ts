@@ -40,6 +40,7 @@ async function seedUser(email: string) {
     data: [
       {
         cardId: card.id,
+        userId: user.id,
         direction: "TERM_TO_DEFINITION",
         interval: 6,
         repetitions: 2,
@@ -47,7 +48,7 @@ async function seedUser(email: string) {
         nextReviewDate: new Date("2026-11-16T00:00:00.000Z"),
         firstGradedAt: new Date("2026-11-10T08:30:00.000Z"),
       },
-      { cardId: card.id, direction: "DEFINITION_TO_TERM", nextReviewDate: new Date("2026-11-14T00:00:00.000Z") },
+      { cardId: card.id, userId: user.id, direction: "DEFINITION_TO_TERM", nextReviewDate: new Date("2026-11-14T00:00:00.000Z") },
     ],
   });
   await prisma.xpEvent.create({

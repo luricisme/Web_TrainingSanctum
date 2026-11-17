@@ -54,6 +54,7 @@ test.describe("firstGradedAt backfill migration", () => {
         schedulingRecords: {
           create: [
             {
+              userId: user.id,
               direction: "TERM_TO_DEFINITION",
               interval: 6,
               repetitions: 2,
@@ -61,6 +62,7 @@ test.describe("firstGradedAt backfill migration", () => {
               firstGradedAt: null,
             },
             {
+              userId: user.id,
               direction: "DEFINITION_TO_TERM",
               interval: 0,
               repetitions: 0,

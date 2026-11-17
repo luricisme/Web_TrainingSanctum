@@ -427,3 +427,33 @@ test.describe("Study directions in Learn", () => {
     expect(backward).toEqual(card.backward);
   });
 });
+
+// Story 12.1 (AD-19): Scheduling Records are per learner.
+test.describe("GET /api/review/learn, two learners on one Card", () => {
+  test("another learner's records do not change the counts or the queue", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const a = await newUser(playwright, base);
+    const b = await newUser(playwright, base);
+    const flashcardId = await createFlashcard(a, base);
+    const card = await addCard(a, base, flashcardId, "alpha");
+    const before = await learnData(a, base, flashcardId);
+    expect(before.counts).toEqual({ newCards: 1, due: 0 });
+
+    // b has learned the Card and it is due for b; a's view must not move.
+    await prisma.schedulingRecord.createMany({
+      data: (["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"] as const).map((direction) => ({
+        cardId: card.cardId,
+        userId: b.userId,
+        direction,
+        firstGradedAt: new Date(),
+        nextReviewDate: new Date(Date.now() - DAY_MS),
+      })),
+    });
+    const after = await learnData(a, base, flashcardId);
+    expect(after.counts).toEqual(before.counts);
+    expect(ids(after.entries).sort()).toEqual(ids(before.entries).sort());
+  });
+});

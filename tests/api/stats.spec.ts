@@ -61,6 +61,7 @@ async function seedCards(userId: string, cards: RecordSpec[][]) {
         userId,
         schedulingRecords: {
           create: records.map(([direction, interval]) => ({
+            userId,
             direction,
             nextReviewDate: new Date(),
             interval: interval ?? 0,
@@ -212,5 +213,34 @@ test.describe("/api/stats", () => {
     expect(xpHistory[29]!.localDay).toBe(
       new Date(localStart.getTime() + 7 * 3_600_000).toISOString().slice(0, 10)
     );
+  });
+});
+
+// Story 12.1 (AD-19): Scheduling Records are per learner.
+test.describe("/api/stats, two learners on one Card", () => {
+  test("another learner's records do not change the owner's stats", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const a = await newUser(playwright, baseURL);
+    const b = await newUser(playwright, baseURL);
+    await seedCards(a.userId, [[[T, null], [D, null]]]);
+    const before = await stats(a);
+    expect(before.cards).toEqual({ total: 1, learned: 0, unlearned: 1 });
+
+    const card = await prisma.card.findFirstOrThrow({ where: { userId: a.userId } });
+    await prisma.schedulingRecord.createMany({
+      data: [T, D].map((direction) => ({
+        cardId: card.id,
+        userId: b.userId,
+        direction,
+        interval: 30,
+        firstGradedAt: new Date(),
+        nextReviewDate: new Date(),
+      })),
+    });
+    const after = await stats(a);
+    expect(after.cards).toEqual(before.cards);
+    expect(after.distribution).toEqual(before.distribution);
   });
 });

@@ -135,6 +135,7 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
       recordRows.push({
         id: randomUUID(),
         cardId: id,
+        userId,
         direction: r.direction,
         interval: r.interval,
         repetitions: r.repetitions,

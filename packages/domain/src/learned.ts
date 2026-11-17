@@ -3,7 +3,7 @@
  *
  * A Scheduling Record is learned once it has been graded at least once
  * (`firstGradedAt` set), and unlearned until then. Every queue and count is
- * filtered to the studied directions, from `studiedDirections(setting)`
+ * filtered to the caller (`userId`, AD-19) and the studied directions, from `studiedDirections(setting)`
  * (FR-18). These are plain Prisma-`where`-shaped objects, composed by the
  * routes into queries; AD-1: no prisma import here.
  *
@@ -36,11 +36,13 @@ export function isDefinitionFirst(dirs: readonly RecallDirection[]): boolean {
 }
 
 export interface LearnedRecordWhere {
+  userId: string;
   firstGradedAt: { not: null };
   direction: { in: RecallDirection[] };
 }
 
 export interface UnlearnedRecordWhere {
+  userId: string;
   firstGradedAt: null;
   direction: { in: RecallDirection[] };
 }
@@ -54,23 +56,38 @@ export interface UnlearnedCardWhere {
 }
 
 /** Records graded at least once, in the studied directions. */
-export function learnedRecordWhere(dirs: readonly RecallDirection[]): LearnedRecordWhere {
-  return { firstGradedAt: { not: null }, direction: { in: [...dirs] } };
+export function learnedRecordWhere(
+  userId: string,
+  dirs: readonly RecallDirection[]
+): LearnedRecordWhere {
+  return { userId, firstGradedAt: { not: null }, direction: { in: [...dirs] } };
 }
 
 /** Records never graded, in the studied directions. */
-export function unlearnedRecordWhere(dirs: readonly RecallDirection[]): UnlearnedRecordWhere {
-  return { firstGradedAt: null, direction: { in: [...dirs] } };
+export function unlearnedRecordWhere(
+  userId: string,
+  dirs: readonly RecallDirection[]
+): UnlearnedRecordWhere {
+  return { userId, firstGradedAt: null, direction: { in: [...dirs] } };
 }
 
 /** Counts only: Cards whose every studied record has been graded. */
-export function learnedCardWhere(dirs: readonly RecallDirection[]): LearnedCardWhere {
+export function learnedCardWhere(
+  userId: string,
+  dirs: readonly RecallDirection[]
+): LearnedCardWhere {
   return {
-    schedulingRecords: { some: learnedRecordWhere(dirs), none: unlearnedRecordWhere(dirs) },
+    schedulingRecords: {
+      some: learnedRecordWhere(userId, dirs),
+      none: unlearnedRecordWhere(userId, dirs),
+    },
   };
 }
 
 /** Counts only: Cards with at least one unlearned record in a studied direction. */
-export function unlearnedCardWhere(dirs: readonly RecallDirection[]): UnlearnedCardWhere {
-  return { schedulingRecords: { some: unlearnedRecordWhere(dirs) } };
+export function unlearnedCardWhere(
+  userId: string,
+  dirs: readonly RecallDirection[]
+): UnlearnedCardWhere {
+  return { schedulingRecords: { some: unlearnedRecordWhere(userId, dirs) } };
 }

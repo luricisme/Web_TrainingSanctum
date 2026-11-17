@@ -32,7 +32,7 @@ export async function GET(request: Request): Promise<Response> {
   const [groups, newestCard] = await Promise.all([
     prisma.card.groupBy({
       by: ["flashcardId"],
-      where: { userId, ...unlearnedCardWhere(dirs), ...inScope },
+      where: { userId, ...unlearnedCardWhere(userId, dirs), ...inScope },
       _count: { _all: true },
       _max: { createdAt: true },
       orderBy: [{ _max: { createdAt: "desc" } }, { flashcardId: "asc" }],

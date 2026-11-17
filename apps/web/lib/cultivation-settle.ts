@@ -97,7 +97,7 @@ export async function settleUser(
         const records: RecordFact[] = needsRebuild
           ? (
               await tx.schedulingRecord.findMany({
-                where: { direction: { in: dirs }, card: { userId } },
+                where: { direction: { in: dirs }, userId },
                 select: {
                   createdAt: true,
                   firstGradedAt: true,

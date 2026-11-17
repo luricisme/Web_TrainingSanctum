@@ -51,6 +51,7 @@ async function seedUser(email: string, disabled = false) {
     data: [
       {
         cardId: card.id,
+        userId: user.id,
         direction: "TERM_TO_DEFINITION",
         interval: 6,
         repetitions: 2,
@@ -60,6 +61,7 @@ async function seedUser(email: string, disabled = false) {
       },
       {
         cardId: card.id,
+        userId: user.id,
         direction: "DEFINITION_TO_TERM",
         nextReviewDate: new Date("2026-11-14T00:00:00.000Z"),
       },

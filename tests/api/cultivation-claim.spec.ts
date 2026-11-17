@@ -59,8 +59,8 @@ async function seedUnlearned(userId: string, cards = 1) {
         userId,
         schedulingRecords: {
           create: [
-            { direction: "TERM_TO_DEFINITION", nextReviewDate: new Date() },
-            { direction: "DEFINITION_TO_TERM", nextReviewDate: new Date() },
+            { userId, direction: "TERM_TO_DEFINITION", nextReviewDate: new Date() },
+            { userId, direction: "DEFINITION_TO_TERM", nextReviewDate: new Date() },
           ],
         },
       },
@@ -96,12 +96,14 @@ async function seedDue(userId: string, daysAgo = 3) {
       schedulingRecords: {
         create: [
           {
+            userId,
             direction: "TERM_TO_DEFINITION",
             nextReviewDate: due,
             firstGradedAt: then,
             updatedAt: then,
           },
           {
+            userId,
             direction: "DEFINITION_TO_TERM",
             nextReviewDate: due,
             firstGradedAt: then,

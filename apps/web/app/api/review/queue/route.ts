@@ -32,8 +32,8 @@ export async function GET(request: Request): Promise<Response> {
   const rows = await prisma.schedulingRecord.findMany({
     where: {
       nextReviewDate: { lte: new Date() },
-      ...learnedRecordWhere(dirs),
-      card: { userId, ...(flashcard ? { flashcard } : {}) },
+      ...learnedRecordWhere(userId, dirs),
+      card: flashcard ? { flashcard } : undefined,
     },
     // Postgres orders enums by declaration: TERM_TO_DEFINITION sorts first.
     orderBy: [{ nextReviewDate: "asc" }, { cardId: "asc" }, { direction: "asc" }],

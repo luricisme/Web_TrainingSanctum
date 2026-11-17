@@ -173,3 +173,7 @@
 - source_spec: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-17.md`
   summary: With invitations by email and open, unverified registration, whoever registers an address first receives its invitations; consider email verification before relying on invitations outside a trusted circle.
   evidence: Same root cause as the existing 7.1 entry (admin seed trusts unverified emails). Not blocking for a personal app shared with known people.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-12-1-scheduling-records-per-learner.md`
+  summary: Card-level counts and flashcard lookups (stats, countLearn, unlearned, cultivation-day) still scope Cards by `Card.userId` (the Owner), so a Member's counts would be zero.
+  evidence: Correct for the Owner today, since `learnerIds` is always `[ownerId]`; Story 12.2 (access guards) and 12.4 (member experience) must scope Cards by Class access instead. Add two-learner tests for cultivation-day and cultivation-settle then.

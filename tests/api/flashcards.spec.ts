@@ -53,6 +53,7 @@ async function seedCards(s: Session, flashcardId: string, count: number) {
     await prisma.schedulingRecord.createMany({
       data: (["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"] as const).map((direction) => ({
         cardId: card.id,
+        userId: s.userId,
         direction,
         nextReviewDate: new Date(),
       })),

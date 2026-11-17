@@ -54,14 +54,15 @@ model User {
   createdAt                 DateTime        @default(now())
   updatedAt                 DateTime        @updatedAt
 
-  sessions        Session[]
-  accounts        Account[]
-  classes         Class[]
-  folders         Folder[]
-  flashcards      Flashcard[]
-  cards           Card[]
-  cultivationDays CultivationDay[]
-  xpEvents        XpEvent[]
+  sessions          Session[]
+  accounts          Account[]
+  classes           Class[]
+  folders           Folder[]
+  flashcards        Flashcard[]
+  cards             Card[]
+  schedulingRecords SchedulingRecord[]
+  cultivationDays   CultivationDay[]
+  xpEvents          XpEvent[]
 
   @@map("users")
 }
@@ -217,6 +218,9 @@ model SchedulingRecord {
   id             String          @id @default(cuid())
   cardId         String
   card           Card            @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  /// AD-19: the learner this schedule belongs to (the Owner or a Member).
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   direction      RecallDirection
   interval       Int             @default(0)
   repetitions    Int             @default(0)
@@ -229,7 +233,8 @@ model SchedulingRecord {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  @@unique([cardId, direction])
+  @@unique([userId, cardId, direction])
+  @@index([userId, nextReviewDate])
   @@index([nextReviewDate])
   @@map("scheduling_records")
 }

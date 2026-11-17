@@ -97,6 +97,33 @@ test.describe("GET /api/review/unlearned", () => {
     expect((await res.json()).error.code).toBe("UNAUTHENTICATED");
   });
 
+  test("records of another learner on the same Card do not change the counts (AD-19)", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const s = await newUser(playwright, base);
+    const other = await newUser(playwright, base);
+    const folder = await createFolder(s, base, await createClass(s, base, "IELTS"), "Speaking");
+    const flashcard = await createFlashcard(s, base, folder, "Shared set");
+    const cardId = await addCard(s, base, flashcard, "drizzle");
+    // API-created records carry the caller's userId (AD-9).
+    expect(await prisma.schedulingRecord.count({ where: { cardId, userId: s.userId } })).toBe(2);
+    // A second learner holds the same Card, already learned.
+    await prisma.schedulingRecord.createMany({
+      data: ["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"].map((direction) => ({
+        cardId,
+        userId: other.userId,
+        direction: direction as never,
+        nextReviewDate: new Date(),
+        firstGradedAt: new Date(),
+      })),
+    });
+    const { status, body } = await unlearned(s, base);
+    expect(status).toBe(200);
+    expect(body.data.flashcards).toEqual([{ id: flashcard, name: "Shared set", newCards: 1 }]);
+  });
+
   test("no Flashcards: an empty list and a null Add card target", async ({
     playwright,
     baseURL,

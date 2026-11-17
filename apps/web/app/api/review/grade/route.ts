@@ -42,10 +42,10 @@ export async function POST(request: Request): Promise<Response> {
     const data = await prisma.$transaction(async (tx) => {
       // Serialize concurrent grades of this record so the due check below
       // and the write cannot interleave with another submit. Scoped to the
-      // owner so nobody can lock another user's row.
-      await tx.$queryRaw`SELECT sr.id FROM "scheduling_records" sr JOIN "cards" c ON c.id = sr."cardId" WHERE sr.id = ${schedulingRecordId} AND c."userId" = ${userId} FOR UPDATE OF sr`;
+      // learner so nobody can lock another user's row.
+      await tx.$queryRaw`SELECT sr.id FROM "scheduling_records" sr WHERE sr.id = ${schedulingRecordId} AND sr."userId" = ${userId} FOR UPDATE OF sr`;
       const record = await tx.schedulingRecord.findFirst({
-        where: { id: schedulingRecordId, card: { userId } },
+        where: { id: schedulingRecordId, userId },
         select: {
           interval: true,
           repetitions: true,

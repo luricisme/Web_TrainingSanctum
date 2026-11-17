@@ -79,7 +79,7 @@ async function seedOldWork(userId: string, extraCards = 0) {
       flashcardId: flashcard.id,
       userId,
       schedulingRecords: {
-        create: dirs.map((direction) => ({ direction, nextReviewDate: old, createdAt: old })),
+        create: dirs.map((direction) => ({ userId, direction, nextReviewDate: old, createdAt: old })),
       },
     },
   });
@@ -92,6 +92,7 @@ async function seedOldWork(userId: string, extraCards = 0) {
         userId,
         schedulingRecords: {
           create: dirs.map((direction) => ({
+            userId,
             direction,
             createdAt: old,
             firstGradedAt: old,
@@ -120,6 +121,7 @@ async function seedRecords(
       userId,
       schedulingRecords: {
         create: (["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"] as const).map((direction) => ({
+          userId,
           direction,
           ...stamps,
         })),

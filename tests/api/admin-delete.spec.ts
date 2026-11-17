@@ -56,7 +56,7 @@ async function populate(userId: string) {
     data: { term: "t", definition: "d", flashcardId: flashcard.id, userId },
   });
   await prisma.schedulingRecord.create({
-    data: { cardId: card.id, direction: "TERM_TO_DEFINITION", nextReviewDate: new Date("2026-11-16") },
+    data: { cardId: card.id, userId, direction: "TERM_TO_DEFINITION", nextReviewDate: new Date("2026-11-16") },
   });
   await prisma.cultivationDay.create({
     data: { userId, localDay: new Date("2026-11-12"), quests: [] },
