@@ -42,6 +42,9 @@ export async function GET(
 
   const guard = await requireClassAccess(userId, { kind: "flashcard", id });
   if (guard.response) return guard.response;
+  const isOwner = guard.access.role === "owner";
+  const ownerName = guard.access.ownerName;
+  const memberCount = guard.access.members.length;
 
   const flashcard = await prisma.flashcard.findFirst({
     where: { id },
@@ -80,6 +83,9 @@ export async function GET(
     cards: flashcard.cards,
     learn: await countLearn(userId, flashcard.id, dirs, new Date()),
     studyDirections: setting,
+    isOwner,
+    ownerName,
+    memberCount,
   };
   return ok(data);
 }

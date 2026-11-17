@@ -26,6 +26,8 @@ export type ClassTarget = {
 
 export interface ClassAccess {
   cls: { id: string; name: string; color: string; userId: string };
+  /** The Owner's display name (Story 12.4). */
+  ownerName: string;
   members: { userId: string }[];
   role: ClassRole;
   /** The Owner first, then Members. */
@@ -88,14 +90,15 @@ export async function loadClassAccess(
       name: true,
       color: true,
       userId: true,
+      user: { select: { name: true } },
       members: { select: { userId: true }, orderBy: { createdAt: "asc" } },
     },
   });
   if (!cls) return null;
-  const { members, ...rest } = cls;
+  const { members, user, ...rest } = cls;
   const role = classAccess(userId, rest, members);
   if (!role) return null;
-  return { cls: rest, members, role, learnerIds: classLearnerIds(rest, members) };
+  return { cls: rest, ownerName: user.name, members, role, learnerIds: classLearnerIds(rest, members) };
 }
 
 /** Reads and study: the Owner and Members pass. */

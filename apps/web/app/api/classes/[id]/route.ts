@@ -52,7 +52,7 @@ export async function PATCH(
   if (count === 0) return fail(404, "NOT_FOUND", "Class not found.");
   const updated = await prisma.class.findFirst({
     where: { id },
-    select: { name: true, color: true, _count: { select: { members: true } } },
+    select: { name: true, color: true, user: { select: { name: true } }, _count: { select: { members: true } } },
   });
   if (!updated) return fail(404, "NOT_FOUND", "Class not found.");
 
@@ -73,6 +73,8 @@ export async function PATCH(
       0
     ),
     memberCount: updated._count.members,
+    ownerName: updated.user.name,
+    isOwner: true,
   };
   return ok(data);
 }

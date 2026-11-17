@@ -9,6 +9,7 @@ import { PageHeader } from "../page-header";
 import { ClassFormModal } from "./class-form-modal";
 import { ClassRow } from "./class-row";
 import { DeleteClassModal } from "./delete-class-modal";
+import { LeaveClassModal } from "./leave-class-modal";
 import { ShareClassModal } from "./share-class-modal";
 import {
   buttonPrimary,
@@ -24,6 +25,7 @@ type Dialog =
   | { kind: "colour"; id: string }
   | { kind: "share"; id: string }
   | { kind: "delete"; id: string }
+  | { kind: "leave"; id: string }
   | null;
 
 export function ClassesView() {
@@ -107,6 +109,7 @@ export function ClassesView() {
                   onColour={() => setDialog({ kind: "colour", id: item.id })}
                   onShare={() => setDialog({ kind: "share", id: item.id })}
                   onDelete={() => setDialog({ kind: "delete", id: item.id })}
+                  onLeave={() => setDialog({ kind: "leave", id: item.id })}
                 />
               ))}
             </ul>
@@ -133,9 +136,12 @@ export function ClassesView() {
         <DeleteClassModal
           key={selected.id}
           target={selected}
-          others={classes.filter((c) => c.id !== selected.id)}
+          others={classes.filter((c) => c.id !== selected.id && c.isOwner)}
           onClose={close}
         />
+      ) : null}
+      {dialog?.kind === "leave" && selected ? (
+        <LeaveClassModal key={selected.id} target={selected} onClose={close} />
       ) : null}
     </>
   );

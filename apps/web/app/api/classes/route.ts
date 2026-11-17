@@ -13,25 +13,26 @@ export async function GET(request: Request): Promise<Response> {
   if (result.response) return result.response;
   const userId = result.session.user.id;
 
-  const [classes, folders] = await Promise.all([
-    prisma.class.findMany({
-      where: { userId },
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        name: true,
-        color: true,
-        _count: { select: { members: true } },
-      },
-    }),
-    prisma.folder.findMany({
-      where: { userId },
-      select: {
-        classId: true,
-        flashcards: { select: { _count: { select: { cards: true } } } },
-      },
-    }),
-  ]);
+  const classes = await prisma.class.findMany({
+    where: { OR: [{ userId }, { members: { some: { userId } } }] },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      name: true,
+      color: true,
+      userId: true,
+      user: { select: { name: true } },
+      _count: { select: { members: true } },
+    },
+  });
+  // Count by Class, not by Folder.userId: a Member's Class has the Owner's Folders.
+  const folders = await prisma.folder.findMany({
+    where: { classId: { in: classes.map((c) => c.id) } },
+    select: {
+      classId: true,
+      flashcards: { select: { _count: { select: { cards: true } } } },
+    },
+  });
 
   const counts = new Map<
     string,
@@ -58,6 +59,8 @@ export async function GET(request: Request): Promise<Response> {
       flashcardCount: counts.get(c.id)?.flashcards ?? 0,
       cardCount: counts.get(c.id)?.cards ?? 0,
       memberCount: c._count.members,
+      ownerName: c.user.name,
+      isOwner: c.userId === userId,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -103,6 +106,8 @@ export async function POST(request: Request): Promise<Response> {
     flashcardCount: 0,
     cardCount: 0,
     memberCount: 0,
+    ownerName: result.session.user.name,
+    isOwner: true,
   };
   return ok(data, 201);
 }

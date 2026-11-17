@@ -12,6 +12,7 @@ import {
   buttonDanger,
   buttonSecondary,
   fieldErrorClass,
+  membersStudying,
   pluralize,
 } from "../../classes/ui";
 
@@ -23,10 +24,12 @@ import {
 export function DeleteFlashcardModal({
   folderId,
   target,
+  memberCount = 0,
   onClose,
 }: {
   folderId: string;
   target: FlashcardSummary;
+  memberCount?: number;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -78,6 +81,11 @@ export function DeleteFlashcardModal({
         {pluralize(target.cardCount, "card")}? The cards and their review history
         are removed. This cannot be undone.
       </p>
+      {memberCount > 0 ? (
+        <p className="mt-2 text-body font-semibold text-foreground">
+          {membersStudying(memberCount)}
+        </p>
+      ) : null}
 
       {error ? (
         <p role="alert" className={`mt-6 ${fieldErrorClass}`}>

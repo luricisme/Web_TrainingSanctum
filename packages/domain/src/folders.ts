@@ -56,4 +56,8 @@ export interface FolderSummary {
 export interface ClassFoldersResponse {
   class: { id: string; name: string; color: ClassColor };
   folders: FolderSummary[];
+  /** Story 12.4: viewer role and Members, excluding the Owner. */
+  isOwner: boolean;
+  ownerName: string;
+  memberCount: number;
 }

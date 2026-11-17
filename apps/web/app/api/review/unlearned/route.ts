@@ -27,7 +27,9 @@ export async function GET(request: Request): Promise<Response> {
   if (read.response) return read.response;
   const flashcard = scopeFlashcardWhere(read.scope);
   // Scoped: the scope check already granted access to the Class, so Cards are
-  // not filtered by their (Owner's) userId. Unscoped stays the caller's own.
+  // not filtered by their (Owner's) userId. Unscoped Cards are matched by the
+  // caller's own records (shared Cards count); only the add-card target stays
+  // the caller's own, since a Member cannot add Cards.
   const inScope = flashcard ? { flashcard } : {};
   const ownCards = flashcard ? {} : { userId };
 
@@ -35,7 +37,7 @@ export async function GET(request: Request): Promise<Response> {
   const [groups, newestCard] = await Promise.all([
     prisma.card.groupBy({
       by: ["flashcardId"],
-      where: { ...ownCards, ...unlearnedCardWhere(userId, dirs), ...inScope },
+      where: { ...unlearnedCardWhere(userId, dirs), ...inScope },
       _count: { _all: true },
       _max: { createdAt: true },
       orderBy: [{ _max: { createdAt: "desc" } }, { flashcardId: "asc" }],

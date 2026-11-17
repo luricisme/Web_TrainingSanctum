@@ -89,4 +89,8 @@ export interface ClassSummary {
   cardCount: number;
   /** Story 12.2: Members of the Class, excluding the Owner. */
   memberCount: number;
+  /** Story 12.4: the Owner's display name, for the "{Owner}'s" label. */
+  ownerName: string;
+  /** Story 12.4: false for a Member, who sees the Class read-only. */
+  isOwner: boolean;
 }

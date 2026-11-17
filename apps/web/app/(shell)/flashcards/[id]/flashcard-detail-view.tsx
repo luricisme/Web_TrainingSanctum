@@ -27,13 +27,16 @@ function Breadcrumb({
   cls,
   folder,
   flashcard,
+  ownerName,
 }: {
   cls?: { id: string; name: string };
   folder?: { id: string; name: string };
   flashcard?: string;
+  ownerName?: string;
 }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 text-body-sm font-medium text-foreground-secondary">
+    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+    <nav aria-label="Breadcrumb" className="text-body-sm font-medium text-foreground-secondary">
       <Link href="/classes" className={crumbLink}>
         Classes
       </Link>
@@ -62,6 +65,10 @@ function Breadcrumb({
         </>
       ) : null}
     </nav>
+    {ownerName ? (
+      <p className="text-caption text-foreground-secondary">{ownerName}&apos;s class</p>
+    ) : null}
+    </div>
   );
 }
 
@@ -160,7 +167,12 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
 
   return (
     <>
-      <Breadcrumb cls={data.class} folder={data.folder} flashcard={flashcard.name} />
+      <Breadcrumb
+        cls={data.class}
+        folder={data.folder}
+        flashcard={flashcard.name}
+        ownerName={data.isOwner ? undefined : data.ownerName}
+      />
       <PageHeader title={flashcard.name}>{pluralize(cards.length, "card")}</PageHeader>
 
       {empty ? null : (
@@ -184,7 +196,7 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
           <SectionMarker as="h2" id="flashcard-cards">
             Cards
           </SectionMarker>
-          {empty ? null : (
+          {empty || !data.isOwner ? null : (
             <button
               ref={addRef}
               type="button"
@@ -198,16 +210,20 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
         {empty ? (
           <div className="flex flex-col items-start gap-4 pt-3">
             <p className="max-w-sm text-body text-foreground-secondary">
-              Add cards to start studying this flashcard.
+              {data.isOwner
+                ? "Add cards to start studying this flashcard."
+                : "This flashcard has no cards yet."}
             </p>
-            <button
-              ref={addRef}
-              type="button"
-              onClick={() => setAdding(true)}
-              className={buttonPrimary}
-            >
-              Add cards
-            </button>
+            {data.isOwner ? (
+              <button
+                ref={addRef}
+                type="button"
+                onClick={() => setAdding(true)}
+                className={buttonPrimary}
+              >
+                Add cards
+              </button>
+            ) : null}
           </div>
         ) : (
           <ul ref={listRef} className="flex flex-col gap-3">
@@ -217,6 +233,7 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
                 card={card}
                 index={index + 1}
                 total={cards.length}
+                canEdit={data.isOwner}
                 onEdit={() => setEditing(card)}
                 onDelete={() => setDeleting(card)}
               />
@@ -225,7 +242,7 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
         )}
       </section>
 
-      {editing ? (
+      {editing && data.isOwner ? (
         <EditCardModal
           key={editing.id}
           card={editing}
@@ -238,6 +255,7 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
         <DeleteCardModal
           key={deleting.id}
           card={deleting}
+          memberCount={data.memberCount}
           onClose={() => setDeleting(null)}
           onDeleted={(id) => {
             const index = Math.max(0, cards.findIndex((c) => c.id === id));
@@ -253,7 +271,7 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
         />
       ) : null}
 
-      {adding ? (
+      {adding && data.isOwner ? (
         <AddCardsPanel
           flashcard={{ id: flashcard.id, name: flashcard.name }}
           onClose={() => setAdding(false)}
@@ -268,12 +286,15 @@ function CardRow({
   card,
   index,
   total,
+  canEdit,
   onEdit,
   onDelete,
 }: {
   card: CardSummary;
   index: number;
   total: number;
+  /** False for a Member: read-only row. */
+  canEdit: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -283,6 +304,7 @@ function CardRow({
         <span>
           {index} / {total}
         </span>
+        {canEdit ? (
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -302,6 +324,7 @@ function CardRow({
             Delete
           </button>
         </div>
+        ) : null}
       </div>
       <div className="grid sm:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]">
         <div className="flex flex-col gap-1 px-5 py-4">

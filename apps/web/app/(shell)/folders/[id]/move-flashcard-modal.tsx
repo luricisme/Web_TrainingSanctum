@@ -17,6 +17,7 @@ import {
   buttonSecondary,
   inputClass,
   labelClass,
+  membersWillLose,
 } from "../../classes/ui";
 
 const FOLDER_GONE = "That folder no longer exists. Choose another.";
@@ -29,6 +30,7 @@ const FOLDER_GONE = "That folder no longer exists. Choose another.";
 export function MoveFlashcardModal({
   folderId,
   classId,
+  memberCount = 0,
   target,
   onClose,
 }: {
@@ -36,6 +38,8 @@ export function MoveFlashcardModal({
   folderId: string;
   /** The Class of that Folder, preselected in the picker. */
   classId: string;
+  /** Members of the current Class, who lose the Flashcard if it moves to another Class. */
+  memberCount?: number;
   target: FlashcardSummary;
   onClose: () => void;
 }) {
@@ -121,6 +125,12 @@ export function MoveFlashcardModal({
         added.
       </p>
 
+      {memberCount > 0 && pickedClassId !== classId ? (
+        <p className="mt-2 text-body font-semibold text-foreground">
+          {membersWillLose(memberCount)}
+        </p>
+      ) : null}
+
       <div className="mt-6 flex flex-col gap-2">
         <label htmlFor={`${ids}-class`} className={labelClass}>
           Class
@@ -136,7 +146,7 @@ export function MoveFlashcardModal({
           }}
           className={inputClass}
         >
-          {(classes.data ?? [{ id: classId, name: "Loading..." }]).map((c) => (
+          {(classes.data?.filter((c) => c.isOwner) ?? [{ id: classId, name: "Loading..." }]).map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>

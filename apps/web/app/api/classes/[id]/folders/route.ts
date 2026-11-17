@@ -25,6 +25,9 @@ export async function GET(
   if (guard.response) return guard.response;
   const { id: classId, name, color } = guard.access.cls;
   const cls = { id: classId, name, color: color as ClassColor };
+  const isOwner = guard.access.role === "owner";
+  const ownerName = guard.access.ownerName;
+  const memberCount = guard.access.members.length;
 
   const rows = await prisma.folder.findMany({
     where: { classId: id },
@@ -51,7 +54,13 @@ export async function GET(
         : a.name.localeCompare(b.name)
     );
 
-  const data: ClassFoldersResponse = { class: cls, folders };
+  const data: ClassFoldersResponse = {
+    class: cls,
+    folders,
+    isOwner,
+    ownerName,
+    memberCount,
+  };
   return ok(data);
 }
 

@@ -16,12 +16,14 @@ export function ClassRow({
   onColour,
   onShare,
   onDelete,
+  onLeave,
 }: {
   item: ClassSummary;
   onRename: () => void;
   onColour: () => void;
   onShare: () => void;
   onDelete: () => void;
+  onLeave: () => void;
 }) {
   return (
     <li className={`${tileClass} ${tintFor(item.color)}`}>
@@ -47,6 +49,11 @@ export function ClassRow({
         >
           {item.name}
         </Link>
+        {item.isOwner ? null : (
+          <p className="mt-1 truncate text-caption text-foreground-secondary">
+            {item.ownerName}&apos;s
+          </p>
+        )}
         <p className="mt-1 text-caption text-foreground-secondary">
           {pluralize(item.folderCount, "folder")} ·{" "}
           {pluralize(item.flashcardCount, "flashcard")} ·{" "}
@@ -56,12 +63,16 @@ export function ClassRow({
 
       <RowMenu
         name={item.name}
-        items={[
-          { label: "Rename", onSelect: onRename },
-          { label: "Colour", onSelect: onColour },
-          { label: "Delete", onSelect: onDelete, danger: true },
-          { label: "Share", onSelect: onShare },
-        ]}
+        items={
+          item.isOwner
+            ? [
+                { label: "Rename", onSelect: onRename },
+                { label: "Colour", onSelect: onColour },
+                { label: "Delete", onSelect: onDelete, danger: true },
+                { label: "Share", onSelect: onShare },
+              ]
+            : [{ label: "Leave", onSelect: onLeave, danger: true }]
+        }
       />
     </li>
   );
