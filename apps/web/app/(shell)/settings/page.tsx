@@ -1,6 +1,7 @@
 import { LogoutButton } from "@/app/components/logout-button";
 import { ThemeToggle } from "@/app/components/theme-toggle";
 import { PageHeader } from "../page-header";
+import { PomodoroSettingsControl } from "./pomodoro-settings";
 import { StudyDirectionsControl } from "./study-directions";
 
 /**
@@ -34,6 +35,18 @@ export default function SettingsPage() {
             </p>
           </div>
           <StudyDirectionsControl />
+        </section>
+
+        <section className={`${sectionClass} items-start`}>
+          <div className="max-w-md">
+            <h2 id="pomodoro-title" className="text-heading-3 text-foreground">
+              Pomodoro
+            </h2>
+            <p id="pomodoro-help" className="mt-1 text-body-sm text-foreground-secondary">
+              Focus and break lengths for the plan built from a Task&apos;s estimate.
+            </p>
+          </div>
+          <PomodoroSettingsControl />
         </section>
 
         <section className={`${sectionClass} items-center`}>
