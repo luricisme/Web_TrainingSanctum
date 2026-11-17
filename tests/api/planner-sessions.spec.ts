@@ -305,3 +305,31 @@ test.describe("/api/planner/sessions", () => {
     expect(await prisma.pomodoroSession.count({ where: { taskId } })).toBe(0);
   });
 });
+
+// spec-9-3: GET /api/planner/tasks/[id].
+test.describe("GET /api/planner/tasks/[id]", () => {
+  test("returns the Task with its sessions, oldest first; 401 and 404 otherwise", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    const other = await newUser(playwright, base);
+    const taskId = await addTask(s, base, 90);
+
+    const anon = await (await playwright.request.newContext()).get(`${base}/api/planner/tasks/${taskId}`);
+    expect(anon.status()).toBe(401);
+
+    await startAndEnd(s, base, taskId, "FOCUS");
+    await startAndEnd(s, base, taskId, "BREAK");
+    const running = await start(s, base, taskId, "FOCUS");
+    expect(running.status()).toBe(201);
+
+    const res = await s.request.get(`${base}/api/planner/tasks/${taskId}`);
+    expect(res.status()).toBe(200);
+    const data = (await res.json()).data;
+    expect(data.task).toMatchObject({ id: taskId, estimateMinutes: 90, loggedMinutes: 25 });
+    expect(data.sessions.map((x: { kind: string }) => x.kind)).toEqual(["FOCUS", "BREAK", "FOCUS"]);
+    expect(data.sessions[2].endedAt).toBeNull();
+
+    expect((await other.request.get(`${base}/api/planner/tasks/${taskId}`)).status()).toBe(404);
+    expect((await s.request.get(`${base}/api/planner/tasks/nope`)).status()).toBe(404);
+  });
+});

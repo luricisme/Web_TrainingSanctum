@@ -1,6 +1,6 @@
 import { prisma, type Prisma } from "@training-sanctum/db";
 import { formatLocalTime, updateTaskSchema } from "@training-sanctum/domain";
-import { requirePlannerSession } from "@/lib/planner-sessions";
+import { requirePlannerSession, toSessionSummary } from "@/lib/planner-sessions";
 import { logOperation } from "@/lib/log";
 import { fail, ok, readJson, validationFailure } from "@/lib/api-response";
 import {
@@ -69,4 +69,20 @@ export async function DELETE(request: Request, { params }: Context): Promise<Res
   if (count === 0) return notFound();
   logOperation("planner.task.delete", { taskId: id });
   return ok({ id });
+}
+
+/** spec-9-3: the Task and its sessions (oldest first), for the Pomodoro screen. */
+export async function GET(request: Request, { params }: Context): Promise<Response> {
+  const result = await requirePlannerSession(request);
+  if (result.response) return result.response;
+  const userId = result.session.user.id;
+  const { id } = await params;
+
+  const row = await prisma.task.findFirst({
+    where: { id, userId },
+    include: { ...taskInclude, sessions: { orderBy: { startedAt: "asc" } } },
+  });
+  if (!row) return notFound();
+  const tz = await userTimezone(userId);
+  return ok({ task: toTaskSummary(row, tz), sessions: row.sessions.map(toSessionSummary) });
 }

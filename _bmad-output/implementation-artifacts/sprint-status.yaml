@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-07-2026 00:00
-last_updated: 11-17-2026 21:30
+last_updated: 11-17-2026 22:35
 project: Web_TrainingSanctum
 project_key: NOKEY
 tracking_system: file-system
@@ -113,7 +113,7 @@ development_status:
   epic-9: in-progress # Sprint Change 2026-11-16 (Planner — Pomodoro)
   9-1-pomodoro-plan-engine-and-settings: review # migration: PomodoroSession, User.pomodoroSettings, partial unique (userId) WHERE endedAt IS NULL
   9-2-server-truth-sessions: review # FOCUS_SESSION XP; 409 on second start / overrun cap
-  9-3-pomodoro-screen: backlog
+  9-3-pomodoro-screen: review
   9-4-planner-in-export-and-restore: backlog # extends backupExportSchema (touches 5-2, 5-3, 7-3)
   epic-9-retrospective: optional
 

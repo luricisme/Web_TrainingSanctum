@@ -9,6 +9,8 @@ import {
   planLengthMinutes,
   planNextSession,
   planPomodoro,
+  pomodoroScreenPlan,
+  type SessionSummary,
   startSessionSchema,
   plannerXp,
   pomodoroSettingsSchema,
@@ -191,5 +193,178 @@ describe("planNextSession (spec-9-2)", () => {
   it("validates the start body and defaults overrun", () => {
     expect(startSessionSchema.parse({ taskId: "a", kind: "FOCUS" }).overrun).toBe(false);
     expect(startSessionSchema.safeParse({ taskId: "a", kind: "NAP" }).success).toBe(false);
+  });
+});
+
+describe("pomodoroScreenPlan (spec-9-3)", () => {
+  const S = DEFAULT_POMODORO_SETTINGS;
+  const sum = (
+    id: number,
+    kind: "FOCUS" | "BREAK",
+    actual: number | null,
+    overrun = false
+  ): SessionSummary => ({
+    id: String(id),
+    taskId: "t",
+    kind,
+    plannedMinutes: actual ?? 25,
+    actualMinutes: actual,
+    startedAt: "2026-11-17T09:00:00.000Z",
+    endedAt: actual === null ? null : "2026-11-17T09:30:00.000Z",
+    overrun,
+  });
+  const run = (est: number, sessions: SessionSummary[], notYet = false, done = false) =>
+    pomodoroScreenPlan({ task: { estimateMinutes: est, done }, sessions, notYet }, S);
+  const shape = (p: ReturnType<typeof run>) =>
+    p.pills.filter((x) => x.state !== "done").map((x) => `${x.kind[0]}${x.minutes}`);
+
+  it("plans 40 left of a 90 estimate as 25 5 15", () => {
+    const fresh = run(40, []);
+    expect(shape(fresh)).toEqual(["F25", "B5", "F15"]);
+    expect(fresh.next).toEqual({ kind: "FOCUS", plannedMinutes: 25, overrun: false });
+    expect(fresh.pills[0]!.state).toBe("current");
+    const after = run(90, [sum(1, "FOCUS", 25), sum(2, "FOCUS", 25)]);
+    expect(after.remaining).toBe(40);
+    expect(shape(after)).toEqual(["B5", "F25", "B5", "F15"]);
+  });
+  it("offers the break after a focus and a focus after the break", () => {
+    expect(run(90, [sum(1, "FOCUS", 25)]).next).toEqual({ kind: "BREAK", plannedMinutes: 5 });
+    expect(run(90, [sum(1, "FOCUS", 25), sum(2, "BREAK", 5)]).next).toEqual({
+      kind: "FOCUS",
+      plannedMinutes: 25,
+      overrun: false,
+    });
+  });
+  it("after a stopped focus the strip shows what is left and offers a break", () => {
+    const p = run(50, [sum(1, "FOCUS", 10)]);
+    expect(p.remaining).toBe(40);
+    expect(p.next.kind).toBe("BREAK");
+    expect(shape(p)).toEqual(["B5", "F25", "B5", "F15"]);
+  });
+  it("shows the running session as current and the rest upcoming", () => {
+    const p = run(60, [sum(1, "FOCUS", null)]);
+    expect(p.next).toEqual({ kind: "FOCUS", plannedMinutes: 25, overrun: false });
+    expect(p.pills.map((x) => `${x.state}:${x.kind[0]}${x.minutes}`)).toEqual([
+      "current:F25",
+      "upcoming:B5",
+      "upcoming:F25",
+      "upcoming:B5",
+      "upcoming:F10",
+    ]);
+  });
+  it("asks Done? when nothing remains, then offers overrun until the cap", () => {
+    const base = [sum(1, "FOCUS", 25)];
+    expect(run(25, base).next).toEqual({ kind: "DONE_CARD", overrunLeft: 2 });
+    expect(run(25, base, true).next).toEqual({ kind: "FOCUS", plannedMinutes: 25, overrun: true });
+    const one = [...base, sum(2, "FOCUS", 25, true)];
+    expect(run(25, one).overrunLeft).toBe(1);
+    expect(run(25, one).over).toBe(true);
+    const two = [...one, sum(3, "FOCUS", 25, true)];
+    expect(run(25, two, true).next).toEqual({ kind: "EXHAUSTED" });
+  });
+  it("is exhausted with no focus ever logged and done when the Task is done", () => {
+    expect(run(0, []).next).toEqual({ kind: "EXHAUSTED" });
+    expect(run(25, [], false, true).next).toEqual({ kind: "TASK_DONE" });
+  });
+});
+
+describe("pomodoroScreenPlan parity and branches (spec-9-3)", () => {
+  const sum = (
+    id: number,
+    kind: "FOCUS" | "BREAK",
+    actual: number | null,
+    planned = 25,
+    overrun = false
+  ): SessionSummary => ({
+    id: String(id),
+    taskId: "t",
+    kind,
+    plannedMinutes: planned,
+    actualMinutes: actual,
+    startedAt: "2026-11-17T09:00:00.000Z",
+    endedAt: actual === null ? null : "2026-11-17T09:30:00.000Z",
+    overrun,
+  });
+  const base = DEFAULT_POMODORO_SETTINGS;
+
+  it("offers only what planNextSession accepts, with the same length", () => {
+    const settingsList = [
+      base,
+      { focus: 20, shortBreak: 7, longBreak: 30, longBreakEvery: 2 },
+      { focus: 50, shortBreak: 10, longBreak: 20, longBreakEvery: 3 },
+    ];
+    for (const settings of settingsList) {
+      for (const estimate of [15, 40, 90, 200]) {
+        for (let n = 0; n <= 6; n++) {
+          for (const endWithBreak of [false, true]) {
+            if (n === 0 && endWithBreak) continue;
+            const sessions: SessionSummary[] = [];
+            for (let i = 0; i < n; i++) {
+              sessions.push(sum(sessions.length, "FOCUS", settings.focus, settings.focus));
+              if (i < n - 1 || endWithBreak) sessions.push(sum(sessions.length, "BREAK", 5, 5));
+            }
+            const task = { estimateMinutes: estimate, done: false };
+            const plan = pomodoroScreenPlan({ task, sessions }, settings);
+            const { next } = plan;
+            if (next.kind !== "FOCUS" && next.kind !== "BREAK") continue;
+            const server = planNextSession(
+              { task, kind: next.kind, overrun: next.kind === "FOCUS" && next.overrun, sessions },
+              settings
+            );
+            expect(server.refusal, JSON.stringify({ settings, estimate, n, endWithBreak })).toBeUndefined();
+            expect(server.plannedMinutes).toBe(next.plannedMinutes);
+          }
+        }
+      }
+    }
+  });
+
+  it("offers a long break on the Nth ended focus", () => {
+    const settings = { focus: 20, shortBreak: 7, longBreak: 30, longBreakEvery: 2 };
+    const sessions = [sum(1, "FOCUS", 20, 20), sum(2, "BREAK", 7, 7), sum(3, "FOCUS", 20, 20)];
+    const plan = pomodoroScreenPlan({ task: { estimateMinutes: 100, done: false }, sessions }, settings);
+    expect(plan.next).toEqual({ kind: "BREAK", plannedMinutes: 30 });
+  });
+
+  it("a running break is current, with the focus plan after it", () => {
+    const sessions = [sum(1, "FOCUS", 25), sum(2, "BREAK", null, 5)];
+    const p = pomodoroScreenPlan({ task: { estimateMinutes: 60, done: false }, sessions }, base);
+    expect(p.next).toEqual({ kind: "BREAK", plannedMinutes: 5 });
+    expect(p.pills.map((x) => `${x.state}:${x.kind[0]}${x.minutes}`)).toEqual([
+      "done:F25",
+      "current:B5",
+      "upcoming:F25",
+      "upcoming:B5",
+      "upcoming:F10",
+    ]);
+  });
+
+  it("a running overrun focus has nothing upcoming", () => {
+    const sessions = [sum(1, "FOCUS", 25), sum(2, "FOCUS", null, 25, true)];
+    const p = pomodoroScreenPlan({ task: { estimateMinutes: 25, done: false }, sessions }, base);
+    expect(p.next).toEqual({ kind: "FOCUS", plannedMinutes: 25, overrun: true });
+    expect(p.pills.filter((x) => x.state === "upcoming")).toHaveLength(0);
+  });
+
+  it("is not over at an exact match, and over past it", () => {
+    const exact = pomodoroScreenPlan(
+      { task: { estimateMinutes: 25, done: false }, sessions: [sum(1, "FOCUS", 25)] },
+      base
+    );
+    expect(exact.over).toBe(false);
+    const past = pomodoroScreenPlan(
+      { task: { estimateMinutes: 20, done: false }, sessions: [sum(1, "FOCUS", 25)] },
+      base
+    );
+    expect(past.over).toBe(true);
+  });
+
+  it("a running session wins over a done Task", () => {
+    const p = pomodoroScreenPlan(
+      { task: { estimateMinutes: 50, done: true }, sessions: [sum(1, "FOCUS", null)] },
+      base
+    );
+    expect(p.next.kind).toBe("FOCUS");
+    expect(p.pills[0]!.state).toBe("current");
   });
 });
