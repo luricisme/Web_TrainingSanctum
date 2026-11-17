@@ -224,3 +224,38 @@ test("an admin gets 404 for an unknown or over-long id", async ({ page }) => {
   expect((await page.goto(`/admin/users/${randomUUID()}`))?.status()).toBe(404);
   expect((await page.goto(`/admin/users/${"x".repeat(300)}`))?.status()).toBe(404);
 });
+
+// Story 12.5: member counts and the shared-classes line.
+test("the admin view shows member counts and shared-class membership", async ({ page }) => {
+  const owner = await seedUser(`e2e-share-own-${randomUUID()}@example.test`);
+  const m1 = await prisma.user.create({ data: { name: "M1", email: `e2e-m1-${randomUUID()}@example.test`, timezone: "UTC" } });
+  const m2 = await prisma.user.create({ data: { name: "M2", email: `e2e-m2-${randomUUID()}@example.test`, timezone: "UTC" } });
+  try {
+    const klass = await prisma.class.findFirstOrThrow({ where: { userId: owner.id } });
+    await prisma.classMember.createMany({
+      data: [
+        { classId: klass.id, userId: m1.id },
+        { classId: klass.id, userId: m2.id },
+      ],
+    });
+    const hostClass = await prisma.class.create({ data: { name: "Host", color: "SKY", userId: owner.id } });
+    await prisma.classMember.create({ data: { classId: hostClass.id, userId: m1.id } });
+    await registerOrLogin(page, ADMIN_EMAIL);
+    await page.goto(`/admin/users/${owner.id}`);
+    await expect(page.getByText("2 members · 1 Folder")).toBeVisible();
+    mkdirSync("test-results/screenshots", { recursive: true });
+    for (const theme of ["dark", "light"] as const) {
+      await page.evaluate((t) => {
+        if (t === "light") document.documentElement.dataset.theme = "light";
+        else delete document.documentElement.dataset.theme;
+      }, theme);
+      await page.screenshot({ path: `test-results/screenshots/admin-members-${theme}.png`, animations: "disabled" });
+    }
+    await page.goto(`/admin/users/${m1.id}`);
+    await expect(page.getByText("Member of 2 shared classes")).toBeVisible();
+    await page.goto(`/admin/users/${m2.id}`);
+    await expect(page.getByText("Member of 1 shared class")).toBeVisible();
+  } finally {
+    await prisma.user.deleteMany({ where: { id: { in: [owner.id, m1.id, m2.id] } } });
+  }
+});

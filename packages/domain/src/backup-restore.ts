@@ -8,7 +8,13 @@ import { classColorSchema } from "./classes";
  * creation order. Pure (AD-1): no Prisma.
  */
 export const backupRestoreSchema = backupExportSchema.extend({
-  classes: z.array(backupExportSchema.shape.classes.element.extend({ color: classColorSchema.optional() })),
+  classes: z.array(
+    backupExportSchema.shape.classes.element.extend({
+      color: classColorSchema.optional(),
+      members: z.array(z.string()).default([]),
+    })
+  ),
+  sharedClasses: backupExportSchema.shape.sharedClasses.default([]),
 });
 
 export type BackupRestore = z.infer<typeof backupRestoreSchema>;

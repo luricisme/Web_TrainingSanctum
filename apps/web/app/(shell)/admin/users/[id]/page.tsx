@@ -72,6 +72,11 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
           />
         </div>
       </div>
+      {payload.sharedClasses.length > 0 ? (
+        <p className="mt-6 text-body-sm text-foreground-secondary">
+          Member of {payload.sharedClasses.length} shared {payload.sharedClasses.length === 1 ? "class" : "classes"}
+        </p>
+      ) : null}
       <BackupTreeView tree={buildBackupTree(payload)} />
       <CultivationSummary cultivation={payload.cultivation} />
     </>

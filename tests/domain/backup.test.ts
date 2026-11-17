@@ -7,6 +7,7 @@ const empty = () => ({
   exportedAt: ts,
   user: { id: "u1", email: "a@example.test", studyDirections: "BOTH", timezone: "UTC" },
   classes: [],
+  sharedClasses: [],
   folders: [],
   flashcards: [],
   cards: [],
@@ -27,7 +28,7 @@ const record = (direction: string, firstGradedAt: string | null) => ({
 
 const full = () => ({
   ...empty(),
-  classes: [{ id: "c1", name: "C", color: "SKY", createdAt: ts, updatedAt: ts }],
+  classes: [{ id: "c1", name: "C", color: "SKY", members: ["m@example.test"], createdAt: ts, updatedAt: ts }],
   folders: [{ id: "f1", classId: "c1", name: "Unsorted", isUnsorted: true, createdAt: ts, updatedAt: ts }],
   flashcards: [{ id: "fc1", folderId: "f1", name: "Set", createdAt: ts, updatedAt: ts }],
   cards: [
@@ -61,6 +62,14 @@ describe("backupExportSchema", () => {
 
   it("accepts an empty account", () => {
     expect(backupExportSchema.safeParse(empty()).success).toBe(true);
+  });
+
+  it("requires members and sharedClasses", () => {
+    const { sharedClasses: _s, ...rest } = full();
+    expect(backupExportSchema.safeParse(rest).success).toBe(false);
+    const noMembers = full();
+    delete (noMembers.classes[0] as { members?: string[] }).members;
+    expect(backupExportSchema.safeParse(noMembers).success).toBe(false);
   });
 
   it("rejects a missing section", () => {

@@ -8,7 +8,7 @@ function valid() {
     version: 1,
     exportedAt: ts,
     user: { id: "u1", email: "a@example.test", studyDirections: "BOTH", timezone: "UTC" },
-    classes: [{ id: "c1", name: "C", color: "MINT", createdAt: ts, updatedAt: ts }],
+    classes: [{ id: "c1", name: "C", color: "MINT", members: [], createdAt: ts, updatedAt: ts }],
     folders: [{ id: "f1", classId: "c1", name: "Unsorted", isUnsorted: true, createdAt: ts, updatedAt: ts }],
     flashcards: [{ id: "s1", folderId: "f1", name: "Set", createdAt: ts, updatedAt: ts }],
     cards: [
@@ -37,6 +37,7 @@ function valid() {
         ],
       },
     ],
+    sharedClasses: [],
     cultivation: {
       xp: 10,
       settledThrough: null,
@@ -49,6 +50,15 @@ function valid() {
 const parse = (value: unknown) => backupRestoreSchema.parse(value);
 
 describe("backupRestoreSchema", () => {
+  it("defaults missing members and sharedClasses to empty (older files)", () => {
+    const old = valid() as Record<string, unknown>;
+    delete old.sharedClasses;
+    for (const c of old.classes as Record<string, unknown>[]) delete c.members;
+    const parsed = backupRestoreSchema.parse(old);
+    expect(parsed.sharedClasses).toEqual([]);
+    expect(parsed.classes[0]!.members).toEqual([]);
+  });
+
   it("accepts a valid file with no issues", () => {
     expect(findBackupIssues(parse(valid()))).toEqual([]);
   });

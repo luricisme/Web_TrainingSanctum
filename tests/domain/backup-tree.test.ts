@@ -3,7 +3,7 @@ import { buildBackupTree } from "@training-sanctum/domain";
 
 const ts = "2026-11-14T10:00:00.000Z";
 const base = { createdAt: ts, updatedAt: ts };
-const klass = (id: string) => ({ id, name: id, color: "SKY" as const, ...base });
+const klass = (id: string) => ({ id, name: id, color: "SKY" as const, members: ["m@example.test"], ...base });
 const folder = (id: string, classId: string, isUnsorted = false) => ({ id, classId, name: id, isUnsorted, ...base });
 const flashcard = (id: string, folderId: string) => ({ id, folderId, name: id, ...base });
 const card = (id: string, flashcardId: string) => ({
@@ -24,6 +24,7 @@ describe("buildBackupTree", () => {
       cards: [card("k3", "s1"), card("k1", "s2"), card("k2", "s2")],
     });
     expect(tree.map((c) => c.id)).toEqual(["c2", "c1"]);
+    expect(tree[0]!.members).toEqual(["m@example.test"]);
     const c1 = tree[1]!;
     expect(c1.folders.map((f) => f.id)).toEqual(["f1", "f3"]);
     expect(c1.folders[0]!.flashcards.map((s) => s.id)).toEqual(["s2", "s1"]);
