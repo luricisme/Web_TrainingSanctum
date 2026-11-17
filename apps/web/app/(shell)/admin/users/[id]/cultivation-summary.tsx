@@ -1,11 +1,16 @@
 import { levelForXp, type BackupExport } from "@training-sanctum/domain";
 import { dateFormat, numberFormat } from "./format";
 
-const QUEST_LABEL: Record<BackupExport["cultivation"]["xpEvents"][number]["questKind"], string> = {
+const QUEST_LABEL: Record<NonNullable<BackupExport["cultivation"]["xpEvents"][number]["questKind"]>, string> = {
   LEARN_FLASHCARDS: "Learn flashcards",
   CLEAR_REVIEW: "Clear review",
 };
-const REASON_LABEL = { CLAIM: "Claimed", PENALTY: "Missed day" } as const;
+const REASON_LABEL = {
+  CLAIM: "Claimed",
+  PENALTY: "Missed day",
+  FOCUS_SESSION: "Focus session",
+  TASK_DONE: "Task done",
+} as const;
 
 const dayText = (day: string) => dateFormat.format(new Date(`${day}T00:00:00.000Z`));
 
@@ -42,7 +47,7 @@ export function CultivationSummary({ cultivation }: { cultivation: BackupExport[
             <li key={e.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-4 py-3 text-body-sm">
               <span className="text-foreground-secondary">{dayText(e.localDay)}</span>
               <span className="min-w-0 text-foreground">
-                {QUEST_LABEL[e.questKind]} · {REASON_LABEL[e.reason]}
+                {e.questKind ? `${QUEST_LABEL[e.questKind]} · ` : ""}{REASON_LABEL[e.reason]}
               </span>
               <span className="ml-auto font-mono text-foreground">
                 {e.delta > 0 ? "+" : ""}

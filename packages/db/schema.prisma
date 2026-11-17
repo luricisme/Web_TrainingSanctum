@@ -54,18 +54,20 @@ model User {
   createdAt                 DateTime        @default(now())
   updatedAt                 DateTime        @updatedAt
 
-  sessions          Session[]
-  accounts          Account[]
-  classes           Class[]
-  classMemberships  ClassMember[]
-  invitationsSent     ClassInvitation[] @relation("InvitationInviter")
-  invitationsReceived ClassInvitation[] @relation("InvitationInvitee")
-  folders           Folder[]
-  flashcards        Flashcard[]
-  cards             Card[]
-  schedulingRecords SchedulingRecord[]
-  cultivationDays   CultivationDay[]
-  xpEvents          XpEvent[]
+  sessions            Session[]
+  accounts            Account[]
+  classes             Class[]
+  classMemberships    ClassMember[]
+  invitationsSent     ClassInvitation[]  @relation("InvitationInviter")
+  invitationsReceived ClassInvitation[]  @relation("InvitationInvitee")
+  folders             Folder[]
+  flashcards          Flashcard[]
+  cards               Card[]
+  schedulingRecords   SchedulingRecord[]
+  cultivationDays     CultivationDay[]
+  xpEvents            XpEvent[]
+  taskCategories      TaskCategory[]
+  tasks               Task[]
 
   @@map("users")
 }
@@ -139,7 +141,7 @@ model Class {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  folders Folder[]
+  folders     Folder[]
   members     ClassMember[]
   invitations ClassInvitation[]
 
@@ -298,6 +300,8 @@ enum QuestKind {
 enum XpEventReason {
   CLAIM
   PENALTY
+  FOCUS_SESSION
+  TASK_DONE
 }
 
 /// One row per user and local day: that day's quest snapshot (kinds,
@@ -322,11 +326,55 @@ model XpEvent {
   userId    String
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   localDay  DateTime      @db.Date
-  questKind QuestKind
+  /// Null for Planner XP (Epic 8); every quest-driven event still has one.
+  questKind QuestKind?
   delta     Int
   reason    XpEventReason
   createdAt DateTime      @default(now())
 
   @@index([userId, localDay])
   @@map("xp_events")
+}
+
+/// Epic 8 (Story 8.2): a user's Task Category. Name is unique per user,
+/// case-insensitive, through the raw-SQL index
+/// "task_categories_userId_lower_name_key" (see the migration).
+model TaskCategory {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  color     ClassColor
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  tasks Task[]
+
+  @@index([userId])
+  @@map("task_categories")
+}
+
+/// Epic 8: a free-form Task. Story 8.3 builds the routes and UI; the full
+/// shape lands with the categories so 8.3 needs no migration.
+/// `categoryId` is Restrict: Category delete re-points or deletes Tasks itself.
+model Task {
+  id              String       @id @default(cuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId      String
+  category        TaskCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  title           String
+  localDay        DateTime     @db.Date
+  /// Optional start instant; `localDay` is its local day when set (AD-8).
+  startAt         DateTime?
+  estimateMinutes Int
+  done            Boolean      @default(false)
+  xpAwardedAt     DateTime?
+  loggedMinutes   Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([userId, localDay])
+  @@index([categoryId])
+  @@map("tasks")
 }
