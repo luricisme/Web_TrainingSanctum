@@ -142,6 +142,7 @@ spacing:
   app-bar-height: 56px
   frame-inset: 6px
   backdrop-inset: 12px
+  calendar-hour: '3.5rem (56px; one hour of the Planner calendar grid, a minute is a sixtieth; --calendar-hour in globals.css)'
 elevation:
   low: '0 1px 2px rgba(20,22,30,0.06)'
   medium: '0 8px 24px rgba(20,22,30,0.08)'
@@ -266,7 +267,7 @@ components:
     foreground: '{colors.text}'
     over-foreground: '{colors.warning}'
   calendar-block:
-    status: 'not built (Epic 10)'
+    status: 'built (Story 10.1)'
     background: '{colors.tint-*}'
     border: '{colors.tint-*-border}'
     radius: '{rounded.sm}'
@@ -274,7 +275,7 @@ components:
     done-opacity: 0.5
     progress-fill: '{colors.accent}'
   calendar-grid:
-    status: 'not built (Epic 10)'
+    status: 'built (Story 10.1)'
     line: '{colors.divider}'
     hour-label: '{typography.caption}'
     now-line: '{colors.accent}'
@@ -334,7 +335,7 @@ All values are in the frontmatter, light first (default), `-dark` variants besid
 
 Any new token must be checked against `{colors.card}`, `{colors.bg}` and, where it sits on one, a tint.
 - **Bell badge (Epic 12, Sprint Change 2026-11-17):** no new pair — `on-frame` on `frame-raised` (7.7:1 measured) on the bar; `on-accent` on `accent` (18.1:1) on the panel.
-- **To measure (Epic 10, Sprint Change 2026-11-16): the calendar conflict border** — `{colors.error}` as a 2px non-text border on each of the five tints, both themes. Story 10.1 records the ratios here and either meets 3:1 or accepts in writing; the "Conflict" caption is always present, so no information depends on the border alone.
+- **Met: calendar conflict border (Story 10.1, measured 2026-11-18).** `{colors.error}` as the 2px non-text border of a conflicting calendar block, against the tint fill it borders: light lavender 3.98, sky 4.25, mint 4.45, butter 4.68, rose 4.05; dark lavender 4.60, sky 4.34, mint 4.29, butter 4.25, rose 4.69. Against the `{colors.card}` it sits on: 5.43 (light) and 5.46 (dark). Every pair meets 3:1. The "Conflict" caption is still always present, so no information depends on the border alone.
 
 ## Typography
 
@@ -414,7 +415,7 @@ Hover on a tile or card draws a darker border; nothing scales or lifts.
 - **Dock** (`components.dock`) — *built (Story 6.3).* The mobile navigation: a pill-shaped bar floating at the bottom of the screen on the frame colour, holding Review, Classes, Cultivation and Settings as round icon buttons. The current destination is a raised pill (`{colors.frame-raised}`). Respects the device's bottom safe area. Hidden in focus mode. **Decision (2026-11-14):** a floating dock, as in the owner's reference screenshots, rather than a full-width bottom bar. **Sprint Change 2026-11-16:** five buttons (Review, Classes, Planner, Cultivation, Settings; Admin as a sixth), still one row.
 - **Plan strip** (`components.plan-strip`) — *built (Story 9.3).* One pill per session of the Pomodoro plan: focus pills in the Task's Category tint with the minutes in mono, break pills on `{colors.elevated}`; the current pill `{colors.text}`-bordered, done pills ticked, overrun pills marked "+". Read-only. Behaviour in EXPERIENCE.md.
 - **Countdown** (`components.countdown`) — *built (Story 9.3).* The remaining time of the current session in `{typography.mono}` at display size, `{colors.text}`; `{colors.warning}` once the Task is over its estimate. No ring, no animation — the XP ring in the app bar stays the only ring.
-- **Calendar block and grid** (`components.calendar-block`, `components.calendar-grid`) — *not built (Epic 10).* Blocks take the Category tint with its border, `{rounded.sm}`, title and minutes in `{colors.text}`; done blocks at 0.5 opacity; a conflict draws a 2px `{colors.error}` border and a "Conflict" caption on both blocks, placed side by side; a running session fills the block from the top in `{colors.accent}`. The grid draws hour lines in `{colors.divider}`, hour labels in `{typography.caption}`, and a 2px now-line in the accent. The unscheduled tray above each column holds tint chips (`{rounded.full}`).
+- **Calendar block and grid** (`components.calendar-block`, `components.calendar-grid`) — *built (Story 10.1, read-only; the progress fill and drag are Stories 10.2 and 10.3).* Blocks take the Category tint with its border, `{rounded.sm}`, title and minutes in `{colors.text}`; done blocks at 0.5 opacity; a conflict draws a 2px `{colors.error}` border and a "Conflict" caption on both blocks, placed side by side; a running session fills the block from the top in `{colors.accent}`. The grid draws hour lines in `{colors.divider}`, hour labels in `{typography.caption}`, and a 2px now-line in the accent. The unscheduled tray above each column holds tint chips (`{rounded.full}`).
 - **Music player** (`components.music-player`) — *not built (Epic 11).* A `surface-card` strip under the countdown: title · artist · licence link in `{typography.body-small}`, a pause button and a volume slider. No artwork, no playlist.
 - **Bell** (`components.bell`) — *not built (Epic 12, Sprint Change 2026-11-17).* A round icon button at the app bar's right, before the Realm badge, in `{colors.on-frame}` with a mono count chip (`on-frame` on `frame-raised`) when > 0; below 640px it sits top-right of the content panel in `{colors.text}` with the chip in `{colors.on-accent}` on `{colors.accent}`. Opens an anchored popover on the card surface with `{elevation.medium}` and no scrim. Hidden in focus mode.
 - **Shared Class tile** (`components.shared-label`) — *not built (Epic 12).* The Owner's tint; "{Owner}'s" in `{typography.caption}` `{colors.text-secondary}` under the name; never a different border or icon — the label is the cue.

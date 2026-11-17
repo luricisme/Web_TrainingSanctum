@@ -194,6 +194,12 @@
   --perspective-review: 1600px;
 }
 
+/* Planner calendar grid (spec-10-1): the height of one hour of the time grid;
+   a minute is a sixtieth of it. Blocks and hour lines position from this. */
+:root {
+  --calendar-hour: 3.5rem;
+}
+
 /* Motion (DESIGN.md motion): state changes use `motion.normal` (150ms) with
    ease-in-out; motion exists only to clarify a state change. */
 :root {
