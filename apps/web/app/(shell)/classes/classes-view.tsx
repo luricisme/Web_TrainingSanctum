@@ -9,6 +9,7 @@ import { PageHeader } from "../page-header";
 import { ClassFormModal } from "./class-form-modal";
 import { ClassRow } from "./class-row";
 import { DeleteClassModal } from "./delete-class-modal";
+import { ShareClassModal } from "./share-class-modal";
 import {
   buttonPrimary,
   buttonSecondary,
@@ -21,6 +22,7 @@ type Dialog =
   | { kind: "create" }
   | { kind: "rename"; id: string }
   | { kind: "colour"; id: string }
+  | { kind: "share"; id: string }
   | { kind: "delete"; id: string }
   | null;
 
@@ -103,6 +105,7 @@ export function ClassesView() {
                   item={item}
                   onRename={() => setDialog({ kind: "rename", id: item.id })}
                   onColour={() => setDialog({ kind: "colour", id: item.id })}
+                  onShare={() => setDialog({ kind: "share", id: item.id })}
                   onDelete={() => setDialog({ kind: "delete", id: item.id })}
                 />
               ))}
@@ -122,6 +125,9 @@ export function ClassesView() {
           focusColour
           onClose={close}
         />
+      ) : null}
+      {dialog?.kind === "share" && selected ? (
+        <ShareClassModal key={selected.id} target={selected} onClose={close} />
       ) : null}
       {dialog?.kind === "delete" && selected ? (
         <DeleteClassModal

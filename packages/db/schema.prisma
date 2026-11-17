@@ -58,6 +58,8 @@ model User {
   accounts          Account[]
   classes           Class[]
   classMemberships  ClassMember[]
+  invitationsSent     ClassInvitation[] @relation("InvitationInviter")
+  invitationsReceived ClassInvitation[] @relation("InvitationInvitee")
   folders           Folder[]
   flashcards        Flashcard[]
   cards             Card[]
@@ -138,7 +140,8 @@ model Class {
   updatedAt DateTime   @updatedAt
 
   folders Folder[]
-  members ClassMember[]
+  members     ClassMember[]
+  invitations ClassInvitation[]
 
   @@index([userId, name])
   @@map("classes")
@@ -157,6 +160,34 @@ model ClassMember {
   @@unique([classId, userId])
   @@index([userId])
   @@map("class_members")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+/// Story 12.3: an Owner's invitation of a registered user into a Class.
+/// "At most one PENDING invitation per (class, invitee)" is a partial unique
+/// index on `class_invitations("classId", "inviteeId") WHERE status = 'PENDING'`,
+/// which Prisma cannot express, so it lives as raw SQL at the end of the
+/// add_class_invitations migration (as `folders_classId_isUnsorted_key`).
+model ClassInvitation {
+  id          String           @id @default(cuid())
+  classId     String
+  class       Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  inviterId   String
+  inviter     User             @relation("InvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  inviteeId   String
+  invitee     User             @relation("InvitationInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  status      InvitationStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+
+  @@index([inviteeId, status])
+  @@index([classId])
+  @@map("class_invitations")
 }
 
 model Folder {
