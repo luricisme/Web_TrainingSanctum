@@ -51,10 +51,14 @@ export const backupExportSchema = z.object({
       id,
       name: z.string(),
       color: z.enum(["LAVENDER", "SKY", "MINT", "BUTTER", "ROSE"]),
+      /** Story 12.5: Member emails (Owner excluded), sorted. */
+      members: z.array(z.string()),
       createdAt: isoTimestamp,
       updatedAt: isoTimestamp,
     })
   ),
+  /** Story 12.5: Classes the user is a Member of; reference only, never restored. */
+  sharedClasses: z.array(z.object({ name: z.string(), ownerEmail: z.string() })),
   folders: z.array(
     z.object({
       id,

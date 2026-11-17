@@ -134,6 +134,9 @@ export function RestorePanel({ userId, email }: { userId: string; email: string 
               {plural(backup.classes.length, "Class", "Classes")},{" "}
               {plural(backup.folders.length, "Folder")}, {plural(backup.flashcards.length, "Flashcard")},{" "}
               {plural(backup.cards.length, "Card")}
+              {backup.classes.some((c) => c.members.length > 0)
+                ? `, ${plural(backup.classes.reduce((n, c) => n + c.members.length, 0), "Member")}`
+                : ""}
             </dd>
           </dl>
           {modalError ? (

@@ -219,4 +219,84 @@ test.describe("GET /api/admin/users/[id]/export", () => {
       await prisma.user.delete({ where: { id: user.id } });
     }
   });
+
+  test("export carries Members and shared Classes, and only the user's own records", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const request = await adminSession(playwright, base);
+    const owner = await seedUser(`export-own-${randomUUID()}@example.test`);
+    const member = await seedUser(`export-mem-${randomUUID()}@example.test`);
+    try {
+      const klass = await prisma.class.findFirstOrThrow({ where: { userId: owner.user.id } });
+      await prisma.classMember.create({ data: { classId: klass.id, userId: member.user.id } });
+      await prisma.schedulingRecord.createMany({
+        data: (["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"] as const).map((direction) => ({
+          cardId: owner.card.id,
+          userId: member.user.id,
+          direction,
+          repetitions: 7,
+          nextReviewDate: new Date("2026-11-20T00:00:00.000Z"),
+        })),
+      });
+
+      const ownerFile = backupExportSchema.parse(
+        await (await request.get(`${base}/api/admin/users/${owner.user.id}/export`)).json()
+      );
+      expect(ownerFile.classes[0].members).toEqual([member.user.email]);
+      expect(ownerFile.sharedClasses).toEqual([]);
+      expect(ownerFile.cards[0].schedulingRecords).toHaveLength(2);
+      expect(ownerFile.cards[0].schedulingRecords.every((r) => r.repetitions !== 7)).toBe(true);
+
+      const memberFile = backupExportSchema.parse(
+        await (await request.get(`${base}/api/admin/users/${member.user.id}/export`)).json()
+      );
+      expect(memberFile.sharedClasses).toEqual([{ name: "Seed class", ownerEmail: owner.user.email }]);
+      expect(memberFile.classes).toHaveLength(1);
+      expect(memberFile.classes[0].members).toEqual([]);
+      expect(memberFile.cards).toHaveLength(1);
+      expect(JSON.stringify(memberFile)).not.toContain(owner.card.id);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: { in: [owner.user.id, member.user.id] } } });
+    }
+  });
+
+  test("members and sharedClasses come back sorted", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const request = await adminSession(playwright, base);
+    const tag = randomUUID();
+    const owner = await seedUser(`export-sort-own-${tag}@example.test`);
+    const zed = await seedUser(`zed-${tag}@example.test`);
+    const amy = await seedUser(`amy-${tag}@example.test`);
+    const hostB = await seedUser(`b-host-${tag}@example.test`);
+    const hostA = await seedUser(`a-host-${tag}@example.test`);
+    try {
+      const own = await prisma.class.findFirstOrThrow({ where: { userId: owner.user.id } });
+      for (const u of [zed, amy]) await prisma.classMember.create({ data: { classId: own.id, userId: u.user.id } });
+      // Two hosts share the name "Zebra" (tie broken by owner email), plus a lower name; created out of order.
+      const zebraB = await prisma.class.findFirstOrThrow({ where: { userId: hostB.user.id } });
+      const zebraA = await prisma.class.findFirstOrThrow({ where: { userId: hostA.user.id } });
+      await prisma.class.update({ where: { id: zebraB.id }, data: { name: "Zebra" } });
+      await prisma.class.update({ where: { id: zebraA.id }, data: { name: "Zebra" } });
+      const apple = await prisma.class.create({ data: { name: "Apple", color: "ROSE", userId: hostB.user.id } });
+      for (const id of [zebraB.id, zebraA.id, apple.id]) {
+        await prisma.classMember.create({ data: { classId: id, userId: owner.user.id } });
+      }
+
+      const file = backupExportSchema.parse(
+        await (await request.get(`${base}/api/admin/users/${owner.user.id}/export`)).json()
+      );
+      expect(file.classes[0].members).toEqual([amy.user.email, zed.user.email]);
+      expect(file.sharedClasses).toEqual([
+        { name: "Apple", ownerEmail: hostB.user.email },
+        { name: "Zebra", ownerEmail: hostA.user.email },
+        { name: "Zebra", ownerEmail: hostB.user.email },
+      ]);
+    } finally {
+      await prisma.user.deleteMany({
+        where: { id: { in: [owner.user.id, zed.user.id, amy.user.id, hostB.user.id, hostA.user.id] } },
+      });
+    }
+  });
 });

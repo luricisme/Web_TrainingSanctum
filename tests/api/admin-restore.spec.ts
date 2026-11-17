@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@training-sanctum/db";
-import { DAY_MS, toLocalDate, type BackupExport } from "@training-sanctum/domain";
+import { DAY_MS, toLocalCalendarDay, toLocalDate, type BackupExport } from "@training-sanctum/domain";
 
 const PASSWORD = "correct-horse-battery";
 const FALLBACK_BASE = "http://localhost:3100";
@@ -347,6 +347,127 @@ test.describe("POST /api/admin/users/[id]/restore", () => {
       expect(await prisma.schedulingRecord.count({ where: { card: { userId: user.id } } })).toBe(2 * (N + 1));
     } finally {
       await prisma.user.deleteMany({ where: { id: user.id } });
+    }
+  });
+
+  // Story 12.5
+  test("Members re-attach with default records; unknown, self and duplicate emails are ignored", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const admin = await adminSession(playwright, base);
+    const owner = await seedUser(`restore-own-${randomUUID()}@example.test`);
+    const friend = await prisma.user.create({
+      data: { name: "Friend", email: `restore-friend-${randomUUID()}@example.test`, timezone: "UTC" },
+    });
+    const far = await prisma.user.create({
+      data: { name: "Far", email: `restore-far-${randomUUID()}@example.test`, timezone: "Pacific/Kiritimati" },
+    });
+    const theirs = await prisma.user.create({
+      data: { name: "Other", email: `restore-host-${randomUUID()}@example.test`, timezone: "UTC" },
+    });
+    try {
+      // The owner is also a Member of someone else's Class.
+      const hostClass = await prisma.class.create({ data: { name: "Host", color: "SKY", userId: theirs.id } });
+      await prisma.classMember.create({ data: { classId: hostClass.id, userId: owner.id } });
+      const before = await exportOf(admin, base, owner.id);
+      expect(before.sharedClasses).toEqual([{ name: "Host", ownerEmail: theirs.email }]);
+      before.classes[0].members = [friend.email, far.email, friend.email, owner.email, "nobody@example.test"];
+
+      const startedAt = new Date();
+      const res = await post(admin, base, owner.id, { confirm: true, backup: before });
+      const finishedAt = new Date();
+      expect(res.status()).toBe(200);
+      expect((await res.json()).data).toMatchObject({ classes: 1, cards: 1, members: 2, schedulingRecords: 6 });
+
+      const after = await exportOf(admin, base, owner.id);
+      expect(after.classes[0].members).toEqual([far.email, friend.email].sort());
+      expect(after.cards[0].schedulingRecords).toHaveLength(2);
+      const records = await prisma.schedulingRecord.findMany({ where: { userId: friend.id } });
+      expect(records).toHaveLength(2);
+      for (const r of records) {
+        expect(r.easeFactor).toBe(2.5);
+        expect(r.repetitions).toBe(0);
+        expect(r.firstGradedAt).toBeNull();
+      }
+      // Each Member's default records are due at the start of today in that Member's own timezone.
+      for (const [member, tz] of [[friend, "UTC"], [far, "Pacific/Kiritimati"]] as const) {
+        const rows = await prisma.schedulingRecord.findMany({ where: { userId: member.id } });
+        expect(rows).toHaveLength(2);
+        const allowed = new Set([startedAt, finishedAt].map((n) => toLocalCalendarDay(n, tz).getTime()));
+        for (const r of rows) expect(allowed.has(r.nextReviewDate.getTime())).toBe(true);
+      }
+      // The owner's membership in another Class is untouched.
+      expect(await prisma.classMember.count({ where: { classId: hostClass.id, userId: owner.id } })).toBe(1);
+      expect(await prisma.class.count({ where: { userId: theirs.id } })).toBe(1);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: { in: [owner.id, friend.id, far.id, theirs.id] } } });
+    }
+  });
+
+  test("an older file without members or sharedClasses restores unchanged", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const admin = await adminSession(playwright, base);
+    const user = await seedUser(`restore-old-${randomUUID()}@example.test`);
+    try {
+      const before = (await exportOf(admin, base, user.id)) as unknown as Record<string, unknown>;
+      delete before.sharedClasses;
+      for (const c of before.classes as Record<string, unknown>[]) delete c.members;
+      const res = await post(admin, base, user.id, { confirm: true, backup: before });
+      expect(res.status()).toBe(200);
+      expect((await res.json()).data).toMatchObject({ classes: 1, members: 0, schedulingRecords: 2 });
+    } finally {
+      await prisma.user.deleteMany({ where: { id: user.id } });
+    }
+  });
+
+  test("a Member of one of two Classes is attached only to that Class's Cards", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const admin = await adminSession(playwright, base);
+    const owner = await seedUser(`restore-two-${randomUUID()}@example.test`);
+    const friend = await prisma.user.create({
+      data: { name: "Friend", email: `restore-two-friend-${randomUUID()}@example.test`, timezone: "UTC" },
+    });
+    try {
+      const second = await prisma.class.create({
+        data: { name: "Second class", color: "SKY", userId: owner.id, createdAt: new Date("2026-11-02T00:00:00Z") },
+      });
+      const folder = await prisma.folder.create({
+        data: { name: "Unsorted", isUnsorted: true, classId: second.id, userId: owner.id },
+      });
+      const flashcard = await prisma.flashcard.create({ data: { name: "Second set", folderId: folder.id, userId: owner.id } });
+      for (const term of ["alpha", "beta"]) {
+        const card = await prisma.card.create({
+          data: { term, definition: "d", flashcardId: flashcard.id, userId: owner.id },
+        });
+        await prisma.schedulingRecord.createMany({
+          data: (["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"] as const).map((direction) => ({
+            cardId: card.id,
+            userId: owner.id,
+            direction,
+            nextReviewDate: new Date("2026-11-16T00:00:00.000Z"),
+          })),
+        });
+      }
+      const before = await exportOf(admin, base, owner.id);
+      expect(before.classes).toHaveLength(2);
+      for (const c of before.classes) c.members = c.name === "Second class" ? [friend.email] : [];
+
+      const res = await post(admin, base, owner.id, { confirm: true, backup: before });
+      expect(res.status()).toBe(200);
+      expect((await res.json()).data).toMatchObject({ classes: 2, cards: 3, members: 1, schedulingRecords: 3 * 2 + 2 * 2 });
+
+      const memberships = await prisma.classMember.findMany({ where: { userId: friend.id }, include: { class: true } });
+      expect(memberships.map((m) => m.class.name)).toEqual(["Second class"]);
+      const records = await prisma.schedulingRecord.findMany({
+        where: { userId: friend.id },
+        include: { card: { select: { term: true } } },
+      });
+      expect(records).toHaveLength(4);
+      expect([...new Set(records.map((r) => r.card.term))].sort()).toEqual(["alpha", "beta"]);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: { in: [owner.id, friend.id] } } });
     }
   });
 });

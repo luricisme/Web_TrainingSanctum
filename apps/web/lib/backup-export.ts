@@ -11,7 +11,7 @@ const byCreated = [{ createdAt: "asc" as const }, { id: "asc" as const }];
  * Every query is scoped by `userId`; no auth, role or disabled data is read.
  */
 export async function buildBackupExport(userId: string): Promise<BackupExport | null> {
-  const [user, classes, folders, flashcards, cards, days, xpEvents] = await prisma.$transaction([
+  const [user, classes, members, memberships, folders, flashcards, cards, days, xpEvents] = await prisma.$transaction([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -24,17 +24,36 @@ export async function buildBackupExport(userId: string): Promise<BackupExport | 
       },
     }),
     prisma.class.findMany({ where: { userId }, orderBy: byCreated }),
+    prisma.classMember.findMany({
+      where: { class: { userId } },
+      select: { classId: true, user: { select: { email: true } } },
+    }),
+    prisma.classMember.findMany({
+      where: { userId },
+      select: { class: { select: { name: true, user: { select: { email: true } } } } },
+    }),
     prisma.folder.findMany({ where: { userId }, orderBy: byCreated }),
     prisma.flashcard.findMany({ where: { userId }, orderBy: byCreated }),
     prisma.card.findMany({
       where: { userId },
       orderBy: byCreated,
-      include: { schedulingRecords: { orderBy: [{ direction: "asc" }] } },
+      include: { schedulingRecords: { where: { userId }, orderBy: [{ direction: "asc" }] } },
     }),
     prisma.cultivationDay.findMany({ where: { userId }, orderBy: byCreated }),
     prisma.xpEvent.findMany({ where: { userId }, orderBy: byCreated }),
   ], { isolationLevel: "RepeatableRead" });
   if (!user) return null;
+
+  const membersByClass = new Map<string, string[]>();
+  for (const m of members) {
+    const list = membersByClass.get(m.classId);
+    if (list) list.push(m.user.email);
+    else membersByClass.set(m.classId, [m.user.email]);
+  }
+  const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  const sharedClasses = memberships
+    .map((m) => ({ name: m.class.name, ownerEmail: m.class.user.email }))
+    .sort((a, b) => cmp(a.name, b.name) || cmp(a.ownerEmail, b.ownerEmail));
 
   return {
     version: BACKUP_VERSION,
@@ -49,9 +68,11 @@ export async function buildBackupExport(userId: string): Promise<BackupExport | 
       id: c.id,
       name: c.name,
       color: c.color,
+      members: (membersByClass.get(c.id) ?? []).sort(cmp),
       createdAt: iso(c.createdAt),
       updatedAt: iso(c.updatedAt),
     })),
+    sharedClasses,
     folders: folders.map((f) => ({
       id: f.id,
       classId: f.classId,

@@ -265,4 +265,51 @@ test.describe("DELETE /api/admin/users/[id]", () => {
       await prisma.user.deleteMany({ where: { id: { in: [actor.id, target.id] } } });
     }
   });
+
+  test("deleting a Member removes their share; deleting an Owner removes the Class for everyone", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const admin = await adminSession(playwright, base);
+    const owner = await account(playwright, base);
+    const member = await account(playwright, base);
+    const again = await account(playwright, base);
+    try {
+      await populate(owner.id);
+      const klass = await prisma.class.findFirstOrThrow({ where: { userId: owner.id } });
+      const card = await prisma.card.findFirstOrThrow({ where: { userId: owner.id } });
+      for (const u of [member, again]) {
+        await prisma.classMember.create({ data: { classId: klass.id, userId: u.id } });
+        await prisma.schedulingRecord.create({
+          data: { cardId: card.id, userId: u.id, direction: "TERM_TO_DEFINITION", nextReviewDate: new Date("2026-11-16") },
+        });
+      }
+
+      await prisma.classInvitation.createMany({
+        data: [
+          { classId: klass.id, inviterId: owner.id, inviteeId: member.id, status: "PENDING" },
+          { classId: klass.id, inviterId: owner.id, inviteeId: again.id, status: "DECLINED" },
+        ],
+      });
+
+      expect((await del(admin, base, member.id, { email: member.email })).status()).toBe(200);
+      expect(await prisma.classInvitation.count({ where: { inviteeId: member.id } })).toBe(0);
+      expect(await prisma.classInvitation.count({ where: { inviteeId: again.id } })).toBe(1);
+      expect(await prisma.schedulingRecord.count({ where: { cardId: card.id, userId: again.id } })).toBe(1);
+      expect(await prisma.schedulingRecord.count({ where: { cardId: card.id, userId: member.id } })).toBe(0);
+      expect(await prisma.classMember.count({ where: { classId: klass.id } })).toBe(1);
+      expect(await prisma.schedulingRecord.count({ where: { cardId: card.id } })).toBe(2);
+      expect(await prisma.class.count({ where: { id: klass.id } })).toBe(1);
+
+      expect((await del(admin, base, owner.id, { email: owner.email })).status()).toBe(200);
+      expect(await prisma.class.count({ where: { id: klass.id } })).toBe(0);
+      expect(await prisma.card.count({ where: { id: card.id } })).toBe(0);
+      expect(await prisma.schedulingRecord.count({ where: { cardId: card.id } })).toBe(0);
+      expect(await prisma.classMember.count({ where: { classId: klass.id } })).toBe(0);
+      expect(await prisma.user.count({ where: { id: again.id } })).toBe(1);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: { in: [owner.id, member.id, again.id] } } });
+    }
+  });
 });

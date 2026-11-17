@@ -84,7 +84,10 @@ export function BackupTreeView({ tree }: { tree: BackupClassNode[] }) {
                 <summary className={summary}>
                   <span aria-hidden="true" className={chevron} />
                   <span className="min-w-0 break-words text-body font-semibold text-foreground">{klass.name}</span>
-                  <span className={count}>{plural(klass.folders.length, "Folder")}</span>
+                  <span className={count}>
+                    {klass.members.length > 0 ? `${plural(klass.members.length, "member")} · ` : ""}
+                    {plural(klass.folders.length, "Folder")}
+                  </span>
                 </summary>
                 <ul className="space-y-2 px-2 pb-2">
                   {klass.folders.map((folder) => (

@@ -3,6 +3,7 @@ import { prisma, type Prisma } from "@training-sanctum/db";
 import {
   DAY_MS,
   backupRestoreSchema,
+  createDefaultSchedulingRecords,
   findBackupIssues,
   nextClassColor,
   toLocalDate,
@@ -47,7 +48,7 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
 
   const target = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, timezone: true },
+    select: { id: true, email: true, timezone: true },
   });
   if (!target) {
     log("error", { outcome: "rejected:404" });
@@ -90,6 +91,19 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
 
   const settledThrough = new Date(toLocalDate(new Date(), target.timezone).getTime() - DAY_MS);
 
+  // Story 12.5: Members re-attach only when their email resolves to another user.
+  const wanted = new Set(
+    backup.classes.flatMap((c) => c.members).filter((email) => email !== target.email)
+  );
+  const found = wanted.size
+    ? await prisma.user.findMany({
+        where: { email: { in: [...wanted] } },
+        select: { id: true, email: true, timezone: true },
+      })
+    : [];
+  const resolved = new Map(found.filter((u) => u.id !== userId).map((u) => [u.email, u]));
+  const unresolvedEmails = new Set<string>();
+
   const classRows = backup.classes.map((c) => ({
     id: classId.get(c.id)!,
     userId,
@@ -115,6 +129,30 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
     createdAt: at(f.createdAt),
     updatedAt: at(f.updatedAt),
   }));
+  const memberRows: Prisma.ClassMemberCreateManyInput[] = [];
+  const membersOfClass = new Map<string, { id: string; timezone: string }[]>();
+  for (const c of backup.classes) {
+    const seen = new Set<string>();
+    const list: { id: string; timezone: string }[] = [];
+    for (const email of c.members) {
+      const user = resolved.get(email);
+      if (!user) {
+        if (email !== target.email) unresolvedEmails.add(email);
+        continue;
+      }
+      if (seen.has(email)) continue;
+      seen.add(email);
+      list.push(user);
+      memberRows.push({ classId: classId.get(c.id)!, userId: user.id });
+    }
+    membersOfClass.set(c.id, list);
+  }
+  const classOfFlashcard = new Map<string, string>();
+  {
+    const classOfFolder = new Map(backup.folders.map((f) => [f.id, f.classId]));
+    for (const f of backup.flashcards) classOfFlashcard.set(f.id, classOfFolder.get(f.folderId)!);
+  }
+  const now = new Date();
   const cardRows: Prisma.CardCreateManyInput[] = [];
   const recordRows: Prisma.SchedulingRecordCreateManyInput[] = [];
   for (const c of backup.cards) {
@@ -131,6 +169,11 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
       createdAt: at(c.createdAt),
       updatedAt: at(c.updatedAt),
     });
+    for (const member of membersOfClass.get(classOfFlashcard.get(c.flashcardId)!) ?? []) {
+      for (const r of createDefaultSchedulingRecords([member.id], { now, timezone: member.timezone })) {
+        recordRows.push({ id: randomUUID(), cardId: id, ...r });
+      }
+    }
     for (const r of c.schedulingRecords) {
       recordRows.push({
         id: randomUUID(),
@@ -179,11 +222,12 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
         });
         if (locked.count === 0) throw new HttpError(404, "NOT_FOUND", "User not found.");
 
-        await tx.class.deleteMany({ where: { userId } }); // cascades down the tree
+        await tx.class.deleteMany({ where: { userId } }); // cascades Members, invitations and every learner's records
         await tx.cultivationDay.deleteMany({ where: { userId } });
         await tx.xpEvent.deleteMany({ where: { userId } });
 
         for (const rows of chunks(classRows)) await tx.class.createMany({ data: rows });
+        for (const rows of chunks(memberRows)) await tx.classMember.createMany({ data: rows });
         for (const rows of chunks(folderRows)) await tx.folder.createMany({ data: rows });
         for (const rows of chunks(flashcardRows)) await tx.flashcard.createMany({ data: rows });
         for (const rows of chunks(cardRows)) await tx.card.createMany({ data: rows });
@@ -211,9 +255,15 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
     flashcards: flashcardRows.length,
     cards: cardRows.length,
     schedulingRecords: recordRows.length,
+    members: memberRows.length,
     cultivationDays: dayRows.length,
     xpEvents: eventRows.length,
   };
-  log("info", { outcome: "success", ...counts });
+  log("info", {
+    outcome: "success",
+    ...counts,
+    unresolvedMemberEmails: [...unresolvedEmails],
+    ignoredSharedClasses: backup.sharedClasses.map((s) => `${s.name} (${s.ownerEmail})`),
+  });
   return ok(counts);
 }
