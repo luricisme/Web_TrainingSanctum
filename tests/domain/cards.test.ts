@@ -119,6 +119,7 @@ describe("createCardWithSchedulingRecords (AD-9)", () => {
   it("returns the Card and exactly two Scheduling Records at SM-2 defaults", () => {
     const { card, schedulingRecords } = createCardWithSchedulingRecords(
       { term: "t", definition: "d", example: null, context: null, partOfSpeech: null },
+      ["a"],
       { now: new Date("2026-11-08T20:00:00Z"), timezone: "Asia/Ho_Chi_Minh" }
     );
     expect(card.term).toBe("t");
@@ -131,6 +132,21 @@ describe("createCardWithSchedulingRecords (AD-9)", () => {
       // spec-4-6: every new Card starts unlearned (AD-14).
       expect(record.firstGradedAt).toBeNull();
       expect(record.nextReviewDate.toISOString()).toBe("2026-11-08T17:00:00.000Z");
+      expect(record.userId).toBe("a");
+    }
+  });
+
+  it("returns two records per learner for several learners", () => {
+    const { schedulingRecords } = createCardWithSchedulingRecords(
+      { term: "t", definition: "d", example: null, context: null, partOfSpeech: null },
+      ["a", "b", "c"],
+      { now: new Date("2026-11-08T20:00:00Z"), timezone: "UTC" }
+    );
+    expect(schedulingRecords).toHaveLength(6);
+    for (const id of ["a", "b", "c"]) {
+      expect(
+        schedulingRecords.filter((r) => r.userId === id).map((r) => r.direction)
+      ).toEqual(["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"]);
     }
   });
 });

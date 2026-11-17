@@ -19,8 +19,8 @@ import {
 /** The Flashcard's ungraded records in the studied directions. */
 function flashcardUnlearnedWhere(userId: string, flashcardId: string, dirs: RecallDirection[]) {
   return {
-    ...unlearnedRecordWhere(dirs),
-    card: { userId, flashcardId },
+    ...unlearnedRecordWhere(userId, dirs),
+    card: { flashcardId },
   } satisfies Prisma.SchedulingRecordWhereInput;
 }
 
@@ -33,8 +33,8 @@ function flashcardDueWhere(
 ) {
   return {
     nextReviewDate: { lte: now },
-    ...learnedRecordWhere(dirs),
-    card: { userId, flashcardId },
+    ...learnedRecordWhere(userId, dirs),
+    card: { flashcardId },
   } satisfies Prisma.SchedulingRecordWhereInput;
 }
 
@@ -81,7 +81,7 @@ export async function countLearn(
   now: Date
 ): Promise<LearnCounts> {
   const [newCards, due] = await Promise.all([
-    prisma.card.count({ where: { userId, flashcardId, ...unlearnedCardWhere(dirs) } }),
+    prisma.card.count({ where: { userId, flashcardId, ...unlearnedCardWhere(userId, dirs) } }),
     prisma.schedulingRecord.count({ where: flashcardDueWhere(userId, flashcardId, dirs, now) }),
   ]);
   return { newCards, due };

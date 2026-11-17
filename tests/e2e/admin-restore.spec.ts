@@ -35,8 +35,8 @@ async function seedUser(email: string, term: string) {
   });
   await prisma.schedulingRecord.createMany({
     data: [
-      { cardId: card.id, direction: "TERM_TO_DEFINITION", nextReviewDate: new Date("2026-11-16T00:00:00.000Z") },
-      { cardId: card.id, direction: "DEFINITION_TO_TERM", nextReviewDate: new Date("2026-11-14T00:00:00.000Z") },
+      { cardId: card.id, userId: user.id, direction: "TERM_TO_DEFINITION", nextReviewDate: new Date("2026-11-16T00:00:00.000Z") },
+      { cardId: card.id, userId: user.id, direction: "DEFINITION_TO_TERM", nextReviewDate: new Date("2026-11-14T00:00:00.000Z") },
     ],
   });
   return user;

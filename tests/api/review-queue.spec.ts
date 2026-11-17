@@ -462,3 +462,40 @@ test.describe("GET /api/review/queue", () => {
     expect(after).toEqual(before);
   });
 });
+
+// Story 12.1 (AD-19): Scheduling Records are per learner.
+test.describe("GET /api/review/queue, two learners on one Card", () => {
+  test("another learner's records never enter the queue", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const a = await newUser(playwright, base);
+    const b = await newUser(playwright, base);
+    const flashcardId = await createFlashcard(
+      a,
+      base,
+      await createFolder(a, base, await createClass(a, base, "C"), "F"),
+      "W"
+    );
+    const card = await addCard(a, base, flashcardId, "alpha");
+    await setDue([card.forward.id, card.backward.id], new Date(Date.now() - DAY_MS));
+    await prisma.schedulingRecord.createMany({
+      data: (["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"] as const).map((direction) => ({
+        cardId: card.cardId,
+        userId: b.userId,
+        direction,
+        firstGradedAt: new Date(),
+        nextReviewDate: new Date(Date.now() - DAY_MS),
+      })),
+    });
+
+    const idsOf = async (s: Session) =>
+      (await (await queue(s, base)).json()).data.entries
+        .map((e: { schedulingRecordId: string }) => e.schedulingRecordId)
+        .sort();
+    expect(await idsOf(a)).toEqual([card.forward.id, card.backward.id].sort());
+
+    const theirs = await prisma.schedulingRecord.findMany({
+      where: { cardId: card.cardId, userId: b.userId },
+    });
+    expect(await idsOf(b)).toEqual(theirs.map((r) => r.id).sort());
+  });
+});

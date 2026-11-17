@@ -97,6 +97,8 @@ export function validateCardRows(rows: readonly unknown[]): CardRowsResult {
 export type RecallDirectionName = "TERM_TO_DEFINITION" | "DEFINITION_TO_TERM";
 
 export interface NewSchedulingRecord {
+  /** AD-19: the learner this record schedules. */
+  userId: string;
   direction: RecallDirectionName;
   easeFactor: number;
   repetitions: number;
@@ -108,22 +110,25 @@ export interface NewSchedulingRecord {
 
 export interface NewCardWithSchedulingRecords {
   card: CardInput;
-  schedulingRecords: [NewSchedulingRecord, NewSchedulingRecord];
+  /** Two records (one per Recall Direction) per learner, in learner order. */
+  schedulingRecords: NewSchedulingRecord[];
 }
 
 /**
  * AD-9: the only place a new Card's Scheduling Records are decided. Both start
  * at SM-2 defaults and are due at the start of today in the user's timezone.
- * Both start unlearned (`firstGradedAt: null`, AD-14), so a new Card stays out
+ * All start unlearned (`firstGradedAt: null`, AD-14), so a new Card stays out
  * of Review until it has been learned.
  */
 export function createCardWithSchedulingRecords(
   input: CardInput,
+  learnerIds: readonly string[],
   context: { now: Date; timezone: string }
 ): NewCardWithSchedulingRecords {
   const card = cardInputSchema.parse(input);
   const nextReviewDate = toLocalCalendarDay(context.now, context.timezone);
-  const record = (direction: RecallDirectionName): NewSchedulingRecord => ({
+  const record = (userId: string, direction: RecallDirectionName): NewSchedulingRecord => ({
+    userId,
     direction,
     easeFactor: 2.5,
     repetitions: 0,
@@ -133,10 +138,10 @@ export function createCardWithSchedulingRecords(
   });
   return {
     card,
-    schedulingRecords: [
-      record("TERM_TO_DEFINITION"),
-      record("DEFINITION_TO_TERM"),
-    ],
+    schedulingRecords: learnerIds.flatMap((userId) => [
+      record(userId, "TERM_TO_DEFINITION"),
+      record(userId, "DEFINITION_TO_TERM"),
+    ]),
   };
 }
 

@@ -55,8 +55,8 @@ async function seedCards(email: string, count = 3) {
         userId: user.id,
         schedulingRecords: {
           create: [
-            { direction: "TERM_TO_DEFINITION", nextReviewDate: due, firstGradedAt },
-            { direction: "DEFINITION_TO_TERM", nextReviewDate: due, firstGradedAt },
+            { userId: user.id, direction: "TERM_TO_DEFINITION", nextReviewDate: due, firstGradedAt },
+            { userId: user.id, direction: "DEFINITION_TO_TERM", nextReviewDate: due, firstGradedAt },
           ],
         },
       },

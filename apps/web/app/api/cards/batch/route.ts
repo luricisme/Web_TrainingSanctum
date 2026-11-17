@@ -25,7 +25,7 @@ function logBatch(entry: Record<string, unknown>): void {
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-/** Creates the Cards and their two Scheduling Records each (AD-9). */
+/** Creates the Cards and each learner's two Scheduling Records (AD-9); the Owner is the only learner until Story 12.2. */
 async function createCards(
   tx: Tx,
   inputs: readonly CardInput[],
@@ -39,7 +39,7 @@ async function createCards(
   });
   const now = new Date();
   const built = inputs.map((input) =>
-    createCardWithSchedulingRecords(input, { now, timezone: user.timezone })
+    createCardWithSchedulingRecords(input, [userId], { now, timezone: user.timezone })
   );
   const cards = await tx.card.createManyAndReturn({
     data: built.map(({ card }) => ({ ...card, flashcardId, userId })),

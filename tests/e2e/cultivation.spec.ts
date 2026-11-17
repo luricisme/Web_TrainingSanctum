@@ -43,8 +43,8 @@ async function seedWork(email: string) {
       userId: user.id,
       schedulingRecords: {
         create: [
-          { direction: "TERM_TO_DEFINITION", nextReviewDate: new Date() },
-          { direction: "DEFINITION_TO_TERM", nextReviewDate: new Date() },
+          { userId: user.id, direction: "TERM_TO_DEFINITION", nextReviewDate: new Date() },
+          { userId: user.id, direction: "DEFINITION_TO_TERM", nextReviewDate: new Date() },
         ],
       },
     },
@@ -62,6 +62,7 @@ async function seedWork(email: string) {
       userId: user.id,
       schedulingRecords: {
         create: ["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"].map((direction) => ({
+          userId: user.id,
           direction: direction as "TERM_TO_DEFINITION" | "DEFINITION_TO_TERM",
           nextReviewDate: new Date(Date.now() - 60_000),
           firstGradedAt: then,

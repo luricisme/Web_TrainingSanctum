@@ -49,8 +49,8 @@ async function seedCard(email: string, extra = 0) {
       userId: user.id,
       schedulingRecords: {
         create: [
-          { direction: "TERM_TO_DEFINITION", nextReviewDate: due, firstGradedAt },
-          { direction: "DEFINITION_TO_TERM", nextReviewDate: due, firstGradedAt },
+          { userId: user.id, direction: "TERM_TO_DEFINITION", nextReviewDate: due, firstGradedAt },
+          { userId: user.id, direction: "DEFINITION_TO_TERM", nextReviewDate: due, firstGradedAt },
         ],
       },
     },
@@ -64,8 +64,8 @@ async function seedCard(email: string, extra = 0) {
         userId: user.id,
         schedulingRecords: {
           create: [
-            { direction: "TERM_TO_DEFINITION", nextReviewDate: due, firstGradedAt },
-            { direction: "DEFINITION_TO_TERM", nextReviewDate: due, firstGradedAt },
+            { userId: user.id, direction: "TERM_TO_DEFINITION", nextReviewDate: due, firstGradedAt },
+            { userId: user.id, direction: "DEFINITION_TO_TERM", nextReviewDate: due, firstGradedAt },
           ],
         },
       },
@@ -402,8 +402,8 @@ async function addNewCards(email: string, flashcardId: string, count: number, of
         userId: user.id,
         schedulingRecords: {
           create: [
-            { direction: "TERM_TO_DEFINITION", nextReviewDate: new Date() },
-            { direction: "DEFINITION_TO_TERM", nextReviewDate: new Date() },
+            { userId: user.id, direction: "TERM_TO_DEFINITION", nextReviewDate: new Date() },
+            { userId: user.id, direction: "DEFINITION_TO_TERM", nextReviewDate: new Date() },
           ],
         },
       },

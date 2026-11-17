@@ -33,7 +33,7 @@ export interface TodayDay {
 /** Learned records due now over every Class ("due" as the review queue checks it). */
 async function countDue(db: Db, userId: string, dirs: RecallDirection[], now: Date) {
   return db.schedulingRecord.count({
-    where: { ...learnedRecordWhere(dirs), nextReviewDate: { lte: now }, card: { userId } },
+    where: { ...learnedRecordWhere(userId, dirs), nextReviewDate: { lte: now } },
   });
 }
 
@@ -48,17 +48,15 @@ export async function gatherQuestFacts(
   const [gradedToday, reviewedToday, dueCount] = await Promise.all([
     db.schedulingRecord.findMany({
       where: {
-        ...learnedRecordWhere(dirs),
+        ...learnedRecordWhere(userId, dirs),
         AND: [{ firstGradedAt: { gte: dayStart } }],
-        card: { userId },
       },
       select: { card: { select: { flashcardId: true } } },
     }),
     db.schedulingRecord.count({
       where: {
-        ...learnedRecordWhere(dirs),
+        ...learnedRecordWhere(userId, dirs),
         AND: [{ firstGradedAt: { lt: dayStart } }, { updatedAt: { gte: dayStart } }],
-        card: { userId },
       },
     }),
     countDue(db, userId, dirs, now),
@@ -70,7 +68,7 @@ export async function gatherQuestFacts(
     candidates.length === 0
       ? 0
       : await db.flashcard.count({
-          where: { userId, id: { in: candidates }, cards: { none: unlearnedCardWhere(dirs) } },
+          where: { userId, id: { in: candidates }, cards: { none: unlearnedCardWhere(userId, dirs) } },
         });
 
   return { flashcardsLearnedToday, reviewedToday, dueCount };
@@ -96,7 +94,7 @@ export async function ensureToday(
   });
   if (!row) {
     const [flashcardsWithUnlearned, dueCount] = await Promise.all([
-      prisma.flashcard.count({ where: { userId, cards: { some: unlearnedCardWhere(dirs) } } }),
+      prisma.flashcard.count({ where: { userId, cards: { some: unlearnedCardWhere(userId, dirs) } } }),
       countDue(prisma, userId, dirs, now),
     ]);
     const snapshot: DaySnapshot = buildDaySnapshot(levelForXp(cultivationXp).bo, {

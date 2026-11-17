@@ -268,3 +268,44 @@ test.describe("POST /api/review/grade", () => {
     }
   });
 });
+
+// Story 12.1 (AD-19): Scheduling Records are per learner.
+test.describe("POST /api/review/grade, two learners on one Card", () => {
+  test("a record that belongs to another user is 404 and unchanged", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const a = await newUser(playwright, base);
+    const b = await newUser(playwright, base);
+    const { cardId } = await createCard(a, base);
+    const theirs = await prisma.schedulingRecord.create({
+      data: {
+        cardId,
+        userId: b.userId,
+        direction: "TERM_TO_DEFINITION",
+        firstGradedAt: new Date(),
+        nextReviewDate: new Date(Date.now() - DAY_MS),
+      },
+    });
+
+    // The Card's owner cannot grade the other learner's record.
+    const asOwner = await grade(a, base, theirs.id, "good");
+    expect(asOwner.status()).toBe(404);
+    expect((await asOwner.json()).error.code).toBe("NOT_FOUND");
+    const unchanged = await prisma.schedulingRecord.findUniqueOrThrow({ where: { id: theirs.id } });
+    expect(unchanged).toEqual(theirs);
+
+    // The learner can grade their own record; the owner's records stay put.
+    const ownerBefore = await prisma.schedulingRecord.findMany({
+      where: { cardId, userId: a.userId },
+      orderBy: { direction: "asc" },
+    });
+    expect((await grade(b, base, theirs.id, "good")).status()).toBe(200);
+    const ownerAfter = await prisma.schedulingRecord.findMany({
+      where: { cardId, userId: a.userId },
+      orderBy: { direction: "asc" },
+    });
+    expect(ownerAfter).toEqual(ownerBefore);
+  });
+});

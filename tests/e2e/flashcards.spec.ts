@@ -132,6 +132,7 @@ test("delete confirms with the name and Card count; Cancel and Escape keep it", 
     await prisma.schedulingRecord.createMany({
       data: (["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"] as const).map((direction) => ({
         cardId: card.id,
+        userId: user.id,
         direction,
         nextReviewDate: new Date(),
       })),

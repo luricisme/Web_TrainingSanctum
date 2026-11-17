@@ -49,6 +49,7 @@ async function seedUser(email: string, timezone = "Asia/Ho_Chi_Minh") {
     data: [
       {
         cardId: card.id,
+        userId: user.id,
         direction: "TERM_TO_DEFINITION",
         interval: 6,
         repetitions: 2,
@@ -56,7 +57,7 @@ async function seedUser(email: string, timezone = "Asia/Ho_Chi_Minh") {
         nextReviewDate: new Date("2026-11-16T00:00:00.000Z"),
         firstGradedAt: new Date("2026-11-10T08:30:00.000Z"),
       },
-      { cardId: card.id, direction: "DEFINITION_TO_TERM", nextReviewDate: new Date("2026-11-14T00:00:00.000Z") },
+      { cardId: card.id, userId: user.id, direction: "DEFINITION_TO_TERM", nextReviewDate: new Date("2026-11-14T00:00:00.000Z") },
     ],
   });
   await prisma.cultivationDay.create({
@@ -200,6 +201,9 @@ test.describe("POST /api/admin/users/[id]/restore", () => {
         "2026-11-10T08:30:00.000Z"
       );
       expect(after.user.studyDirections).toBe("TERM_TO_DEFINITION");
+      // AD-19: restored records belong to the restore target.
+      expect(await prisma.schedulingRecord.count({ where: { userId: user.id } })).toBe(2);
+      expect(await prisma.schedulingRecord.count({ where: { card: { userId: user.id }, NOT: { userId: user.id } } })).toBe(0);
       expect(after.cultivation.xp).toBe(120);
       const yesterday = new Date(toLocalDate(new Date(), "Asia/Ho_Chi_Minh").getTime() - DAY_MS);
       expect(after.cultivation.settledThrough).toBe(yesterday.toISOString().slice(0, 10));
@@ -327,6 +331,7 @@ test.describe("POST /api/admin/users/[id]/restore", () => {
         data: ids.flatMap((cardId) =>
           (["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"] as const).map((direction) => ({
             cardId,
+            userId: user.id,
             direction,
             nextReviewDate: new Date("2026-11-16T00:00:00.000Z"),
           }))

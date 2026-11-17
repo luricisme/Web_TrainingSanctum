@@ -76,6 +76,7 @@ async function seedFlashcard(
         data: (["TERM_TO_DEFINITION", "DEFINITION_TO_TERM"] as const).map(
           (direction) => ({
             cardId: card.id,
+            userId: s.userId,
             direction,
             nextReviewDate: new Date(),
           })
