@@ -136,3 +136,37 @@ test("a task over its estimate shows actual / estimate in warning", async ({ pag
   await page.goto("/planner");
   await expect(page.getByText("30 / 25")).toHaveClass(/text-warning/);
 });
+
+test("the row menu of a single task is not clipped by the list", async ({ page }) => {
+  const email = await register(page);
+  const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+  const today = await page.evaluate(() => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  });
+  const category = await prisma.taskCategory.create({
+    data: { userId: user.id, name: "Deep work", color: "SKY" },
+  });
+  await prisma.task.create({
+    data: {
+      userId: user.id,
+      categoryId: category.id,
+      title: "Only task",
+      localDay: new Date(`${today}T00:00:00.000Z`),
+      estimateMinutes: 25,
+    },
+  });
+  await page.goto("/planner");
+  await page.getByRole("button", { name: "Options for Only task" }).click();
+  const del = page.getByRole("menuitem", { name: "Delete" });
+  await expect(del).toBeVisible();
+  // A clipped menu is still "visible" to Playwright; check what is really on top.
+  const reachable = await del.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return hit === el || el.contains(hit);
+  });
+  expect(reachable).toBe(true);
+  await shoot(page, "planner-tasks-menu");
+});

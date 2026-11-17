@@ -138,7 +138,7 @@ export function TasksView() {
             </button>
           </div>
         ) : (
-          <ul className="divide-y divide-divider overflow-hidden rounded-lg border border-divider bg-card">
+          <ul className="divide-y divide-divider rounded-lg border border-divider bg-card">
             {tasks.map((task) => (
               <TaskRow
                 key={task.id}
