@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { TaskSummary } from "@training-sanctum/domain";
+import type { OverdueSummary, TaskSummary } from "@training-sanctum/domain";
 import { apiFetch } from "@/lib/api-client";
 import { SectionMarker } from "@/app/components/section-marker";
 import {
@@ -18,6 +18,7 @@ import { DeleteTaskModal } from "./delete-task-modal";
 import { TaskModal } from "./task-modal";
 import { PLANNER_CATEGORIES_KEY } from "./categories-key";
 import {
+  PLANNER_OVERDUE_KEY,
   PLANNER_TASKS_KEY,
   formatDay,
   localToday,
@@ -52,6 +53,11 @@ export function TasksView() {
     enabled: day !== null,
   });
   const tasks = data ?? [];
+  const overdue = useQuery({
+    queryKey: PLANNER_OVERDUE_KEY,
+    queryFn: () => apiFetch<OverdueSummary>("/api/planner/tasks/overdue"),
+  });
+  const overdueCount = overdue.data?.count ?? 0;
   const empty = day !== null && !isPending && !isError && tasks.length === 0;
   const isToday = day !== null && day === today;
   const dayLabel = day ? (isToday ? "today" : formatDay(day)) : "";
@@ -73,6 +79,8 @@ export function TasksView() {
           ) : null}
         </div>
       </div>
+
+      {overdueCount > 0 ? <OverdueStrip count={overdueCount} /> : null}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
@@ -166,6 +174,37 @@ export function TasksView() {
   );
 }
 
+function OverdueStrip({ count }: { count: number }) {
+  const queryClient = useQueryClient();
+  const move = useMutation({
+    mutationFn: () => apiFetch<{ moved: number }>("/api/planner/tasks/move-overdue", { method: "PATCH" }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: PLANNER_TASKS_KEY });
+      void queryClient.invalidateQueries({ queryKey: PLANNER_OVERDUE_KEY });
+    },
+  });
+  return (
+    <div className="mt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-elevated px-4 py-3">
+        <p className="text-body font-medium text-foreground">{count} overdue</p>
+        <button
+          type="button"
+          disabled={move.isPending}
+          onClick={() => move.mutate()}
+          className={buttonSecondary}
+        >
+          Move all to today
+        </button>
+      </div>
+      {move.isError ? (
+        <p role="alert" className="mt-2 text-caption text-error">
+          Could not move your tasks.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function TaskRow({
   task,
   onEdit,
@@ -196,6 +235,7 @@ function TaskRow({
         list?.map((t) => (t.id === updated.id ? updated : t))
       );
       void queryClient.invalidateQueries({ queryKey: PLANNER_TASKS_KEY });
+      void queryClient.invalidateQueries({ queryKey: PLANNER_OVERDUE_KEY });
       void queryClient.invalidateQueries({ queryKey: ["cultivation"] });
       void queryClient.invalidateQueries({ queryKey: PLANNER_CATEGORIES_KEY });
     },

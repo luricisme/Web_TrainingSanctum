@@ -193,3 +193,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-8-3-tasks-per-day.md`
   summary: Decide whether TASK_DONE XP needs a cap, since a Task can be created, ticked and deleted repeatedly for XP.
   evidence: Verified in 8.3 review: nothing limits awards per day and delete never reverses XP; the epic's "passive XP" rule does not say, so it is a product decision.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-8-4-overdue-tasks-and-move-to-today.md`
+  summary: Add e2e tests for the Move-overdue failure alert (500 keeps the strip) and for the strip count changing after marking done, deleting or rescheduling a past-day Task.
+  evidence: Verification-gap review of 8.4; both behaviours are implemented but no test reads them.

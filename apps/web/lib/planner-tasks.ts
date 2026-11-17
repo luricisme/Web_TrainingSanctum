@@ -39,6 +39,11 @@ export async function userTimezone(userId: string): Promise<string> {
   return u.timezone;
 }
 
+/** Open Tasks of the user on a day before `today` (a `toLocalDate` value). */
+export function overdueWhere(userId: string, today: Date): Prisma.TaskWhereInput {
+  return { userId, done: false, localDay: { lt: today } };
+}
+
 /** True when the Category exists and belongs to the user. */
 export async function ownsCategory(userId: string, categoryId: string): Promise<boolean> {
   const c = await prisma.taskCategory.findFirst({

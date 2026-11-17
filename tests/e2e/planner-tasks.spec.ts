@@ -170,3 +170,37 @@ test("the row menu of a single task is not clipped by the list", async ({ page }
   expect(reachable).toBe(true);
   await shoot(page, "planner-tasks-menu");
 });
+
+test("overdue strip shows, moves tasks to today and disappears", async ({ page }) => {
+  const email = await register(page);
+  const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+  const category = await prisma.taskCategory.create({
+    data: { userId: user.id, name: "Study", color: "SKY" },
+  });
+  for (const [title, day] of [
+    ["Old reading", "2020-01-02"],
+    ["Older notes", "2020-01-01"],
+  ] as const) {
+    await prisma.task.create({
+      data: {
+        userId: user.id,
+        categoryId: category.id,
+        title,
+        localDay: new Date(`${day}T00:00:00.000Z`),
+        estimateMinutes: 25,
+      },
+    });
+  }
+  await page.goto("/planner");
+  await expect(page.getByText("2 overdue")).toBeVisible();
+  await shoot(page, "planner-overdue-1280");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await shoot(page, "planner-overdue-390");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  await page.getByRole("button", { name: "Move all to today" }).click();
+  await expect(page.getByText(/overdue/)).toHaveCount(0);
+  await expect(page.getByRole("listitem").filter({ hasText: "Old reading" })).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: "Older notes" })).toBeVisible();
+});

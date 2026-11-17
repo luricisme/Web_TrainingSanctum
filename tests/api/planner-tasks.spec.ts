@@ -265,3 +265,72 @@ test.describe("/api/planner/tasks", () => {
     expect(await prisma.task.count({ where: { id: t.id } })).toBe(0);
   });
 });
+
+// spec-8-4: Overdue count and the explicit move to today.
+test.describe("/api/planner/tasks overdue", () => {
+  const PAST = "2020-01-02";
+
+  test("signed-out requests return 401", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const ctx = await playwright.request.newContext();
+    for (const res of [
+      await ctx.get(`${base}/api/planner/tasks/overdue`),
+      await ctx.patch(`${base}/api/planner/tasks/move-overdue`),
+    ]) {
+      expect(res.status()).toBe(401);
+      expect((await res.json()).error.code).toBe("UNAUTHENTICATED");
+    }
+  });
+
+  test("none overdue gives count 0 and moved 0", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    expect((await (await s.request.get(`${base}/api/planner/tasks/overdue`)).json()).data).toEqual({ count: 0 });
+    const res = await s.request.patch(`${base}/api/planner/tasks/move-overdue`);
+    expect(res.status()).toBe(200);
+    expect((await res.json()).data).toEqual({ moved: 0 });
+  });
+
+  test("counts and moves only the user's open past tasks, keeping time, estimate and logged", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const tz = "Asia/Ho_Chi_Minh";
+    const s = await newUser(playwright, base, tz);
+    const other = await newUser(playwright, base, tz);
+    const today = toLocalDate(new Date(), tz).toISOString().slice(0, 10);
+    const tomorrow = new Date(Date.parse(`${today}T00:00:00.000Z`) + 86_400_000).toISOString().slice(0, 10);
+
+    const timed = await add(s, base, { localDay: PAST, startTime: "09:30", estimateMinutes: 25 });
+    const plain = await add(s, base, { localDay: "2020-01-03" });
+    const finished = await add(s, base, { localDay: PAST });
+    await markDone(s, base, finished.id);
+    const current = await add(s, base, { localDay: today });
+    const future = await add(s, base, { localDay: tomorrow });
+    const foreign = await add(other, base, { localDay: PAST });
+    await prisma.task.update({ where: { id: timed.id }, data: { loggedMinutes: 30 } });
+
+    expect((await (await s.request.get(`${base}/api/planner/tasks/overdue`)).json()).data).toEqual({ count: 2 });
+    const res = await s.request.patch(`${base}/api/planner/tasks/move-overdue`);
+    expect(res.status()).toBe(200);
+    expect((await res.json()).data).toEqual({ moved: 2 });
+
+    const rows = await prisma.task.findMany({ where: { userId: s.userId } });
+    const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
+    const day = (id: string) => byId[id]!.localDay.toISOString().slice(0, 10);
+    expect(day(timed.id)).toBe(today);
+    expect(day(plain.id)).toBe(today);
+    expect(day(finished.id)).toBe(PAST);
+    expect(day(current.id)).toBe(today);
+    expect(day(future.id)).toBe(tomorrow);
+    expect(byId[timed.id]!.startAt?.toISOString()).toBe(`${today}T02:30:00.000Z`);
+    expect(byId[timed.id]).toMatchObject({ estimateMinutes: 25, loggedMinutes: 30 });
+    expect(byId[plain.id]!.startAt).toBeNull();
+
+    const theirs = await prisma.task.findUniqueOrThrow({ where: { id: foreign.id } });
+    expect(theirs.localDay.toISOString().slice(0, 10)).toBe(PAST);
+    expect((await (await s.request.get(`${base}/api/planner/tasks/overdue`)).json()).data).toEqual({ count: 0 });
+    expect((await (await other.request.get(`${base}/api/planner/tasks/overdue`)).json()).data).toEqual({ count: 1 });
+  });
+});
