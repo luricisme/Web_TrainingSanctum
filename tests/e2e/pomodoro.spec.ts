@@ -172,18 +172,21 @@ test("a session ended elsewhere shows on focus; an expired one moves on without 
   await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
 
   // Ended from another client: the page catches up on focus.
+  // Run it 3 minutes first so it logs real focus time (a 0-minute session is a different path).
+  await age(taskId!, 3);
   const running = await prisma.pomodoroSession.findFirstOrThrow({ where: { taskId, endedAt: null } });
   await page.request.post(`/api/planner/sessions/${running.id}/end`);
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-  await expect(page.getByRole("button", { name: "Start", exact: true })).toBeVisible();
+  // Wait for the refetched plan (a break follows a focus) so the next Start is deterministic.
+  await expect(page.getByText(/^Break · /)).toBeVisible({ timeout: 10_000 });
 
-  // Expiry: the session passes its planned end while the page stays open.
+  // Expiry: the break passes its planned end while the page stays open.
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
   await age(taskId!, 26);
   await page.clock.fastForward(26 * 60_000);
   await page.clock.resume();
   await expect(page.getByRole("button", { name: "Start", exact: true })).toBeVisible({ timeout: 10_000 });
-  // The Start button can reappear a beat before the refetched plan swaps the caption to Break.
-  await expect(page.getByText(/^Break · /)).toBeVisible({ timeout: 10_000 });
+  // After a break the plan moves on to the next focus session.
+  await expect(page.getByText(/^Focus · /)).toBeVisible({ timeout: 10_000 });
 });
