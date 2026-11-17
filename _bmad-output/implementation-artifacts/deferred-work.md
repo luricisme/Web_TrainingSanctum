@@ -215,3 +215,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-9-4-planner-in-export-and-restore.md`
   summary: `tests/api/admin-delete.spec.ts` is flaky ("last enabled admin cannot be deleted", or an admin login failing in the Member/Owner test).
   evidence: Fails intermittently across runs on this branch with different tests each time and does not touch Planner data; likely a race on shared admin accounts in the shared test DB. Not confirmed on the base commit.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-10-1-week-grid-and-unscheduled-tray.md`
+  summary: The Calendar now-line and today column use the browser clock, not `User.timezone`.
+  evidence: Block times come from the server in `User.timezone` (AD-8) while `useClock` reads `new Date()`; they disagree for a user whose browser zone differs from their profile zone. `tasks-view.tsx` `localToday` has the same pattern.

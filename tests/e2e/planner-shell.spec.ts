@@ -24,7 +24,7 @@ test("Planner opens with Tasks selected and the switcher drives the URL", async 
 
   await group.getByRole("radio", { name: "Calendar" }).click();
   await page.waitForURL("/planner/calendar");
-  await expect(page.getByText("Coming with Epic 10.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Planner" })).toHaveAttribute("aria-current", "page");
 
   // Arrow keys move and select.

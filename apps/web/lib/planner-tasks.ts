@@ -1,6 +1,10 @@
 import { prisma, type Prisma } from "@training-sanctum/db";
 import {
+  type PomodoroSettings,
   type TaskSummary,
+  type WeekTaskSummary,
+  planLengthMinutes,
+  planPomodoro,
   formatLocalTime,
   localDateTimeToInstant,
 } from "@training-sanctum/domain";
@@ -21,6 +25,18 @@ export function toTaskSummary(row: TaskRow, timeZone: string): TaskSummary {
     estimateMinutes: row.estimateMinutes,
     loggedMinutes: row.loggedMinutes,
     done: row.done,
+  };
+}
+
+/** A Task for the calendar: the summary plus the plan length (AD-17), computed here. */
+export function toCalendarTask(
+  row: TaskRow,
+  timeZone: string,
+  settings: PomodoroSettings
+): WeekTaskSummary {
+  return {
+    ...toTaskSummary(row, timeZone),
+    planMinutes: planLengthMinutes(planPomodoro(row.estimateMinutes, settings)),
   };
 }
 

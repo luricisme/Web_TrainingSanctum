@@ -6,6 +6,31 @@ export const PLANNER_OVERDUE_KEY = ["planner-overdue"] as const;
 
 export const plannerTasksKey = (day: string) => [...PLANNER_TASKS_KEY, day] as const;
 
+/** React Query key for one calendar week, by its Monday. Kept out of PLANNER_TASKS_KEY: its rows carry `planMinutes`. */
+export const plannerWeekKey = (monday: string) => ["planner-week", monday] as const;
+
+/** "16 – 22 November 2026" for the Monday-to-Sunday week starting at `monday`. */
+export function formatWeek(monday: string): string {
+  const fmt = (day: string, withYear: boolean, withMonth: boolean) =>
+    new Intl.DateTimeFormat("en-GB", {
+      day: "numeric",
+      ...(withMonth ? { month: "long" } : {}),
+      ...(withYear ? { year: "numeric" } : {}),
+      timeZone: "UTC",
+    }).format(new Date(`${day}T00:00:00.000Z`));
+  const sunday = shiftDay(monday, 6);
+  const sameMonth = monday.slice(0, 7) === sunday.slice(0, 7);
+  const sameYear = monday.slice(0, 4) === sunday.slice(0, 4);
+  return `${fmt(monday, !sameYear, !sameMonth)} – ${fmt(sunday, true, true)}`;
+}
+
+/** "Mon" for a `YYYY-MM-DD` day. */
+export function weekdayShort(day: string): string {
+  return new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" }).format(
+    new Date(`${day}T00:00:00.000Z`)
+  );
+}
+
 /** `YYYY-MM-DD` of the browser's local calendar date. */
 export function localToday(now: Date = new Date()): string {
   const y = now.getFullYear();
