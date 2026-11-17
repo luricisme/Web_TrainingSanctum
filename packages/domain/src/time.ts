@@ -72,3 +72,23 @@ export function localDayStart(localDay: Date, timeZone: string): Date {
   }
   return toLocalCalendarDay(new Date(guess), timeZone);
 }
+
+/**
+ * The UTC instant at which the wall clock of `timeZone` reads `hour:minute` on
+ * the local calendar date `localDay` (a UTC-midnight `Date`). Used to turn a
+ * Task's day and `HH:MM` into `startAt` (AD-8).
+ */
+export function localDateTimeToInstant(
+  localDay: Date,
+  hour: number,
+  minute: number,
+  timeZone: string
+): Date {
+  const target = localDay.getTime() + (hour * 60 + minute) * 60_000;
+  let guess = target;
+  for (let i = 0; i < 2; i++) {
+    guess -= wallClockAsUtc(guess, timeZone) - target;
+  }
+  return new Date(guess);
+}
+
