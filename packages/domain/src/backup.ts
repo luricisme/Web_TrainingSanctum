@@ -95,9 +95,9 @@ export const backupExportSchema = z.object({
       z.object({
         id,
         localDay,
-        questKind: z.enum(["LEARN_FLASHCARDS", "CLEAR_REVIEW"]),
+        questKind: z.enum(["LEARN_FLASHCARDS", "CLEAR_REVIEW"]).nullable(),
         delta: z.number().int(),
-        reason: z.enum(["CLAIM", "PENALTY"]),
+        reason: z.enum(["CLAIM", "PENALTY", "FOCUS_SESSION", "TASK_DONE"]),
         createdAt: isoTimestamp,
       })
     ),

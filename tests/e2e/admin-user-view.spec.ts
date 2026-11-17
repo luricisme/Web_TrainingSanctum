@@ -219,6 +219,26 @@ test("the page shows only the target user's data", async ({ page }) => {
   }
 });
 
+test("the cultivation summary renders a Planner XP event with no quest kind", async ({ page }) => {
+  const user = await seedUser(`e2e-view-${randomUUID()}@example.test`);
+  try {
+    await prisma.xpEvent.create({
+      data: { userId: user.id, localDay: new Date("2026-11-14"), questKind: null, delta: 5, reason: "TASK_DONE" },
+    });
+    await registerOrLogin(page, ADMIN_EMAIL);
+    await page.goto(`/admin/users/${user.id}`);
+    const events = page.getByRole("region", { name: "Cultivation" }).locator("ul > li");
+    await expect(events).toHaveCount(3);
+    const row = events.filter({ hasText: "Task done" });
+    await expect(row).toHaveCount(1);
+    await expect(row).toContainText("+5 XP");
+    await expect(row).not.toContainText("undefined");
+    await expect(row).not.toContainText("·");
+  } finally {
+    await prisma.user.deleteMany({ where: { id: user.id } });
+  }
+});
+
 test("an admin gets 404 for an unknown or over-long id", async ({ page }) => {
   await registerOrLogin(page, ADMIN_EMAIL);
   expect((await page.goto(`/admin/users/${randomUUID()}`))?.status()).toBe(404);

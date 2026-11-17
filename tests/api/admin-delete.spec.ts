@@ -199,6 +199,32 @@ test.describe("DELETE /api/admin/users/[id]", () => {
     }
   });
 
+  test("deletes a user who owns a task category and a task", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const admin = await adminSession(playwright, base);
+    const target = await account(playwright, base);
+    try {
+      const category = await prisma.taskCategory.create({
+        data: { userId: target.id, name: "Study", color: "SKY" },
+      });
+      await prisma.task.create({
+        data: {
+          userId: target.id,
+          categoryId: category.id,
+          title: "Read",
+          localDay: new Date("2026-11-17T00:00:00.000Z"),
+          estimateMinutes: 25,
+        },
+      });
+      const res = await del(admin, base, target.id, { email: target.email });
+      expect(res.status()).toBe(200);
+      expect(await prisma.taskCategory.count({ where: { userId: target.id } })).toBe(0);
+      expect(await prisma.task.count({ where: { userId: target.id } })).toBe(0);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: target.id } });
+    }
+  });
+
   test("an admin cannot delete themselves", async ({ playwright, baseURL }) => {
     const base = baseURL ?? FALLBACK_BASE;
     const actor = await account(playwright, base, "admin");
