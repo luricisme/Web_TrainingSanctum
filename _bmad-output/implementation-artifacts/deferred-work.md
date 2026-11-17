@@ -189,3 +189,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-8-1-planner-shell-and-navigation.md`
   summary: The build workflow's UI facts point at `ux-designs/.../.working/design-dna-profile.json` and `mockups/key-screens.html`, which are not in the repo (only `history/focus-indigo/working/design-dna-profile.json` exists).
   evidence: The implementer and the design-fidelity reviewer could not read them for story 8.1; they fell back to DESIGN.md and `globals.css`. Restore the files or repoint the persistent facts.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-8-3-tasks-per-day.md`
+  summary: Decide whether TASK_DONE XP needs a cap, since a Task can be created, ticked and deleted repeatedly for XP.
+  evidence: Verified in 8.3 review: nothing limits awards per day and delete never reverses XP; the epic's "passive XP" rule does not say, so it is a product decision.
