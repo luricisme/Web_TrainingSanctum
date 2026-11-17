@@ -4,6 +4,7 @@ import { QueryProvider } from "@/lib/query-provider";
 import { AppBar } from "./app-bar";
 import { Dock } from "./dock";
 import { FocusModeProvider } from "./focus-mode";
+import { PanelBell } from "./invitations-bell";
 
 export default async function ShellLayout({
   children,
@@ -23,9 +24,12 @@ export default async function ShellLayout({
           <FocusModeProvider>
             <AppBar userName={session.user.name} isAdmin={isAdmin} />
             {/* Below 640px the bottom padding keeps the dock off the page end. */}
-            <main className="min-w-0 flex-1 bg-background px-4 pb-28 pt-10 sm:rounded-panel sm:px-8 sm:pb-10">
-              <div className="mx-auto w-full max-w-content">{children}</div>
-            </main>
+            <div className="relative flex min-w-0 flex-1 flex-col">
+              <PanelBell />
+              <main className="min-w-0 flex-1 bg-background px-4 pb-28 pt-10 sm:rounded-panel sm:px-8 sm:pb-10">
+                <div className="mx-auto w-full max-w-content">{children}</div>
+              </main>
+            </div>
             <Dock isAdmin={isAdmin} />
           </FocusModeProvider>
         </QueryProvider>

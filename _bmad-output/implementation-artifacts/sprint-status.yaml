@@ -133,7 +133,7 @@ development_status:
   epic-12: in-progress # Sprint Change 2026-11-17 (Shared Classes) — BUILT BEFORE EPIC 8
   12-1-scheduling-records-per-learner: review # migration: SchedulingRecord.userId backfilled from Card.userId, unique -> (userId, cardId, direction); dry-run on a Neon branch with row counts first
   12-2-class-membership-and-access-guards: review # ClassMember; requireClassOwner / requireClassAccess (AD-19); card creation fans out to learners (AD-9)
-  12-3-invitations-share-modal-and-the-bell: backlog # ClassInvitation (partial unique on PENDING); bell = invitations only, no email
+  12-3-invitations-share-modal-and-the-bell: review # ClassInvitation (partial unique on PENDING); bell = invitations only, no email
   12-4-member-experience: backlog # "{Owner}'s" tile, read-only pages, Leave, shared classes in Review/Learn/quests
   12-5-export-restore-and-admin-with-sharing: backlog # backupExportSchema: members[], sharedClasses[]; user delete cascade (touches 5-2, 5-3, 7-3, 7-6)
   epic-12-retrospective: optional

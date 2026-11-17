@@ -14,11 +14,13 @@ export function ClassRow({
   item,
   onRename,
   onColour,
+  onShare,
   onDelete,
 }: {
   item: ClassSummary;
   onRename: () => void;
   onColour: () => void;
+  onShare: () => void;
   onDelete: () => void;
 }) {
   return (
@@ -58,6 +60,7 @@ export function ClassRow({
           { label: "Rename", onSelect: onRename },
           { label: "Colour", onSelect: onColour },
           { label: "Delete", onSelect: onDelete, danger: true },
+          { label: "Share", onSelect: onShare },
         ]}
       />
     </li>

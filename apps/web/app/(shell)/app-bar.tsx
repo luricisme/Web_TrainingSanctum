@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useIsFocused } from "./focus-mode";
 import { adminNavItem, iconProps, isActive, navItems } from "./nav-items";
+import { InvitationsBell } from "./invitations-bell";
 import { RealmBadge } from "./realm-badge";
 
 /**
@@ -65,7 +66,8 @@ export function AppBar({ userName, isAdmin = false }: { userName: string; isAdmi
       </nav>
 
       {/* The account menu (name, realm, Settings, Log out), at the right end of the app bar. */}
-      <div className="justify-self-end">
+      <div className="flex items-center gap-2 justify-self-end">
+        <InvitationsBell on="frame" />
         <RealmBadge userName={userName} />
       </div>
     </header>
