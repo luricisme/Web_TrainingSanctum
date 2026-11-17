@@ -184,5 +184,6 @@ test("a session ended elsewhere shows on focus; an expired one moves on without 
   await page.clock.fastForward(26 * 60_000);
   await page.clock.resume();
   await expect(page.getByRole("button", { name: "Start", exact: true })).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText(/^Break · /)).toBeVisible();
+  // The Start button can reappear a beat before the refetched plan swaps the caption to Break.
+  await expect(page.getByText(/^Break · /)).toBeVisible({ timeout: 10_000 });
 });

@@ -31,7 +31,8 @@ test("Planner opens with Tasks selected and the switcher drives the URL", async 
   await group.getByRole("radio", { name: "Calendar" }).focus();
   await page.keyboard.press("ArrowRight");
   await page.waitForURL("/planner/pomodoro");
-  await expect(page.getByText("Coming with Epic 9.")).toBeVisible();
+  // Story 9.3 replaced the placeholder with the real Pomodoro screen (task picker with no ?task).
+  await expect(page.getByText("Choose a Task to run its plan.")).toBeVisible();
   await expect(group.getByRole("radio", { name: "Pomodoro" })).toBeChecked();
   await page.keyboard.press("Home");
   await page.waitForURL("/planner");
