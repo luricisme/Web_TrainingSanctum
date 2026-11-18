@@ -267,13 +267,14 @@ components:
     foreground: '{colors.text}'
     over-foreground: '{colors.warning}'
   calendar-block:
-    status: 'built (Story 10.1); drag and keyboard move built (Story 10.2)'
+    status: 'built (Story 10.1); drag and keyboard move built (Story 10.2); live blocks built (Story 10.3)'
     background: '{colors.tint-*}'
     border: '{colors.tint-*-border}'
     radius: '{rounded.sm}'
     conflict-border: '{colors.error}'
     done-opacity: 0.5
-    progress-fill: '{colors.accent}'
+    progress-fill: '{colors.accent} at 25% opacity, with a 2px {colors.accent} leading edge at its lower edge, drawn on every segment of a block that crosses midnight'
+    running-caption: 'Running, in {typography.caption} semibold {colors.text}'
     move-states: 'lifted item uses {elevation.low} and the accent focus-style ring; the drop slot is a dashed {colors.border} ghost; the target tray fills with {colors.row-hover}'
   calendar-grid:
     status: 'built (Story 10.1)'
@@ -336,6 +337,7 @@ All values are in the frontmatter, light first (default), `-dark` variants besid
 
 Any new token must be checked against `{colors.card}`, `{colors.bg}` and, where it sits on one, a tint.
 - **Bell badge (Epic 12, Sprint Change 2026-11-17):** no new pair — `on-frame` on `frame-raised` (7.7:1 measured) on the bar; `on-accent` on `accent` (18.1:1) on the panel.
+- **Met: running calendar block text (Story 10.3, measured 2026-11-18).** Text on the tint under the 25% accent fill — dark: lavender 5.6, sky 5.4, mint 5.3, butter 5.3, rose 5.8; light: lavender 7.9, sky 8.4, mint 8.8, butter 9.2, rose 8.1 (every pair meets AA 4.5:1); text-secondary falls to 3.1–4.3 there, so running blocks use `{colors.text}` for all their text.
 - **Met: calendar conflict border (Story 10.1, measured 2026-11-18).** `{colors.error}` as the 2px non-text border of a conflicting calendar block, against the tint fill it borders: light lavender 3.98, sky 4.25, mint 4.45, butter 4.68, rose 4.05; dark lavender 4.60, sky 4.34, mint 4.29, butter 4.25, rose 4.69. Against the `{colors.card}` it sits on: 5.43 (light) and 5.46 (dark). Every pair meets 3:1. The "Conflict" caption is still always present, so no information depends on the border alone.
 
 ## Typography
@@ -416,7 +418,7 @@ Hover on a tile or card draws a darker border; nothing scales or lifts.
 - **Dock** (`components.dock`) — *built (Story 6.3).* The mobile navigation: a pill-shaped bar floating at the bottom of the screen on the frame colour, holding Review, Classes, Cultivation and Settings as round icon buttons. The current destination is a raised pill (`{colors.frame-raised}`). Respects the device's bottom safe area. Hidden in focus mode. **Decision (2026-11-14):** a floating dock, as in the owner's reference screenshots, rather than a full-width bottom bar. **Sprint Change 2026-11-16:** five buttons (Review, Classes, Planner, Cultivation, Settings; Admin as a sixth), still one row.
 - **Plan strip** (`components.plan-strip`) — *built (Story 9.3).* One pill per session of the Pomodoro plan: focus pills in the Task's Category tint with the minutes in mono, break pills on `{colors.elevated}`; the current pill `{colors.text}`-bordered, done pills ticked, overrun pills marked "+". Read-only. Behaviour in EXPERIENCE.md.
 - **Countdown** (`components.countdown`) — *built (Story 9.3).* The remaining time of the current session in `{typography.mono}` at display size, `{colors.text}`; `{colors.warning}` once the Task is over its estimate. No ring, no animation — the XP ring in the app bar stays the only ring.
-- **Calendar block and grid** (`components.calendar-block`, `components.calendar-grid`) — *built (Story 10.1, read-only; the progress fill and drag are Stories 10.2 and 10.3).* Blocks take the Category tint with its border, `{rounded.sm}`, title and minutes in `{colors.text}`; done blocks at 0.5 opacity; a conflict draws a 2px `{colors.error}` border and a "Conflict" caption on both blocks, placed side by side; a running session fills the block from the top in `{colors.accent}`. The grid draws hour lines in `{colors.divider}`, hour labels in `{typography.caption}`, and a 2px now-line in the accent. The unscheduled tray above each column holds tint chips (`{rounded.full}`).
+- **Calendar block and grid** (`components.calendar-block`, `components.calendar-grid`) — *built (Stories 10.1, 10.2, 10.3).* Blocks take the Category tint with its border, `{rounded.sm}`, title and minutes in `{colors.text}`; done blocks at 0.5 opacity; a conflict draws a 2px `{colors.error}` border and a "Conflict" caption on both blocks, placed side by side; a running session fills the block from the top in `{colors.accent}` at 25% opacity with a 2px `{colors.accent}` leading edge at the fill's lower edge, on every segment of a block that crosses midnight (logged minutes plus elapsed, over the block length; behind the text, which stays `{colors.text}`) and adds a "Running" caption, so the fill is never the only cue. The grid draws hour lines in `{colors.divider}`, hour labels in `{typography.caption}`, and a 2px now-line in the accent. The unscheduled tray above each column holds tint chips (`{rounded.full}`).
 - **Music player** (`components.music-player`) — *not built (Epic 11).* A `surface-card` strip under the countdown: title · artist · licence link in `{typography.body-small}`, a pause button and a volume slider. No artwork, no playlist.
 - **Bell** (`components.bell`) — *not built (Epic 12, Sprint Change 2026-11-17).* A round icon button at the app bar's right, before the Realm badge, in `{colors.on-frame}` with a mono count chip (`on-frame` on `frame-raised`) when > 0; below 640px it sits top-right of the content panel in `{colors.text}` with the chip in `{colors.on-accent}` on `{colors.accent}`. Opens an anchored popover on the card surface with `{elevation.medium}` and no scrim. Hidden in focus mode.
 - **Shared Class tile** (`components.shared-label`) — *not built (Epic 12).* The Owner's tint; "{Owner}'s" in `{typography.caption}` `{colors.text-secondary}` under the name; never a different border or icon — the label is the cue.

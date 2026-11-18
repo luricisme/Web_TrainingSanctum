@@ -4,6 +4,8 @@ import {
   layoutWeek,
   snapStartMinutes,
   stepSlot,
+  runningFillFraction,
+  segmentFillFraction,
   formatStartTime,
   weekDays,
   weekQuerySchema,
@@ -179,5 +181,49 @@ describe("stepSlot", () => {
     expect(stepSlot({ day: "2026-11-16", startMin: null }, "ArrowDown", days).startMin).toBe(540);
     expect(stepSlot({ day: "2026-11-16", startMin: null }, "ArrowUp", days).startMin).toBeNull();
     expect(stepSlot({ day: "2026-11-16", startMin: null }, "ArrowRight", days)).toEqual({ day: "2026-11-17", startMin: null });
+  });
+});
+
+describe("runningFillFraction (spec-10-3)", () => {
+  const start = Date.parse("2026-11-17T10:00:00.000Z");
+  const row = (over: Partial<Parameters<typeof runningFillFraction>[0]> = {}) => ({
+    planMinutes: 50,
+    doneMinutes: 0,
+    running: { startedAt: new Date(start).toISOString(), plannedMinutes: 25 },
+    ...over,
+  });
+  it("is elapsed over the block length", () => {
+    expect(runningFillFraction(row(), start + 10 * 60_000)).toBeCloseTo(10 / 50);
+  });
+  it("adds logged minutes and caps elapsed at the planned length", () => {
+    expect(runningFillFraction(row({ doneMinutes: 25 }), start + 99 * 60_000)).toBeCloseTo(1);
+    expect(runningFillFraction(row({ doneMinutes: 5 }), start + 10 * 60_000)).toBeCloseTo(15 / 50);
+  });
+  it("is 0 when nothing runs, before the start, or with no length", () => {
+    expect(runningFillFraction(row({ running: null }), start)).toBe(0);
+    expect(runningFillFraction(row(), start - 60_000)).toBe(0);
+    expect(runningFillFraction(row({ planMinutes: 0 }), start)).toBe(0);
+  });
+});
+
+describe("segmentFillFraction (spec-10-3)", () => {
+  // 23:50 start, 50 min plan, 20 worked: 10 min in the first segment, 10 of 40 in the second.
+  it("splits the fill across a midnight crossing", () => {
+    expect(segmentFillFraction(20 / 50, 50, { lengthMin: 10, continued: false })).toBe(1);
+    expect(segmentFillFraction(20 / 50, 50, { lengthMin: 40, continued: true })).toBeCloseTo(10 / 40);
+  });
+  it("is the plain fraction for a block in one piece and clamps", () => {
+    expect(segmentFillFraction(0.2, 50, { lengthMin: 50, continued: false })).toBeCloseTo(0.2);
+    expect(segmentFillFraction(5 / 50, 50, { lengthMin: 40, continued: true })).toBe(0);
+    expect(segmentFillFraction(1, 50, { lengthMin: 40, continued: true })).toBe(1);
+  });
+});
+
+describe("a block started near midnight (spec-10-3)", () => {
+  it("sits at 23:50 and continues into the next day", () => {
+    const days = weekDays("2026-11-17");
+    const layout = layoutWeek(days, [task("a", "23:50", 50, "2026-11-17")]);
+    expect(layout["2026-11-17"]![0]).toMatchObject({ startMin: 1430, lengthMin: 10, continued: false });
+    expect(layout["2026-11-18"]![0]).toMatchObject({ startMin: 0, lengthMin: 40, continued: true });
   });
 });

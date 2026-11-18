@@ -113,6 +113,42 @@ export function planLengthMinutes(plan: readonly PomodoroPlanItem[]): number {
   return plan.reduce((sum, item) => sum + item.plannedMinutes, 0);
 }
 
+/** A session as the calendar block length needs it (spec-10-3). `actualMinutes` null means running. */
+export interface BlockSessionFacts {
+  kind: "FOCUS" | "BREAK";
+  actualMinutes: number | null;
+  plannedMinutes: number;
+}
+
+/**
+ * Calendar block length (spec-10-3): logged minutes of ended sessions, plus the
+ * running session's planned minutes, plus the plan length of the focus minutes
+ * still unlogged. No sessions: the plan length. A done Task with logged time is
+ * as long as what was logged. Nothing is stored.
+ */
+export function blockMinutes(
+  task: { estimateMinutes: number; done: boolean },
+  sessions: readonly BlockSessionFacts[],
+  settings: PomodoroSettings
+): number {
+  let logged = 0;
+  let loggedFocus = 0;
+  let runningMinutes = 0;
+  let runningFocus = 0;
+  for (const s of sessions) {
+    if (s.actualMinutes === null) {
+      runningMinutes += s.plannedMinutes;
+      if (s.kind === "FOCUS") runningFocus += s.plannedMinutes;
+    } else {
+      logged += s.actualMinutes;
+      if (s.kind === "FOCUS") loggedFocus += s.actualMinutes;
+    }
+  }
+  if (task.done && logged + runningMinutes > 0) return logged + runningMinutes;
+  const unlogged = Math.max(task.estimateMinutes - loggedFocus - runningFocus, 0);
+  return logged + runningMinutes + planLengthMinutes(planPomodoro(unlogged, settings));
+}
+
 export const startSessionSchema = z.object({
   taskId: z.string({ error: "Task is required." }).min(1, "Task is required."),
   kind: z.enum(["FOCUS", "BREAK"], { error: "Kind must be FOCUS or BREAK." }),

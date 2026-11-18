@@ -1,5 +1,6 @@
+import { useEffect, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
-import type { CalendarBlock as Block, WeekTaskSummary } from "@training-sanctum/domain";
+import { runningFillFraction, segmentFillFraction, type CalendarBlock as Block, type WeekTaskSummary } from "@training-sanctum/domain";
 import { tintFor } from "@/app/components/ui";
 import { formatDay } from "../tasks-key";
 
@@ -10,6 +11,22 @@ function clock(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** Wall time in ms, re-read every 30 s while `active`, so a running block's fill advances. */
+function useNow(active: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!active) return;
+    // A block that turns running later starts from the current time, not the mount time.
+    const soon = window.setTimeout(() => setNow(Date.now()), 0);
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => {
+      window.clearTimeout(soon);
+      window.clearInterval(id);
+    };
+  }, [active]);
+  return now;
 }
 
 const focusClass =
@@ -68,6 +85,9 @@ export function CalendarBlock({
   move?: MoveProps;
 }) {
   const end = block.startMin + block.lengthMin;
+  const running = task.running !== null;
+  const now = useNow(running);
+  const fill = segmentFillFraction(runningFillFraction(task, now), task.planMinutes, block);
   const short = block.lengthMin < 45;
   const roomy = block.lengthMin >= 90;
   const label = [
@@ -80,6 +100,7 @@ export function CalendarBlock({
     task.category.name,
     block.conflict ? "conflict" : null,
     task.done ? "done" : null,
+    running ? "running" : null,
   ]
     .filter(Boolean)
     .join(", ");
@@ -100,6 +121,7 @@ export function CalendarBlock({
       aria-label={label}
       data-testid="calendar-block"
       data-conflict={block.conflict ? "true" : undefined}
+      data-running={running ? "true" : undefined}
       {...moveAttrs(move, task.id)}
       className={`absolute overflow-hidden rounded-sm px-2 py-0.5 ${border} ${tint} ${focusClass} ${moveClass(move)} ${
         task.done ? "opacity-50" : ""
@@ -113,19 +135,33 @@ export function CalendarBlock({
         ...liftStyle(move),
       }}
     >
-      <div className={short ? "flex items-baseline gap-2" : "flex flex-col"}>
+      {running ? (
+        <div
+          aria-hidden="true"
+          data-testid="calendar-block-fill"
+          className="pointer-events-none absolute inset-x-0 top-0"
+          style={{ height: `${(fill * 100).toFixed(1)}%` }}
+        >
+          <div className="absolute inset-0 bg-accent opacity-25" />
+          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-accent" />
+        </div>
+      ) : null}
+      <div className={`relative ${short ? "flex items-baseline gap-2" : "flex flex-col"}`}>
         <p
           className={`min-w-0 text-body-sm font-semibold ${roomy ? "line-clamp-2 break-words" : "truncate"} ${
-            block.continued ? "text-foreground-secondary" : "text-foreground"
+            block.continued && !running ? "text-foreground-secondary" : "text-foreground"
           }`}
         >
           {task.title}
         </p>
-        {block.continued ? (
-          <p className="shrink-0 text-caption text-foreground-secondary">continues, {block.lengthMin} min</p>
-        ) : (
-          <p className="shrink-0 font-mono text-caption text-foreground-secondary">{task.planMinutes} min</p>
-        )}
+        <div className="flex shrink-0 items-baseline gap-2">
+          {block.continued ? (
+            <p className={`text-caption ${running ? "text-foreground" : "text-foreground-secondary"}`}>continues, {block.lengthMin} min</p>
+          ) : (
+            <p className={`font-mono text-caption ${running ? "text-foreground" : "text-foreground-secondary"}`}>{task.planMinutes} min</p>
+          )}
+          {running ? <p className="text-caption font-semibold text-foreground">Running</p> : null}
+        </div>
         {block.conflict ? (
           <p className="shrink-0 text-caption font-semibold text-foreground">Conflict</p>
         ) : null}
@@ -143,6 +179,7 @@ export function TrayChip({ task, move }: { task: WeekTaskSummary; move?: MovePro
     `${task.planMinutes} minutes`,
     task.category.name,
     task.done ? "done" : null,
+    task.running ? "running" : null,
   ]
     .filter(Boolean)
     .join(", ");

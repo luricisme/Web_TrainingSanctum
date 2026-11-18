@@ -169,7 +169,9 @@ test.describe("/api/planner/sessions", () => {
     const base = baseURL ?? "http://localhost:3100";
     const s = await newUser(playwright, base);
     const taskId = await addTask(s, base);
-    const id = (await (await start(s, base, taskId)).json()).data.id;
+    const started = (await (await start(s, base, taskId)).json()).data;
+    const id = started.id as string;
+    const startedAtUtc = (started.startedAt as string).slice(0, 10);
     await age(id, 10 * MIN + 5_000);
     const end = await s.request.post(`${base}/api/planner/sessions/${id}/end`);
     expect(end.status()).toBe(200);
@@ -178,7 +180,8 @@ test.describe("/api/planner/sessions", () => {
     const events = await prisma.xpEvent.findMany({ where: { userId: s.userId, reason: "FOCUS_SESSION" } });
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ delta: 1, questKind: null });
-    expect(events[0]!.localDay.toISOString().slice(0, 10)).toBe(DAY);
+    // spec-10-3: the first focus session moved the Task to the real start day (user is UTC).
+    expect(events[0]!.localDay.toISOString().slice(0, 10)).toBe(startedAtUtc);
     expect((await prisma.task.findUniqueOrThrow({ where: { id: taskId } })).loggedMinutes).toBe(10);
     expect((await prisma.user.findUniqueOrThrow({ where: { id: s.userId } })).cultivationXp).toBe(1);
     await ledgerMatches(s.userId);
@@ -332,4 +335,62 @@ test.describe("GET /api/planner/tasks/[id]", () => {
     expect((await other.request.get(`${base}/api/planner/tasks/${taskId}`)).status()).toBe(404);
     expect((await s.request.get(`${base}/api/planner/tasks/nope`)).status()).toBe(404);
   });
+});
+
+// spec-10-3: the first focus session anchors the Task's start.
+test.describe("first focus session sets startAt", () => {
+  const taskRow = (id: string) => prisma.task.findUniqueOrThrow({ where: { id } });
+
+  test("first FOCUS sets startAt and localDay; a second session leaves them", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    const id = await addTask(s, base, 90);
+    expect((await taskRow(id)).startAt).toBeNull();
+    const res = await start(s, base, id);
+    expect(res.status()).toBe(201);
+    const first = (await res.json()).data;
+    const after = await taskRow(id);
+    expect(after.startAt?.toISOString()).toBe(first.startedAt);
+    expect(after.localDay.toISOString().slice(0, 10)).toBe(first.startedAt.slice(0, 10));
+
+    await age(first.id, 25 * MIN + 5_000);
+    expect((await s.request.post(`${base}/api/planner/sessions/${first.id}/end`)).status()).toBe(200);
+    expect((await start(s, base, id, "BREAK")).status()).toBe(201);
+    expect((await taskRow(id)).startAt?.toISOString()).toBe(first.startedAt);
+  });
+
+  test("a refused start writes nothing", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    const id = await addTask(s, base, 90);
+    const res = await start(s, base, id, "BREAK");
+    expect(res.status()).toBe(409);
+    expect((await prisma.task.findUniqueOrThrow({ where: { id } })).startAt).toBeNull();
+  });
+
+  test("a scheduled Task moves to the real start", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    const created = await s.request.post(`${base}/api/planner/tasks`, {
+      data: { title: "Read", categoryId: s.categoryId, localDay: DAY, startTime: "09:00", estimateMinutes: 50 },
+    });
+    expect(created.status()).toBe(201);
+    const id = (await created.json()).data.id as string;
+    const first = (await (await start(s, base, id)).json()).data;
+    const after = await taskRow(id);
+    expect(after.startAt?.toISOString()).toBe(first.startedAt);
+    expect(after.localDay.toISOString().slice(0, 10)).toBe(first.startedAt.slice(0, 10));
+  });
+
+  for (const timeZone of ["Pacific/Kiritimati", "Etc/GMT+12"]) {
+    test(`localDay follows the user's timezone (${timeZone})`, async ({ playwright, baseURL }) => {
+      const base = baseURL ?? "http://localhost:3100";
+      const s = await newUser(playwright, base);
+      await prisma.user.update({ where: { id: s.userId }, data: { timezone: timeZone } });
+      const id = await addTask(s, base, 50);
+      const first = (await (await start(s, base, id)).json()).data;
+      const expected = new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date(first.startedAt));
+      expect((await taskRow(id)).localDay.toISOString().slice(0, 10)).toBe(expected);
+    });
+  }
 });

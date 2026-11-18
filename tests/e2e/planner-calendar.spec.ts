@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
+import { prisma } from "@training-sanctum/db";
 
 async function register(page: Page) {
   await page.goto("/register");
@@ -366,4 +367,44 @@ test("calendar: no drag under 4px, Esc cancels a drag, continuation blocks stay 
   await expect(page.locator("[aria-live=polite].sr-only")).not.toContainText("Moving Late");
   await expect(cont).toBeVisible();
   expect(patches).toHaveLength(0);
+});
+
+// spec-10-3: starting a session anchors the block at the real start and fills it.
+test("calendar: a started session moves the chip to a block with a Running fill", async ({ page }) => {
+  await register(page);
+  await page.goto("/planner");
+  await addTasks(page, [{ title: "Deep work", estimateMinutes: 50 }]);
+  await page.goto("/planner/calendar");
+  const chip = page.getByRole("group", { name: /^Deep work, .*no start time/ });
+  await expect(chip).toBeVisible();
+
+  const taskId = await chip.getAttribute("data-task-id");
+  const started = await page.evaluate(async (id) => {
+    const res = await fetch("/api/planner/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: id, kind: "FOCUS" }),
+    });
+    return res.status;
+  }, taskId);
+  expect(started).toBe(201);
+  // Ten minutes in, so the fill has height.
+  await prisma.pomodoroSession.updateMany({
+    where: { taskId: taskId! },
+    data: { startedAt: new Date(Date.now() - 10 * 60_000) },
+  });
+
+  await page.reload();
+  const block = page.getByRole("group", { name: /^Deep work, .*minutes, Study, running$/ });
+  await expect(block).toBeVisible();
+  await expect(block).toHaveAttribute("data-running", "true");
+  await expect(block).toContainText("Running");
+  await expect(page.getByRole("group", { name: /^Deep work, .*no start time/ })).toHaveCount(0);
+  const fill = block.getByTestId("calendar-block-fill");
+  await expect(fill).toHaveCount(1);
+  const [fh, bh] = [(await fill.boundingBox())!.height, (await block.boundingBox())!.height];
+  expect(fh).toBeGreaterThan(0);
+  expect(fh).toBeLessThan(bh);
+  await block.scrollIntoViewIfNeeded();
+  await shoot(page, "planner-calendar-running");
 });
