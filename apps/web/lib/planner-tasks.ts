@@ -6,6 +6,7 @@ import {
   blockMinutes,
   formatLocalTime,
   localDateTimeToInstant,
+  parseMusicTrack,
 } from "@training-sanctum/domain";
 
 export const taskInclude = {
@@ -34,6 +35,7 @@ export function toTaskSummary(row: TaskRow, timeZone: string): TaskSummary {
     estimateMinutes: row.estimateMinutes,
     loggedMinutes: row.loggedMinutes,
     done: row.done,
+    musicTrack: parseMusicTrack(row.musicTrack),
   };
 }
 

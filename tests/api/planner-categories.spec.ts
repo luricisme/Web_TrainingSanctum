@@ -235,6 +235,56 @@ test.describe("/api/planner/categories", () => {
     expect(await prisma.taskCategory.count({ where: { id: cat.id } })).toBe(1);
   });
 
+  test("musicTrack round-trips on create, patch and clear; a bad shape is a 400", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    const track = { source: "jamendo", trackId: "1204" };
+
+    const made = await s.request.post(`${base}/api/planner/categories`, { data: { name: "Lofi", musicTrack: track } });
+    expect(made.status()).toBe(201);
+    const cat = (await made.json()).data;
+    expect(cat.musicTrack).toEqual(track);
+
+    const plain = await create(s, base, "Plain");
+    expect((plain as Category & { musicTrack: unknown }).musicTrack).toBeNull();
+
+    const list = (await (await s.request.get(`${base}/api/planner/categories`)).json()).data;
+    expect(list.find((c: { id: string }) => c.id === cat.id).musicTrack).toEqual(track);
+
+    const bad = await s.request.patch(`${base}/api/planner/categories/${cat.id}`, {
+      data: { musicTrack: { source: "x" } },
+    });
+    expect(bad.status()).toBe(400);
+    expect((await bad.json()).error.code).toBe("VALIDATION_ERROR");
+
+    const other = await s.request.patch(`${base}/api/planner/categories/${cat.id}`, {
+      data: { musicTrack: { source: "jamendo", trackId: "9" } },
+    });
+    expect((await other.json()).data.musicTrack).toEqual({ source: "jamendo", trackId: "9" });
+
+    const cleared = await s.request.patch(`${base}/api/planner/categories/${cat.id}`, { data: { musicTrack: null } });
+    expect(cleared.status()).toBe(200);
+    expect((await cleared.json()).data.musicTrack).toBeNull();
+    const row = await prisma.taskCategory.findUniqueOrThrow({ where: { id: cat.id } });
+    expect(row.musicTrack).toBeNull();
+
+    // A Task keeps its own track, independent of the Category's.
+    const taskRes = await s.request.post(`${base}/api/planner/tasks`, {
+      data: { title: "T", categoryId: cat.id, localDay: "2026-11-18", estimateMinutes: 25, musicTrack: track },
+    });
+    expect(taskRes.status()).toBe(201);
+    const task = (await taskRes.json()).data;
+    expect(task.musicTrack).toEqual(track);
+    const next = { source: "jamendo", trackId: "77" };
+    const swapped = await s.request.patch(`${base}/api/planner/tasks/${task.id}`, { data: { musicTrack: next } });
+    expect((await swapped.json()).data.musicTrack).toEqual(next);
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: task.id } })).musicTrack).toEqual(next);
+    const noTrack = await s.request.patch(`${base}/api/planner/tasks/${task.id}`, { data: { musicTrack: null } });
+    expect((await noTrack.json()).data.musicTrack).toBeNull();
+    const badTask = await s.request.patch(`${base}/api/planner/tasks/${task.id}`, { data: { musicTrack: { trackId: "1" } } });
+    expect(badTask.status()).toBe(400);
+  });
+
   test("an XpEvent with a null questKind is stored", async ({ playwright, baseURL }) => {
     const base = baseURL ?? "http://localhost:3100";
     const s = await newUser(playwright, base);

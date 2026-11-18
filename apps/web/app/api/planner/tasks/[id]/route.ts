@@ -1,4 +1,4 @@
-import { prisma, type Prisma } from "@training-sanctum/db";
+import { prisma, Prisma } from "@training-sanctum/db";
 import { formatLocalTime, updateTaskSchema } from "@training-sanctum/domain";
 import { requirePlannerSession, toSessionSummary } from "@/lib/planner-sessions";
 import { logOperation } from "@/lib/log";
@@ -42,6 +42,7 @@ export async function PATCH(request: Request, { params }: Context): Promise<Resp
   if (input.categoryId !== undefined) data.categoryId = input.categoryId;
   if (input.estimateMinutes !== undefined) data.estimateMinutes = input.estimateMinutes;
   if (input.done === false) data.done = false;
+  if (input.musicTrack !== undefined) data.musicTrack = input.musicTrack ?? Prisma.JsonNull;
   if (input.localDay !== undefined || input.startTime !== undefined) {
     const day = input.localDay ?? existing.localDay.toISOString().slice(0, 10);
     const time =

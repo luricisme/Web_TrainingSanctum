@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   TASK_MIN_ESTIMATE_MINUTES,
+  type MusicTrackRef,
   type TaskCategorySummary,
   type TaskSummary,
   createTaskSchema,
@@ -20,9 +21,10 @@ import {
 } from "@/app/components/ui";
 import { Modal } from "../classes/modal";
 import { PLANNER_CATEGORIES_KEY } from "./categories-key";
+import { MusicField } from "./music-field";
 import { PLANNER_OVERDUE_KEY, PLANNER_TASKS_KEY } from "./tasks-key";
 
-type Fields = Partial<Record<"title" | "categoryId" | "localDay" | "startTime" | "estimateMinutes", string>>;
+type Fields = Partial<Record<"title" | "categoryId" | "localDay" | "startTime" | "estimateMinutes" | "musicTrack", string>>;
 
 /**
  * Add / Edit Task modal. With no Category yet it first offers to create one
@@ -160,6 +162,7 @@ function TaskForm({
   const [localDay, setLocalDay] = useState(existing?.localDay ?? day);
   const [startTime, setStartTime] = useState(existing?.startTime ?? "");
   const [estimate, setEstimate] = useState(String(existing?.estimateMinutes ?? 25));
+  const [musicTrack, setMusicTrack] = useState<MusicTrackRef | null>(existing?.musicTrack ?? null);
   const [errors, setErrors] = useState<Fields>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -200,6 +203,12 @@ function TaskForm({
       if (localDay !== existing.localDay) body.localDay = localDay;
       if (time !== existing.startTime) body.startTime = time;
       if (estimateValue !== existing.estimateMinutes) body.estimateMinutes = estimateValue;
+      if (
+        musicTrack?.source !== existing.musicTrack?.source ||
+        musicTrack?.trackId !== existing.musicTrack?.trackId
+      ) {
+        body.musicTrack = musicTrack;
+      }
       // Validate the whole form so every bad field shows, then send only changes.
       const full = createTaskSchema.safeParse({
         title,
@@ -207,6 +216,7 @@ function TaskForm({
         localDay,
         startTime: time,
         estimateMinutes: estimateValue,
+        musicTrack,
       });
       if (!full.success) return showIssues(full.error.issues);
       if (Object.keys(body).length === 0) {
@@ -226,6 +236,7 @@ function TaskForm({
       localDay,
       startTime: time,
       estimateMinutes: estimateValue,
+      musicTrack,
     });
     if (!parsed.success) return showIssues(parsed.error.issues);
     setErrors({});
@@ -341,6 +352,13 @@ function TaskForm({
         </p>
         {fieldError("estimateMinutes")}
       </div>
+
+      <MusicField
+        value={musicTrack}
+        onChange={setMusicTrack}
+        inherited={categories.find((c) => c.id === categoryId)?.musicTrack ?? null}
+      />
+      {fieldError("musicTrack")}
 
       {formError ? (
         <p role="alert" className={fieldErrorClass}>

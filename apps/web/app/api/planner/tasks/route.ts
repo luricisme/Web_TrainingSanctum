@@ -1,4 +1,4 @@
-import { prisma } from "@training-sanctum/db";
+import { prisma, Prisma } from "@training-sanctum/db";
 import { compareTasks, createTaskSchema, taskDayQuerySchema } from "@training-sanctum/domain";
 import { requirePlannerSession } from "@/lib/planner-sessions";
 import { logOperation } from "@/lib/log";
@@ -55,6 +55,7 @@ export async function POST(request: Request): Promise<Response> {
       localDay: new Date(`${input.localDay}T00:00:00.000Z`),
       startAt: startAtFor(input.localDay, input.startTime ?? null, tz),
       estimateMinutes: input.estimateMinutes,
+      musicTrack: input.musicTrack ?? Prisma.JsonNull,
     },
     include: taskInclude,
   });

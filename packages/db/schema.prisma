@@ -344,13 +344,15 @@ model XpEvent {
 /// case-insensitive, through the raw-SQL index
 /// "task_categories_userId_lower_name_key" (see the migration).
 model TaskCategory {
-  id        String     @id @default(cuid())
-  userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String
-  color     ClassColor
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  color      ClassColor
+  /// Story 11.2: `{ source, trackId }` or null; metadata is fetched, never stored.
+  musicTrack Json?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
   tasks Task[]
 
@@ -375,6 +377,8 @@ model Task {
   done            Boolean      @default(false)
   xpAwardedAt     DateTime?
   loggedMinutes   Int          @default(0)
+  /// Story 11.2: overrides the Category's track; null inherits it.
+  musicTrack      Json?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 

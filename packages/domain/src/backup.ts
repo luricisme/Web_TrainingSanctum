@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { pomodoroSettingsSchema } from "./pomodoro";
+import { musicTrackSchema } from "./music";
 
 /** Story 5.2: one shared shape for the backup file (export now, restore in 5.3, view in 7.3). */
 export const BACKUP_VERSION = 1;
@@ -46,6 +47,7 @@ export const backupPlannerSchema = z.object({
       id,
       name: z.string(),
       color: z.enum(["LAVENDER", "SKY", "MINT", "BUTTER", "ROSE"]),
+      musicTrack: musicTrackSchema.nullable().default(null),
       createdAt: isoTimestamp,
       updatedAt: isoTimestamp,
     })
@@ -61,6 +63,7 @@ export const backupPlannerSchema = z.object({
       done: z.boolean(),
       xpAwardedAt: isoTimestamp.nullable(),
       loggedMinutes: z.number().int(),
+      musicTrack: musicTrackSchema.nullable().default(null),
       createdAt: isoTimestamp,
       updatedAt: isoTimestamp,
     })

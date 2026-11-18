@@ -6,6 +6,7 @@
  */
 import { z } from "zod";
 import { classColorSchema, type ClassColor } from "./classes";
+import { musicTrackSchema, type MusicTrackRef } from "./music";
 
 export const TASK_CATEGORY_NAME_MAX_LENGTH = 40;
 
@@ -24,16 +25,18 @@ export const taskCategoryNameSchema = z
 export const createTaskCategorySchema = z.object({
   name: taskCategoryNameSchema,
   color: classColorSchema.optional(),
+  musicTrack: musicTrackSchema.nullish(),
 });
 
-/** Rename and/or recolour: at least one of `name` and `color`. */
+/** Rename, recolour and/or change the track: at least one field. */
 export const updateTaskCategorySchema = z
   .object({
     name: taskCategoryNameSchema.optional(),
     color: classColorSchema.optional(),
+    musicTrack: musicTrackSchema.nullable().optional(),
   })
-  .refine((v) => v.name !== undefined || v.color !== undefined, {
-    message: "Provide a name or a colour.",
+  .refine((v) => v.name !== undefined || v.color !== undefined || v.musicTrack !== undefined, {
+    message: "Provide a name, a colour or a track.",
   });
 
 export const deleteTaskCategorySchema = z.discriminatedUnion("mode", [
@@ -54,4 +57,5 @@ export interface TaskCategorySummary {
   name: string;
   color: ClassColor;
   taskCount: number;
+  musicTrack: MusicTrackRef | null;
 }

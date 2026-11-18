@@ -1,9 +1,10 @@
-import { prisma } from "@training-sanctum/db";
+import { prisma, Prisma } from "@training-sanctum/db";
 import {
   TASK_CATEGORY_NAME_TAKEN,
   type TaskCategorySummary,
   createTaskCategorySchema,
   nextClassColor,
+  parseMusicTrack,
 } from "@training-sanctum/domain";
 import { requirePlannerSession } from "@/lib/planner-sessions";
 import { isUniqueViolation } from "@/lib/prisma-errors";
@@ -26,6 +27,7 @@ export async function GET(request: Request): Promise<Response> {
       id: true,
       name: true,
       color: true,
+      musicTrack: true,
       _count: { select: { tasks: true } },
     },
   });
@@ -34,6 +36,7 @@ export async function GET(request: Request): Promise<Response> {
     name: c.name,
     color: c.color,
     taskCount: c._count.tasks,
+    musicTrack: parseMusicTrack(c.musicTrack),
   }));
   return ok(data);
 }
@@ -63,6 +66,7 @@ export async function POST(request: Request): Promise<Response> {
         userId,
         name: parsed.data.name,
         color: parsed.data.color ?? nextClassColor(existing.length),
+        musicTrack: parsed.data.musicTrack ?? Prisma.JsonNull,
       },
     });
     const data: TaskCategorySummary = {
@@ -70,6 +74,7 @@ export async function POST(request: Request): Promise<Response> {
       name: created.name,
       color: created.color,
       taskCount: 0,
+      musicTrack: parseMusicTrack(created.musicTrack),
     };
     return ok(data, 201);
   } catch (error) {

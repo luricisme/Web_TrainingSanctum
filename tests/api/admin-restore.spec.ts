@@ -478,7 +478,13 @@ async function seedPlanner(userId: string) {
     data: { pomodoroSettings: { focus: 30, shortBreak: 10, longBreak: 20, longBreakEvery: 3 } },
   });
   const study = await prisma.taskCategory.create({
-    data: { userId, name: "Study", color: "SKY", createdAt: new Date("2026-11-01T00:00:00Z") },
+    data: {
+      userId,
+      name: "Study",
+      color: "SKY",
+      musicTrack: { source: "jamendo", trackId: "111" },
+      createdAt: new Date("2026-11-01T00:00:00Z"),
+    },
   });
   await prisma.taskCategory.create({
     data: { userId, name: "Home", color: "MINT", createdAt: new Date("2026-11-02T00:00:00Z") },
@@ -493,6 +499,7 @@ async function seedPlanner(userId: string) {
       loggedMinutes: 25,
       done: true,
       xpAwardedAt: new Date("2026-11-17T09:00:00.000Z"),
+      musicTrack: { source: "jamendo", trackId: "222" },
     },
   });
   await prisma.pomodoroSession.createMany({
@@ -518,6 +525,26 @@ async function seedPlanner(userId: string) {
 }
 
 test.describe("restore with Planner data", () => {
+  test("an older planner file without musicTrack restores with null", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? FALLBACK_BASE;
+    const admin = await adminSession(playwright, base);
+    const user = await seedUser(`restore-nomusic-${randomUUID()}@example.test`);
+    try {
+      await seedPlanner(user.id);
+      const old = await exportOf(admin, base, user.id);
+      for (const row of [...old.planner.categories, ...old.planner.tasks]) {
+        delete (row as { musicTrack?: unknown }).musicTrack;
+      }
+      const res = await post(admin, base, user.id, { confirm: true, backup: old });
+      expect(res.status()).toBe(200);
+      const after = await exportOf(admin, base, user.id);
+      expect(after.planner.categories.map((c) => c.musicTrack)).toEqual([null, null]);
+      expect(after.planner.tasks.map((t) => t.musicTrack)).toEqual([null]);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: user.id } });
+    }
+  });
+
   test("round trip restores settings, categories, tasks and sessions with new ids", async ({
     playwright,
     baseURL,
@@ -543,6 +570,11 @@ test.describe("restore with Planner data", () => {
 
       const after = await exportOf(admin, base, user.id);
       expect(shape(after)).toEqual(shape(before));
+      expect(after.planner.categories.map((c) => [c.name, c.musicTrack])).toEqual([
+        ["Study", { source: "jamendo", trackId: "111" }],
+        ["Home", null],
+      ]);
+      expect(after.planner.tasks.map((t) => t.musicTrack)).toEqual([{ source: "jamendo", trackId: "222" }]);
       const oldIds = new Set([
         ...before.planner.categories.map((c) => c.id),
         ...before.planner.tasks.map((t) => t.id),
