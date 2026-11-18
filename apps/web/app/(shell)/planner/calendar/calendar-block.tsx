@@ -1,3 +1,4 @@
+import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import type { CalendarBlock as Block, WeekTaskSummary } from "@training-sanctum/domain";
 import { tintFor } from "@/app/components/ui";
 import { formatDay } from "../tasks-key";
@@ -14,13 +15,58 @@ function clock(minutes: number): string {
 const focusClass =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
+/** Pointer and keyboard wiring for a movable item (Story 10.2); absent for done and continued blocks. */
+export interface MoveProps {
+  /** Viewport rect to draw the item fixed under the pointer while it is lifted; null otherwise. */
+  lift: { left: number; top: number; width: number; height: number } | null;
+  /** True while this item is selected for a keyboard move. */
+  selected: boolean;
+  onPointerDown: (event: PointerEvent<HTMLElement>) => void;
+  onKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
+  onBlur: () => void;
+}
+
+export const MOVE_HINT_ID = "calendar-move-hint";
+
+function moveAttrs(move: MoveProps | undefined, taskId: string) {
+  if (!move) return { "data-task-id": taskId };
+  return {
+    "data-task-id": taskId,
+    "aria-describedby": MOVE_HINT_ID,
+    onPointerDown: move.onPointerDown,
+    onKeyDown: move.onKeyDown,
+    onBlur: move.onBlur,
+  };
+}
+
+function moveClass(move: MoveProps | undefined) {
+  if (!move) return "";
+  if (move.lift) return "pointer-events-none z-30 cursor-grabbing shadow-low outline outline-2 outline-offset-2 outline-accent touch-none";
+  return `cursor-grab select-none ${move.selected ? "shadow-low outline outline-2 outline-offset-2 outline-accent" : ""}`;
+}
+
+function liftStyle(move: MoveProps | undefined): CSSProperties {
+  const l = move?.lift;
+  return l ? { position: "fixed", left: l.left, top: l.top, width: l.width, height: l.height } : {};
+}
+
 /**
  * A scheduled Task (DESIGN.md components.calendar-block): Category tint, title
  * and minutes in `text`, `rounded.sm`. A conflict swaps the tint border for a
  * 2px `error` one and adds the "Conflict" caption (never the border alone).
- * Read-only in Story 10.1; focusable and labelled for Tab reach.
+ * Focusable and labelled for Tab reach; movable by pointer and keyboard (Story 10.2).
  */
-export function CalendarBlock({ block, task, day }: { block: Block; task: WeekTaskSummary; day: string }) {
+export function CalendarBlock({
+  block,
+  task,
+  day,
+  move,
+}: {
+  block: Block;
+  task: WeekTaskSummary;
+  day: string;
+  move?: MoveProps;
+}) {
   const end = block.startMin + block.lengthMin;
   const short = block.lengthMin < 45;
   const roomy = block.lengthMin >= 90;
@@ -54,7 +100,8 @@ export function CalendarBlock({ block, task, day }: { block: Block; task: WeekTa
       aria-label={label}
       data-testid="calendar-block"
       data-conflict={block.conflict ? "true" : undefined}
-      className={`absolute overflow-hidden rounded-sm px-2 py-0.5 ${border} ${tint} ${focusClass} ${
+      {...moveAttrs(move, task.id)}
+      className={`absolute overflow-hidden rounded-sm px-2 py-0.5 ${border} ${tint} ${focusClass} ${moveClass(move)} ${
         task.done ? "opacity-50" : ""
       }`}
       style={{
@@ -63,6 +110,7 @@ export function CalendarBlock({ block, task, day }: { block: Block; task: WeekTa
         height: `max(1.5rem, ${minutePx(block.lengthMin)})`,
         left: `calc(${block.lane} * 100% / ${block.lanes} + 1px)`,
         width: `calc(100% / ${block.lanes} - 2px)`,
+        ...liftStyle(move),
       }}
     >
       <div className={short ? "flex items-baseline gap-2" : "flex flex-col"}>
@@ -87,7 +135,7 @@ export function CalendarBlock({ block, task, day }: { block: Block; task: WeekTa
 }
 
 /** A timeless Task in its day tray (`rounded.full` tint chip). */
-export function TrayChip({ task }: { task: WeekTaskSummary }) {
+export function TrayChip({ task, move }: { task: WeekTaskSummary; move?: MoveProps }) {
   const label = [
     task.title,
     formatDay(task.localDay),
@@ -104,7 +152,9 @@ export function TrayChip({ task }: { task: WeekTaskSummary }) {
       tabIndex={0}
       aria-label={label}
       data-testid="calendar-chip"
-      className={`flex max-w-48 shrink-0 items-baseline gap-2 rounded-full border px-3 py-0.5 sm:max-w-full ${tintFor(task.category.color)} ${focusClass} ${
+      {...moveAttrs(move, task.id)}
+      style={liftStyle(move)}
+      className={`flex max-w-48 shrink-0 items-baseline gap-2 rounded-full border px-3 py-0.5 sm:max-w-full ${tintFor(task.category.color)} ${focusClass} ${moveClass(move)} ${
         task.done ? "opacity-50" : ""
       }`}
     >

@@ -267,13 +267,14 @@ components:
     foreground: '{colors.text}'
     over-foreground: '{colors.warning}'
   calendar-block:
-    status: 'built (Story 10.1)'
+    status: 'built (Story 10.1); drag and keyboard move built (Story 10.2)'
     background: '{colors.tint-*}'
     border: '{colors.tint-*-border}'
     radius: '{rounded.sm}'
     conflict-border: '{colors.error}'
     done-opacity: 0.5
     progress-fill: '{colors.accent}'
+    move-states: 'lifted item uses {elevation.low} and the accent focus-style ring; the drop slot is a dashed {colors.border} ghost; the target tray fills with {colors.row-hover}'
   calendar-grid:
     status: 'built (Story 10.1)'
     line: '{colors.divider}'
