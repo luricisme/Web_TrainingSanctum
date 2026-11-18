@@ -320,7 +320,9 @@ test.describe("GET /api/admin/users/[id]/export", () => {
       data: { name: "Other", email: `export-planner-o-${randomUUID()}@example.test`, timezone: "UTC" },
     });
     try {
-      const category = await prisma.taskCategory.create({ data: { userId: user.id, name: "Study", color: "SKY" } });
+      const category = await prisma.taskCategory.create({
+        data: { userId: user.id, name: "Study", color: "SKY", musicTrack: { source: "jamendo", trackId: "111" } },
+      });
       const otherCategory = await prisma.taskCategory.create({ data: { userId: other.id, name: "Nope", color: "ROSE" } });
       const task = await prisma.task.create({
         data: {
@@ -330,6 +332,7 @@ test.describe("GET /api/admin/users/[id]/export", () => {
           localDay: new Date("2026-11-17T00:00:00.000Z"),
           estimateMinutes: 50,
           loggedMinutes: 25,
+          musicTrack: { source: "jamendo", trackId: "222" },
         },
       });
       await prisma.task.create({
@@ -358,6 +361,8 @@ test.describe("GET /api/admin/users/[id]/export", () => {
       expect(parsed.planner.settings).toEqual({ focus: 30, shortBreak: 10, longBreak: 20, longBreakEvery: 3 });
       expect(parsed.planner.categories.map((c) => c.name)).toEqual(["Study"]);
       expect(parsed.planner.tasks.map((t) => [t.title, t.localDay, t.loggedMinutes])).toEqual([["Read", "2026-11-17", 25]]);
+      expect(parsed.planner.categories[0]!.musicTrack).toEqual({ source: "jamendo", trackId: "111" });
+      expect(parsed.planner.tasks[0]!.musicTrack).toEqual({ source: "jamendo", trackId: "222" });
       expect(parsed.planner.sessions.map((x) => [x.kind, x.endedAt])).toEqual([["FOCUS", "2026-11-17T08:25:00.000Z"]]);
     } finally {
       await prisma.user.deleteMany({ where: { id: { in: [user.id, other.id] } } });

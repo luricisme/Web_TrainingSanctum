@@ -5,6 +5,7 @@
  */
 import { z } from "zod";
 import type { ClassColor } from "./classes";
+import { musicTrackSchema, type MusicTrackRef } from "./music";
 
 export const TASK_TITLE_MAX_LENGTH = 120;
 export const TASK_MIN_ESTIMATE_MINUTES = 5;
@@ -48,6 +49,7 @@ export const createTaskSchema = z.object({
   localDay: localDaySchema,
   startTime: startTimeSchema.nullish(),
   estimateMinutes: estimateMinutesSchema,
+  musicTrack: musicTrackSchema.nullish(),
 });
 
 /**
@@ -62,6 +64,7 @@ export const updateTaskSchema = z
     startTime: startTimeSchema.nullable().optional(),
     estimateMinutes: estimateMinutesSchema.optional(),
     done: z.literal(false).optional(),
+    musicTrack: musicTrackSchema.nullable().optional(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), {
     message: "Provide at least one field to change.",
@@ -84,6 +87,8 @@ export interface TaskSummary {
   estimateMinutes: number;
   loggedMinutes: number;
   done: boolean;
+  /** Overrides the Category's track; null inherits it. */
+  musicTrack: MusicTrackRef | null;
 }
 
 /** Shape returned by `GET /api/planner/tasks/overdue`. */

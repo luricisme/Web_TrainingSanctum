@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type ClassColor,
+  type MusicTrackRef,
   type TaskCategorySummary,
   nextClassColor,
   taskCategoryNameSchema,
@@ -22,6 +23,7 @@ import { Modal } from "../classes/modal";
 import { RowMenu } from "../classes/row-menu";
 import { DeleteCategoryModal } from "./delete-category-modal";
 import { PLANNER_CATEGORIES_KEY as KEY } from "./categories-key";
+import { MusicField } from "./music-field";
 
 type Editing = { kind: "new" } | { kind: "edit"; id: string; focusColour: boolean } | null;
 
@@ -157,11 +159,12 @@ function CategoryForm({
   const queryClient = useQueryClient();
   const [name, setName] = useState(existing?.name ?? "");
   const [color, setColor] = useState<ClassColor>(existing?.color ?? nextClassColor(count));
+  const [musicTrack, setMusicTrack] = useState<MusicTrackRef | null>(existing?.musicTrack ?? null);
   const [error, setError] = useState<string | null>(null);
   const formId = existing?.id ?? "new";
 
   const save = useMutation({
-    mutationFn: (body: { name: string; color: ClassColor }) =>
+    mutationFn: (body: { name: string; color: ClassColor; musicTrack: MusicTrackRef | null }) =>
       existing
         ? apiFetch<TaskCategorySummary>(`/api/planner/categories/${existing.id}`, {
             method: "PATCH",
@@ -192,7 +195,7 @@ function CategoryForm({
       setError(parsed.error.issues[0]?.message ?? "Enter a category name.");
       return;
     }
-    save.mutate({ name: parsed.data, color });
+    save.mutate({ name: parsed.data, color, musicTrack });
   }
 
   return (
@@ -229,6 +232,7 @@ function CategoryForm({
         onChange={setColor}
         autoFocusSelected={focusColour}
       />
+      <MusicField value={musicTrack} onChange={setMusicTrack} />
       <div className="flex flex-wrap justify-end gap-3">
         {existing || onCancel ? (
           <button type="button" onClick={existing ? onDone : onCancel} className={buttonSecondary}>

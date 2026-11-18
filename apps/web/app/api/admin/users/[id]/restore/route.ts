@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { prisma, type Prisma } from "@training-sanctum/db";
+import { prisma, Prisma } from "@training-sanctum/db";
 import {
   DAY_MS,
   DEFAULT_POMODORO_SETTINGS,
@@ -217,6 +217,7 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
     userId,
     name: c.name,
     color: c.color,
+    musicTrack: c.musicTrack ?? Prisma.JsonNull,
     createdAt: at(c.createdAt),
     updatedAt: at(c.updatedAt),
   }));
@@ -231,6 +232,7 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
     done: t.done,
     xpAwardedAt: t.xpAwardedAt ? at(t.xpAwardedAt) : null,
     loggedMinutes: t.loggedMinutes,
+    musicTrack: t.musicTrack ?? Prisma.JsonNull,
     createdAt: at(t.createdAt),
     updatedAt: at(t.updatedAt),
   }));

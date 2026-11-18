@@ -32,6 +32,7 @@ export * from "./backup";
 export * from "./backup-restore";
 export * from "./backup-tree";
 export * from "./invitations";
+export * from "./music";
 export * from "./task-categories";
 export * from "./pomodoro";
 export * from "./tasks";

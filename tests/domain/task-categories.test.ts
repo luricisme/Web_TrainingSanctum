@@ -7,6 +7,7 @@ import {
   nextClassColor,
   taskCategoryNameSchema,
   updateTaskCategorySchema,
+  updateTaskSchema,
 } from "@training-sanctum/domain";
 
 describe("task category schemas (spec-8-2)", () => {
@@ -33,6 +34,19 @@ describe("task category schemas (spec-8-2)", () => {
     expect(updateTaskCategorySchema.safeParse({}).success).toBe(false);
     expect(updateTaskCategorySchema.safeParse({ color: "SKY" }).success).toBe(true);
     expect(updateTaskCategorySchema.safeParse({ name: "Gym" }).success).toBe(true);
+  });
+
+  it("musicTrack accepts null and a jamendo ref, and rejects other shapes", () => {
+    const ref = { source: "jamendo", trackId: "1204" };
+    expect(createTaskCategorySchema.safeParse({ name: "A", musicTrack: ref }).success).toBe(true);
+    expect(createTaskCategorySchema.safeParse({ name: "A", musicTrack: null }).success).toBe(true);
+    expect(updateTaskCategorySchema.safeParse({ musicTrack: null }).success).toBe(true);
+    expect(updateTaskCategorySchema.safeParse({ musicTrack: ref }).success).toBe(true);
+    for (const bad of [{ source: "x" }, { source: "spotify", trackId: "1" }, { source: "jamendo", trackId: "" }, { source: "jamendo", trackId: "search" }, { source: "jamendo", trackId: "12a" }, { source: "jamendo", trackId: "1".repeat(21) }, "1204"]) {
+      expect(updateTaskCategorySchema.safeParse({ musicTrack: bad }).success).toBe(false);
+    }
+    expect(updateTaskSchema.safeParse({ musicTrack: null }).success).toBe(true);
+    expect(updateTaskSchema.safeParse({ musicTrack: { source: "x" } }).success).toBe(false);
   });
 
   it("delete is move with a target or delete", () => {
@@ -64,6 +78,13 @@ describe("backup schema with Planner XP events (spec-8-2)", () => {
     ];
     const parsed = backupExportSchema.parse(payload(events));
     expect(parsed.cultivation.xpEvents).toEqual(events);
+  });
+
+  it("an old planner without musicTrack parses with null", () => {
+    const p = payload([]);
+    p.planner.categories = [{ id: "c", name: "A", color: "SKY", createdAt: ts, updatedAt: ts }] as never;
+    const parsed = backupExportSchema.parse(p);
+    expect(parsed.planner.categories[0]!.musicTrack).toBeNull();
   });
 
   it("still rejects an unknown reason", () => {

@@ -204,3 +204,111 @@ test("overdue strip shows, moves tasks to today and disappears", async ({ page }
   await expect(page.getByRole("listitem").filter({ hasText: "Old reading" })).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: "Older notes" })).toBeVisible();
 });
+
+const TRACKS = [
+  { id: "1204", title: "Slow Rain", artist: "Marlow", licence: "CC BY-NC-SA 3.0", licenceUrl: "https://creativecommons.org/licenses/by-nc-sa/3.0/", shareUrl: "https://example.test/t/1204", streamUrl: "https://example.test/1204.mp3", duration: 180 },
+  { id: "1205", title: "Paper Lanterns", artist: "Ode", licence: "CC BY 3.0", licenceUrl: "https://creativecommons.org/licenses/by/3.0/", shareUrl: "https://example.test/t/1205", streamUrl: "https://example.test/1205.mp3", duration: 200 },
+];
+
+test("music: pick a track on a task, last pick is offered first, Jamendo down still saves", async ({ page }) => {
+  let down = false;
+  await page.route("**/api/planner/music/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (down) {
+      await route.fulfill({ status: 502, json: { error: { code: "MUSIC_UNAVAILABLE", message: "Music is unavailable right now." } } });
+    } else if (url.pathname.endsWith("/search")) {
+      await route.fulfill({ json: { data: TRACKS } });
+    } else {
+      const track = TRACKS.find((t) => url.pathname.endsWith(`/${t.id}`));
+      await route.fulfill(track ? { json: { data: track } } : { status: 404, json: { error: { code: "NOT_FOUND", message: "x" } } });
+    }
+  });
+  await register(page);
+  await page.goto("/planner");
+  await page.getByRole("button", { name: "+ Add task" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add task" });
+  await dialog.getByLabel("Category name").fill("Study");
+  await dialog.getByRole("button", { name: "Create category" }).click();
+  await dialog.getByLabel("Title").fill("Read with music");
+  await dialog.getByRole("button", { name: "Choose a track" }).click();
+  await dialog.getByLabel("Search tracks").fill("rain");
+  await dialog.getByLabel("Search tracks").press("Enter");
+  await shoot(page, "planner-music-search");
+  await dialog.getByRole("button", { name: /Slow Rain/ }).click();
+  await expect(dialog.getByRole("link", { name: "CC BY-NC-SA 3.0" })).toBeVisible();
+  await shoot(page, "planner-music-picked");
+  await dialog.getByRole("button", { name: "Add task" }).click();
+  await expect(page.getByRole("listitem").filter({ hasText: "Read with music" })).toBeVisible();
+
+  // Another Music field offers the last pick first.
+  await page.getByRole("button", { name: "+ Add task" }).click();
+  const second = page.getByRole("dialog", { name: "Add task" });
+  await second.getByRole("button", { name: "Choose a track" }).click();
+  await expect(second.getByText("Last picked")).toBeVisible();
+  await expect(second.getByRole("button", { name: /Slow Rain/ })).toBeVisible();
+  await second.getByRole("button", { name: "Cancel" }).click();
+
+  // Jamendo down: the stored track shows "Music unavailable" and Save still works.
+  down = true;
+  await page.reload();
+  await page.getByRole("button", { name: "Options for Read with music" }).click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  const edit = page.getByRole("dialog", { name: "Edit task" });
+  await expect(edit.getByText("Music unavailable")).toBeVisible();
+  await shoot(page, "planner-music-unavailable");
+  await edit.getByLabel("Title").fill("Read with music 2");
+  await edit.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("listitem").filter({ hasText: "Read with music 2" })).toBeVisible();
+  const stored = await prisma.task.findFirstOrThrow({ where: { title: "Read with music 2" } });
+  expect(stored.musicTrack).toEqual({ source: "jamendo", trackId: "1204" });
+});
+
+async function stubMusic(page: Page) {
+  await page.route("**/api/planner/music/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/search")) {
+      await route.fulfill({ json: { data: TRACKS } });
+    } else {
+      const track = TRACKS.find((t) => url.pathname.endsWith(`/${t.id}`));
+      await route.fulfill(track ? { json: { data: track } } : { status: 404, json: { error: { code: "NOT_FOUND", message: "x" } } });
+    }
+  });
+}
+
+test("music: category modal picks, saves and clears a track; a task inherits it", async ({ page }) => {
+  await stubMusic(page);
+  await register(page);
+  await page.goto("/planner");
+  await page.getByRole("button", { name: "Categories" }).click();
+  const modal = page.getByRole("dialog", { name: "Categories" });
+  await modal.getByLabel("Category name").fill("Focus");
+  await modal.getByRole("button", { name: "Choose a track" }).click();
+  await modal.getByLabel("Search tracks").fill("lanterns");
+  await modal.getByLabel("Search tracks").press("Enter");
+  await modal.getByRole("button", { name: /Paper Lanterns/ }).click();
+  await modal.getByRole("button", { name: "Create category" }).click();
+
+  await page.getByRole("button", { name: "Options for Focus" }).click();
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  await expect(modal.getByText("Paper Lanterns")).toBeVisible();
+  await expect(modal.getByRole("link", { name: "CC BY 3.0" })).toBeVisible();
+  await modal.getByRole("button", { name: "Cancel" }).click();
+  await modal.getByRole("button", { name: "Close" }).click();
+
+  // A Task with no track of its own shows the Category's.
+  await page.getByRole("button", { name: "+ Add task" }).click();
+  const task = page.getByRole("dialog", { name: "Add task" });
+  await expect(task.getByText("Uses the category's track")).toBeVisible();
+  await expect(task.getByText("Paper Lanterns")).toBeVisible();
+  await task.getByRole("button", { name: "Cancel" }).click();
+
+  await page.getByRole("button", { name: "Categories" }).click();
+  await page.getByRole("button", { name: "Options for Focus" }).click();
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  await modal.getByRole("button", { name: "None" }).click();
+  await shoot(page, "planner-music-category-none");
+  await modal.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Options for Focus" }).click();
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  await expect(modal.getByText("No music")).toBeVisible();
+});

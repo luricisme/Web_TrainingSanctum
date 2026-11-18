@@ -1,5 +1,5 @@
 import { prisma } from "@training-sanctum/db";
-import { BACKUP_VERSION, parsePomodoroSettings, type BackupExport } from "@training-sanctum/domain";
+import { BACKUP_VERSION, parseMusicTrack, parsePomodoroSettings, type BackupExport } from "@training-sanctum/domain";
 
 const iso = (d: Date) => d.toISOString();
 const day = (d: Date) => d.toISOString().slice(0, 10);
@@ -139,6 +139,7 @@ export async function buildBackupExport(userId: string): Promise<BackupExport | 
         id: c.id,
         name: c.name,
         color: c.color,
+        musicTrack: parseMusicTrack(c.musicTrack),
         createdAt: iso(c.createdAt),
         updatedAt: iso(c.updatedAt),
       })),
@@ -152,6 +153,7 @@ export async function buildBackupExport(userId: string): Promise<BackupExport | 
         done: t.done,
         xpAwardedAt: t.xpAwardedAt ? iso(t.xpAwardedAt) : null,
         loggedMinutes: t.loggedMinutes,
+        musicTrack: parseMusicTrack(t.musicTrack),
         createdAt: iso(t.createdAt),
         updatedAt: iso(t.updatedAt),
       })),

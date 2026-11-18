@@ -431,6 +431,7 @@ Music plays during Focus Sessions from one catalogue, **Jamendo** (Creative Comm
 
 **Consequences (testable):**
 - A Category can hold one track or none; a Task can override it. The last choice is remembered.
+- The user can also choose or change the track from the Pomodoro screen itself; a track picked there is saved as the Task's override and used by that Task's later sessions. *(Sprint Change 2026-11-18.)*
 - Music fades in at the start of a Focus Session and out at its end; it is silent during Breaks. Volume and pause are the user's.
 - The current track's title, artist and licence are shown while it plays (attribution is a condition of the licence).
 - If Jamendo is unreachable the timer runs without music and says so once; the plan and logging are unaffected.

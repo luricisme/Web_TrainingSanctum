@@ -1,9 +1,10 @@
-import { prisma } from "@training-sanctum/db";
+import { prisma, Prisma } from "@training-sanctum/db";
 import {
   TASK_CATEGORY_NAME_TAKEN,
   type DeleteTaskCategoryInput,
   type TaskCategorySummary,
   deleteTaskCategorySchema,
+  parseMusicTrack,
   updateTaskCategorySchema,
 } from "@training-sanctum/domain";
 import { requirePlannerSession } from "@/lib/planner-sessions";
@@ -60,6 +61,9 @@ export async function PATCH(
       data: {
         ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
         ...(parsed.data.color !== undefined ? { color: parsed.data.color } : {}),
+        ...(parsed.data.musicTrack !== undefined
+          ? { musicTrack: parsed.data.musicTrack ?? Prisma.JsonNull }
+          : {}),
       },
     });
     if (count === 0) return notFound();
@@ -69,7 +73,7 @@ export async function PATCH(
   }
   const updated = await prisma.taskCategory.findFirst({
     where: { id, userId },
-    select: { id: true, name: true, color: true, _count: { select: { tasks: true } } },
+    select: { id: true, name: true, color: true, musicTrack: true, _count: { select: { tasks: true } } },
   });
   if (!updated) return notFound();
   const data: TaskCategorySummary = {
@@ -77,6 +81,7 @@ export async function PATCH(
     name: updated.name,
     color: updated.color,
     taskCount: updated._count.tasks,
+    musicTrack: parseMusicTrack(updated.musicTrack),
   };
   return ok(data);
 }

@@ -18,7 +18,7 @@ Let a user pick a background track per Task Category (with an optional per-Task 
 - A Category holds one track or none; a Task may override it; "None" is allowed; the last pick is remembered and offered first.
 - Fade in on focus-session start and fade out at its end; breaks are silent. A track longer than the session is cut by the fade-out; a shorter one loops until the fade-out. Reduced-motion preference does not alter audio fades.
 - The current track's title, artist and licence link must be shown (attribution is a licence condition), including beside the Music field in edit forms.
-- Player controls are only pause and volume (volume remembered in `localStorage`); no artwork, no playlist, no "now playing" banner elsewhere.
+- Player controls are only pause, volume (volume remembered in `localStorage`) and a quiet Change control that picks a track and saves it as the Task's override (Sprint Change 2026-11-18); no artwork, no playlist, no "now playing" banner elsewhere.
 - If Jamendo or the stream is unreachable, show one quiet line, "Music unavailable — the timer continues.", and the session runs unchanged.
 - External dependency isolation: music failure degrades music only; no Planner or flashcard feature waits on it.
 - Story 11.1 gate: before building, record the current Jamendo API terms (the terms page was dated 2013) and do a listening check of `tags=lofi,chillout`. If either fails, stop and re-decide the music source through a sprint change.
@@ -35,11 +35,12 @@ Let a user pick a background track per Task Category (with an optional per-Task 
 ## UX & Interaction Patterns
 
 - Music field lives in the Category edit modal (reusing its name and tint rows) and in Task edit; it searches Jamendo and stores the chosen track.
-- Music player: a card-surface strip under the Pomodoro countdown showing title · artist · licence link in small body text, a pause button and a volume slider. Quiet voice: the unavailable line is plain, not playful.
+- Music player: a card-surface strip under the Pomodoro countdown showing title · artist · licence link in small body text, a pause button, a volume slider and a quiet Change control that opens the Music field's Jamendo search in place and saves the pick as the Task's override (a pick during a focus session fades in at once; otherwise it plays at the next focus session; "None" falls back to the Category's track). Quiet voice: the unavailable line is plain, not playful.
 - Pomodoro does not enter focus mode; the only sound the product makes is the music the user chose.
 
 ## Cross-Story Dependencies
 
 - Build order is strict: 11.1 (adapter, API, config) -> 11.2 (storage and picker, uses the search API) -> 11.3 (player, uses stored track and the track endpoint).
 - Depends on Epic 8 (Categories and Tasks, the Category modal) and Epic 9 (Pomodoro screen, focus session and break lifecycle).
+- 11.3 reuses `MusicField` (`apps/web/app/(shell)/planner/music-field.tsx`) from 11.2 and writes through the existing Task PATCH; no new route or migration.
 - Epic 8's Categories modal anticipates the Music field added here.
