@@ -1,0 +1,37 @@
+{
+  "headers": {
+    "status": "success",
+    "code": 0,
+    "error_message": "",
+    "warnings": "",
+    "results_count": 2
+  },
+  "results": [
+    {
+      "id": "1532771",
+      "name": "Rainy Window",
+      "duration": 142,
+      "artistid": "500001",
+      "artist_name": "Example Artist",
+      "album_name": "Example Album",
+      "releasedate": "2020-01-01",
+      "license_ccurl": "https://creativecommons.org/licenses/by-nc-sa/3.0/",
+      "shareurl": "https://www.jamendo.com/track/1532771",
+      "audio": "https://prod-1.storage.jamendo.com/?trackid=1532771&format=mp31&from=app-example",
+      "audiodownload_allowed": true
+    },
+    {
+      "id": 1532772,
+      "name": "Night Drive",
+      "duration": 201,
+      "artistid": "500002",
+      "artist_name": "Another Artist",
+      "album_name": "Another Album",
+      "releasedate": "2021-03-04",
+      "license_ccurl": "https://creativecommons.org/licenses/by/4.0/",
+      "shareurl": "https://www.jamendo.com/track/1532772",
+      "audio": "https://prod-1.storage.jamendo.com/?trackid=1532772&format=mp31&from=app-example",
+      "audiodownload_allowed": true
+    }
+  ]
+}

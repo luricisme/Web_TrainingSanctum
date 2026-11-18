@@ -57,6 +57,11 @@ const envSchema = z.object({
       }
       return [...new Set(emails)];
     }),
+  // Story 11.1: Jamendo API client id (Planner music). Required.
+  JAMENDO_CLIENT_ID: z
+    .string({ message: "JAMENDO_CLIENT_ID is required" })
+    .trim()
+    .min(1, "JAMENDO_CLIENT_ID must not be empty"),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

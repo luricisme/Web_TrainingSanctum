@@ -44,6 +44,7 @@ In the Vercel project → Settings → Environment Variables, add for
 | --- | --- | --- |
 | `DATABASE_URL` | Neon production branch pooled connection string | Leave unset if using the Neon-Vercel integration (it injects a per-preview branch URL automatically); otherwise set manually per branch |
 | `BETTER_AUTH_SECRET` | A strong random secret, e.g. `openssl rand -base64 32` | Generate a separate secret for Preview (don't reuse the production value), even though no real auth is wired up until story 1.2 |
+| `JAMENDO_CLIENT_ID` | Free client id from https://developer.jamendo.com (Story 11.1; required, the app fails fast without it) | The same id is fine |
 
 If you installed the Neon Vercel integration in step 1, it manages
 `DATABASE_URL` for Preview deployments itself — don't hand-set a single
