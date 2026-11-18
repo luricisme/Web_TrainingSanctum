@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-07-2026 00:00
-last_updated: 11-18-2026 13:00
+last_updated: 11-18-2026 23:30
 project: Web_TrainingSanctum
 project_key: NOKEY
 tracking_system: file-system
@@ -126,7 +126,7 @@ development_status:
   epic-11: in-progress # Sprint Change 2026-11-16 (Planner — Music, Jamendo)
   11-1-jamendo-adapter: review # FIRST verify Jamendo terms (page dated 2013) + listen to tags=lofi,chillout; stop and re-decide if either fails; needs JAMENDO_CLIENT_ID
   11-2-track-per-category-and-task: review # migration: musicTrack on TaskCategory and Task
-  11-3-player-in-the-pomodoro-screen: backlog # Sprint Change 2026-11-18: player also has a Change control; the pick is saved as the Task's musicTrack override (reuses MusicField from 11.2; no migration)
+  11-3-player-in-the-pomodoro-screen: review # Sprint Change 2026-11-18: player also has a Change control; the pick is saved as the Task's musicTrack override (reuses MusicField from 11.2; no migration)
   epic-11-retrospective: optional
   # build order (Sprint Change 2026-11-16): 8-1 -> 8-2 -> 8-3 -> 8-4 -> 9-1 -> 9-2 -> 9-3 -> 9-4 -> 10-1 -> 10-2 -> 10-3 -> 11-1 -> 11-2 -> 11-3 -> 5-5
 

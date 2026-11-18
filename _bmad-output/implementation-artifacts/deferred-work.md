@@ -223,3 +223,11 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-11-1-jamendo-adapter.md`
   summary: Before deploying Epic 11, make one real Jamendo call with a real client id and confirm the response field names, `include=licenses` and `audioformat` params, and `tags=lofi+chillout` against the adapter fixtures; also do the listening check.
   evidence: The adapter fixtures were hand-written from Jamendo's documented shape (the response sample on its docs page is empty), because no client id existed at build time.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-11-3-player-in-the-pomodoro-screen.md`
+  summary: Music fades and the volume slider do nothing on iOS Safari, where `HTMLMediaElement.volume` is read-only; a Web Audio GainNode would fix it.
+  evidence: Raised by the blind and edge-case reviewers; a platform limit that the spec does not cover and that needs a different audio path.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-11-3-player-in-the-pomodoro-screen.md`
+  summary: Update DESIGN.md `components.music-player` and its Do/Don't row to include the Change control, None and the search panel.
+  evidence: Design reviewer found DESIGN.md still says "title, licence, pause, volume" only; Sprint Change 2026-11-18 added Change, so the doc is stale.
