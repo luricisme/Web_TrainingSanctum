@@ -3,8 +3,7 @@ import {
   type PomodoroSettings,
   type TaskSummary,
   type WeekTaskSummary,
-  planLengthMinutes,
-  planPomodoro,
+  blockMinutes,
   formatLocalTime,
   localDateTimeToInstant,
 } from "@training-sanctum/domain";
@@ -14,6 +13,16 @@ export const taskInclude = {
 } satisfies Prisma.TaskInclude;
 
 export type TaskRow = Prisma.TaskGetPayload<{ include: typeof taskInclude }>;
+
+/** The week read also needs each Task's sessions (spec-10-3). */
+export const weekTaskInclude = {
+  ...taskInclude,
+  sessions: {
+    select: { kind: true, actualMinutes: true, plannedMinutes: true, startedAt: true, endedAt: true },
+  },
+} satisfies Prisma.TaskInclude;
+
+export type WeekTaskRow = Prisma.TaskGetPayload<{ include: typeof weekTaskInclude }>;
 
 export function toTaskSummary(row: TaskRow, timeZone: string): TaskSummary {
   return {
@@ -28,15 +37,21 @@ export function toTaskSummary(row: TaskRow, timeZone: string): TaskSummary {
   };
 }
 
-/** A Task for the calendar: the summary plus the plan length (AD-17), computed here. */
+/** A Task for the calendar: the summary plus its block length and live state (AD-17), computed here. */
 export function toCalendarTask(
-  row: TaskRow,
+  row: WeekTaskRow,
   timeZone: string,
   settings: PomodoroSettings
 ): WeekTaskSummary {
+  const running = row.sessions.find((s) => s.endedAt === null) ?? null;
+  const doneMinutes = row.sessions.reduce((sum, s) => sum + (s.actualMinutes ?? 0), 0);
   return {
     ...toTaskSummary(row, timeZone),
-    planMinutes: planLengthMinutes(planPomodoro(row.estimateMinutes, settings)),
+    planMinutes: blockMinutes(row, row.sessions, settings),
+    doneMinutes,
+    running: running
+      ? { startedAt: running.startedAt.toISOString(), plannedMinutes: running.plannedMinutes }
+      : null,
   };
 }
 

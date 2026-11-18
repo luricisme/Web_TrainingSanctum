@@ -22,7 +22,7 @@ A user sees the week as a time grid where each scheduled Task is a block as long
 - Rescheduling snaps to 15 minutes; optimistic with rollback and an inline error on failure. Drag to a time/day sets day + start; tray to grid gains a start; block to tray clears it. A moved Task keeps its estimate, sessions and overrun count.
 - Keyboard: every block and chip is reachable; arrows move 15 min / one day, Enter commits, Esc cancels.
 - Live behavior: starting a Pomodoro sets the Task's start to the session's real start (a tray Task gains one); an overrun session lengthens the block; a running session shows an accent progress fill; a plan stopped early is as long as logged time plus what remains of the plan. Planned time is intentionally lost on start (accepted for v1).
-- Accessibility: measure the conflict border's contrast on each of the five tints in both themes and record the ratios in DESIGN.md (target 3:1 or accept in writing). The "Conflict" caption means no information depends on the border alone.
+- Conflict-border contrast is already measured and recorded (all pairs meet 3:1 on every tint in both themes); the "Conflict" caption means no information depends on the border alone.
 - Planner routes return 401 without a session, are user-scoped, validate with Zod first, and use the standard error envelope.
 
 ## Technical Decisions
@@ -37,7 +37,8 @@ A user sees the week as a time grid where each scheduled Task is a block as long
 
 - Planner is one nav item with a Tasks / Calendar / Pomodoro segment switcher; the segment is in the URL.
 - Calendar block: the whole block is the drag handle; keyboard is select, then arrows. Tray chips are compact, per day. Conflicts: no modal.
-- DESIGN.md tokens `calendar-block` (tint fill and border, `done-opacity` 0.5, accent progress fill, `error` conflict border) and `calendar-grid` (divider lines, caption hour labels, accent now-line); both are marked "not built" and should be flipped when implemented. Support light and dark themes; CSS only.
+- Design tokens `calendar-block` (tint fill and border, `done-opacity` 0.5, accent progress fill, `error` conflict border, move states) and `calendar-grid` (divider lines, caption hour labels, accent now-line) exist; one hour is `--calendar-hour` (3.5rem, a minute is a sixtieth). Both are marked built through Story 10.2; progress fill (10.3) is the remaining piece. Support light and dark themes; CSS only.
+- Move states: the lifted item uses `elevation.low` and the accent focus-style ring; the drop slot is a dashed `border` ghost; the target tray fills with `row-hover`.
 - If the grid proves too heavy, a month view is the documented fallback; Epics 8–9 do not depend on the grid.
 
 ## Cross-Story Dependencies

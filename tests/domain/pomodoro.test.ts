@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  blockMinutes,
   compareTasks,
   createTaskSchema,
   DEFAULT_POMODORO_SETTINGS,
@@ -366,5 +367,39 @@ describe("pomodoroScreenPlan parity and branches (spec-9-3)", () => {
     );
     expect(p.next.kind).toBe("FOCUS");
     expect(p.pills[0]!.state).toBe("current");
+  });
+});
+
+describe("blockMinutes (spec-10-3)", () => {
+  const D = DEFAULT_POMODORO_SETTINGS;
+  const ended = (kind: "FOCUS" | "BREAK", actualMinutes: number) => ({ kind, actualMinutes, plannedMinutes: actualMinutes });
+  const running = (plannedMinutes: number, kind: "FOCUS" | "BREAK" = "FOCUS") => ({ kind, actualMinutes: null, plannedMinutes });
+
+  it("keeps the plan length with no sessions", () => {
+    expect(blockMinutes({ estimateMinutes: 90, done: false }, [], D)).toBe(105);
+    expect(blockMinutes({ estimateMinutes: 90, done: true }, [], D)).toBe(105);
+  });
+  it("is the logged time for a Task done as planned", () => {
+    const s = [ended("FOCUS", 25), ended("BREAK", 5), ended("FOCUS", 25)];
+    expect(blockMinutes({ estimateMinutes: 50, done: true }, s, D)).toBe(55);
+  });
+  it("adds an overrun session", () => {
+    const s = [ended("FOCUS", 25), ended("BREAK", 5), ended("FOCUS", 25), ended("FOCUS", 25)];
+    expect(blockMinutes({ estimateMinutes: 50, done: false }, s, D)).toBe(80);
+  });
+  it("shortens when stopped early and done", () => {
+    expect(blockMinutes({ estimateMinutes: 60, done: true }, [ended("FOCUS", 10)], D)).toBe(10);
+  });
+  it("is logged plus the remaining plan when stopped early and open", () => {
+    // 10 logged, 50 focus minutes left = 25 + 5 + 25 = 55.
+    expect(blockMinutes({ estimateMinutes: 60, done: false }, [ended("FOCUS", 10)], D)).toBe(65);
+  });
+  it("counts the running session at its planned length", () => {
+    // Running 25 of a 50 plan: 25 running + 25 left (no break counted between).
+    expect(blockMinutes({ estimateMinutes: 50, done: false }, [running(25)], D)).toBe(50);
+  });
+  it("does not treat a running break as focus", () => {
+    const s = [ended("FOCUS", 25), running(5, "BREAK")];
+    expect(blockMinutes({ estimateMinutes: 50, done: false }, s, D)).toBe(55);
   });
 });

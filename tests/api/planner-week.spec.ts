@@ -37,7 +37,14 @@ async function add(s: Session, base: string, extra: Record<string, unknown>) {
   return (await res.json()).data as { id: string };
 }
 
-type Week = Array<{ id: string; localDay: string; startTime: string | null; planMinutes: number }>;
+type Week = Array<{
+  id: string;
+  localDay: string;
+  startTime: string | null;
+  planMinutes: number;
+  doneMinutes: number;
+  running: { startedAt: string; plannedMinutes: number } | null;
+}>;
 
 // spec-10-1: the week read. Session-guarded, user-scoped, plan length from the server.
 test.describe("GET /api/planner/tasks/week", () => {
@@ -111,5 +118,59 @@ test.describe("GET /api/planner/tasks/week", () => {
       .data as Week;
     expect(week.map((t) => t.id)).toEqual([mine.id]);
     expect(week.map((t) => t.id)).not.toContain(theirs.id);
+  });
+});
+
+// spec-10-3: block length follows what was logged; a running session is exposed.
+test.describe("GET /api/planner/tasks/week live blocks", () => {
+  const MIN = 60_000;
+  const weekOf = async (s: Session, base: string) =>
+    (await (await s.request.get(`${base}/api/planner/tasks/week?start=${DAY}`)).json()).data as Week;
+  const log = (taskId: string, userId: string, kind: "FOCUS" | "BREAK", actual: number, overrun = false) =>
+    prisma.pomodoroSession.create({
+      data: {
+        userId,
+        taskId,
+        kind,
+        plannedMinutes: actual,
+        actualMinutes: actual,
+        startedAt: new Date(Date.now() - 3_600_000),
+        endedAt: new Date(Date.now() - 3_000_000),
+        overrun,
+      },
+    });
+
+  test("an overrun session lengthens the block", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    const t = await add(s, base, { estimateMinutes: 50, startTime: "09:00" });
+    await log(t.id, s.userId, "FOCUS", 25);
+    await log(t.id, s.userId, "BREAK", 5);
+    await log(t.id, s.userId, "FOCUS", 25);
+    await log(t.id, s.userId, "FOCUS", 25, true);
+    const row = (await weekOf(s, base)).find((x) => x.id === t.id);
+    expect(row).toMatchObject({ planMinutes: 80, doneMinutes: 80, running: null });
+  });
+
+  test("a Task done early shortens the block to what was logged", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    const t = await add(s, base, { estimateMinutes: 60, startTime: "09:00" });
+    await log(t.id, s.userId, "FOCUS", 10);
+    await prisma.task.update({ where: { id: t.id }, data: { done: true } });
+    expect((await weekOf(s, base)).find((x) => x.id === t.id)?.planMinutes).toBe(10);
+  });
+
+  test("a running session is exposed with its start and planned length", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    const t = await add(s, base, { estimateMinutes: 50, startTime: "09:00" });
+    const startedAt = new Date(Date.now() - 10 * MIN);
+    await prisma.pomodoroSession.create({
+      data: { userId: s.userId, taskId: t.id, kind: "FOCUS", plannedMinutes: 25, startedAt },
+    });
+    const row = (await weekOf(s, base)).find((x) => x.id === t.id);
+    expect(row?.running).toEqual({ startedAt: startedAt.toISOString(), plannedMinutes: 25 });
+    expect(row).toMatchObject({ doneMinutes: 0, planMinutes: 50 });
   });
 });

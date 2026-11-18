@@ -24,8 +24,43 @@ export function weekDays(day: string): string[] {
 
 /** Shape returned by `GET /api/planner/tasks/week`: a Task plus its plan length. */
 export interface WeekTaskSummary extends TaskSummary {
-  /** Focus plus breaks for the whole estimate, from the user's Pomodoro settings. */
+  /** The block length: logged minutes plus the plan for what remains (spec-10-3). */
   planMinutes: number;
+  /** Sum of the actual minutes of ended sessions, focus and break. */
+  doneMinutes: number;
+  /** The session running now for this Task, or null. */
+  running: { startedAt: string; plannedMinutes: number } | null;
+}
+
+/**
+ * Share (0-1) of a running block already worked: logged minutes plus the running
+ * session's elapsed time (capped at its planned length), over the block length
+ * (spec-10-3). 0 when nothing runs.
+ */
+export function runningFillFraction(
+  task: Pick<WeekTaskSummary, "planMinutes" | "doneMinutes" | "running">,
+  nowMs: number
+): number {
+  if (!task.running || task.planMinutes <= 0) return 0;
+  const elapsed = Math.max(nowMs - Date.parse(task.running.startedAt), 0) / 60_000;
+  const worked = task.doneMinutes + Math.min(elapsed, task.running.plannedMinutes);
+  return Math.min(worked / task.planMinutes, 1);
+}
+
+/**
+ * The share (0-1) of one drawn segment of a block that is filled. `fraction` is
+ * `runningFillFraction` over the whole block; a continuation segment starts
+ * `planMinutes - lengthMin` minutes into it (spec-10-3).
+ */
+export function segmentFillFraction(
+  fraction: number,
+  planMinutes: number,
+  segment: { lengthMin: number; continued: boolean }
+): number {
+  if (segment.lengthMin <= 0) return 0;
+  const offset = segment.continued ? planMinutes - segment.lengthMin : 0;
+  const filled = (fraction * planMinutes - offset) / segment.lengthMin;
+  return Math.min(Math.max(filled, 0), 1);
 }
 
 /** What the layout needs of a Task. `planMinutes` is the server's plan length. */

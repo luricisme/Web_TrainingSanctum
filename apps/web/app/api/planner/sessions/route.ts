@@ -3,6 +3,7 @@ import {
   parsePomodoroSettings,
   planNextSession,
   startSessionSchema,
+  toLocalDate,
 } from "@training-sanctum/domain";
 import { requirePlannerSession, toSessionSummary } from "@/lib/planner-sessions";
 import { isUniqueViolation } from "@/lib/prisma-errors";
@@ -29,7 +30,7 @@ export async function POST(request: Request): Promise<Response> {
       await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${userId} FOR UPDATE`;
       const user = await tx.user.findUniqueOrThrow({
         where: { id: userId },
-        select: { pomodoroSettings: true },
+        select: { pomodoroSettings: true, timezone: true },
       });
       const task = await tx.task.findFirst({
         where: { id: taskId, userId },
@@ -51,16 +52,18 @@ export async function POST(request: Request): Promise<Response> {
       );
       if (plan.refusal !== undefined) throw new HttpError(409, "SESSION_REFUSED", plan.refusal);
 
-      return tx.pomodoroSession.create({
-        data: {
-          userId,
-          taskId,
-          kind,
-          plannedMinutes: plan.plannedMinutes,
-          startedAt: new Date(),
-          overrun,
-        },
+      const startedAt = new Date();
+      const created = await tx.pomodoroSession.create({
+        data: { userId, taskId, kind, plannedMinutes: plan.plannedMinutes, startedAt, overrun },
       });
+      // spec-10-3: the first focus session anchors the Task's block at the real start.
+      if (kind === "FOCUS" && task.sessions.length === 0) {
+        await tx.task.update({
+          where: { id: taskId },
+          data: { startAt: startedAt, localDay: toLocalDate(startedAt, user.timezone) },
+        });
+      }
+      return created;
     });
     logOperation("planner.session.start", { sessionId: row.id, taskId, kind, overrun });
     return ok(toSessionSummary(row), 201);

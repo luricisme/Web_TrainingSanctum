@@ -102,6 +102,8 @@ export function CalendarView() {
     queryFn: () => apiFetch<WeekTaskSummary[]>(`/api/planner/tasks/week?start=${monday}`),
     enabled: monday !== null,
     staleTime: 0,
+    // A running session moves its block's fill: re-read the week every 30 s meanwhile.
+    refetchInterval: (query) => (query.state.data?.some((t) => t.running) ? 30_000 : false),
   });
   const tasks = data ?? [];
   const byId = new Map(tasks.map((t) => [t.id, t]));

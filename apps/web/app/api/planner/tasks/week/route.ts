@@ -7,7 +7,7 @@ import {
 } from "@training-sanctum/domain";
 import { requirePlannerSession } from "@/lib/planner-sessions";
 import { ok, validationFailure } from "@/lib/api-response";
-import { taskInclude, toCalendarTask } from "@/lib/planner-tasks";
+import { toCalendarTask, weekTaskInclude } from "@/lib/planner-tasks";
 
 /** The Monday-to-Sunday week containing `?start=`, each Task with its plan length. */
 export async function GET(request: Request): Promise<Response> {
@@ -33,7 +33,7 @@ export async function GET(request: Request): Promise<Response> {
         lte: new Date(`${days[6]}T00:00:00.000Z`),
       },
     },
-    include: taskInclude,
+    include: weekTaskInclude,
   });
   rows.sort(compareTasks);
   return ok(rows.map((r) => toCalendarTask(r, user.timezone, settings)));
