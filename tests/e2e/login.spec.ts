@@ -101,7 +101,7 @@ for (const theme of ["dark", "light"] as const) {
     await page.evaluate((t) => {
       if (t === "light") document.documentElement.dataset.theme = "light";
     }, theme);
-    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Log in" })).toBeVisible();
     await page.screenshot({
       path: `test-results/screenshots/login-${theme}.png`,
       fullPage: true,

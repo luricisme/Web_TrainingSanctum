@@ -255,7 +255,7 @@ function TaskRow({
           toggle.mutate(event.target.checked);
         }}
         aria-label={`Mark ${task.title} ${task.done ? "not done" : "done"}`}
-        className="size-5 shrink-0 accent-accent"
+        className="size-5 shrink-0 cursor-pointer accent-accent focus-ring disabled:cursor-not-allowed"
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
         <span

@@ -34,7 +34,7 @@ export const FIELD_LABELS: Record<Field, string> = {
 
 /** DESIGN.md `manual-row`: underlined field, underline turns accent on focus. */
 export const underlineInput =
-  "w-full rounded-none border-0 border-b-2 border-b-border bg-transparent px-0 py-2 text-body text-foreground transition-state placeholder:text-foreground-tertiary focus:border-b-accent focus:outline-none aria-[invalid=true]:border-b-error";
+  "w-full rounded-none border-0 border-b-2 border-b-border bg-transparent px-0 py-2 text-body text-foreground transition-state placeholder:text-foreground-tertiary focus-visible:border-b-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent aria-[invalid=true]:border-b-error";
 
 export function emptyRow(key: number): Row {
   return {

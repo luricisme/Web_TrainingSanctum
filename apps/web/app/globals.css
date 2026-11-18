@@ -241,6 +241,23 @@
   }
 }
 
+/* Cursor (Story 5.5): one rule for every clickable element; components never
+   set it per control. Disabled controls show not-allowed. Draggable calendar
+   blocks keep grab/grabbing (recorded exception in DESIGN.md). */
+@layer base {
+  button,
+  [role="button"],
+  a[href],
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 /* The current realm on the Realm Ladder: a gold aura that breathes outward.
    Reduced motion keeps the steady glow (the rule below stops the animation). */
 @keyframes realm-aura {

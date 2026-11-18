@@ -88,7 +88,7 @@ export default function LoginPage() {
         <header className="mx-auto w-full max-w-md lg:mx-0 lg:justify-self-end">
           <SectionMarker>Training Sanctum</SectionMarker>
           <h1 className="mt-6 text-heading-1 text-foreground">
-            Welcome back
+            Log in
           </h1>
           <p className="mt-6 text-body text-foreground-secondary">
             Pick up your daily review where you left off.
