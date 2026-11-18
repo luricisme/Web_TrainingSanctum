@@ -40,6 +40,7 @@ export default defineConfig({
         process.env.DATABASE_URL ??
         "postgresql://placeholder:placeholder@localhost:5432/placeholder",
       BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "placeholder-secret-for-ci",
+      JAMENDO_CLIENT_ID: process.env.JAMENDO_CLIENT_ID ?? "placeholder-client-id",
       // Suites sign up/in more than Better Auth's per-IP limit allows.
       AUTH_RATE_LIMIT: "off",
       // Story 7.1: the test admin account (tests/api/admin-guard.spec.ts).

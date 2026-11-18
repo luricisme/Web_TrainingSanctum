@@ -26,11 +26,38 @@ describe("apps/web/lib/env fail-fast validation (AC2)", () => {
     );
   });
 
+  it("fails fast naming JAMENDO_CLIENT_ID when it is missing", async () => {
+    process.env = {
+      ...ORIGINAL_ENV,
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
+      BETTER_AUTH_SECRET: "test-secret",
+    };
+    delete process.env.JAMENDO_CLIENT_ID;
+
+    await expect(import("../../apps/web/lib/env")).rejects.toThrow(
+      /JAMENDO_CLIENT_ID: JAMENDO_CLIENT_ID is required/
+    );
+  });
+
+  it("rejects a whitespace-only JAMENDO_CLIENT_ID", async () => {
+    process.env = {
+      ...ORIGINAL_ENV,
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
+      BETTER_AUTH_SECRET: "test-secret",
+      JAMENDO_CLIENT_ID: "   ",
+    };
+
+    await expect(import("../../apps/web/lib/env")).rejects.toThrow(
+      /JAMENDO_CLIENT_ID must not be empty/
+    );
+  });
+
   it("rejects a DATABASE_URL that isn't a postgres connection string", async () => {
     process.env = {
       ...ORIGINAL_ENV,
       DATABASE_URL: "http://example.com/not-postgres",
       BETTER_AUTH_SECRET: "test-secret",
+      JAMENDO_CLIENT_ID: "test-client-id",
     };
 
     await expect(import("../../apps/web/lib/env")).rejects.toThrow(
@@ -43,6 +70,7 @@ describe("apps/web/lib/env fail-fast validation (AC2)", () => {
       ...ORIGINAL_ENV,
       DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
       BETTER_AUTH_SECRET: "test-secret",
+      JAMENDO_CLIENT_ID: "test-client-id",
     };
 
     process.env = { ...base };
@@ -58,6 +86,7 @@ describe("apps/web/lib/env fail-fast validation (AC2)", () => {
     const base = {
       DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
       BETTER_AUTH_SECRET: "test-secret",
+      JAMENDO_CLIENT_ID: "test-client-id",
     };
 
     it("is [] when unset or empty", async () => {
@@ -95,6 +124,7 @@ describe("apps/web/lib/env fail-fast validation (AC2)", () => {
       ...ORIGINAL_ENV,
       DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
       BETTER_AUTH_SECRET: "test-secret",
+      JAMENDO_CLIENT_ID: "test-client-id",
     };
 
     const { env } = await import("../../apps/web/lib/env");
@@ -109,6 +139,7 @@ describe("apps/web/lib/env fail-fast validation (AC2)", () => {
       ...ORIGINAL_ENV,
       DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
       BETTER_AUTH_SECRET: "test-secret",
+      JAMENDO_CLIENT_ID: "test-client-id",
       BETTER_AUTH_URL: "",
     };
 
@@ -121,6 +152,7 @@ describe("apps/web/lib/env fail-fast validation (AC2)", () => {
       ...ORIGINAL_ENV,
       DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
       BETTER_AUTH_SECRET: "test-secret",
+      JAMENDO_CLIENT_ID: "test-client-id",
       BETTER_AUTH_URL: "not-a-url",
     };
 

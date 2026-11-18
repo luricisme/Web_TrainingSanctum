@@ -219,3 +219,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-10-1-week-grid-and-unscheduled-tray.md`
   summary: The Calendar now-line and today column use the browser clock, not `User.timezone`.
   evidence: Block times come from the server in `User.timezone` (AD-8) while `useClock` reads `new Date()`; they disagree for a user whose browser zone differs from their profile zone. `tasks-view.tsx` `localToday` has the same pattern.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-11-1-jamendo-adapter.md`
+  summary: Before deploying Epic 11, make one real Jamendo call with a real client id and confirm the response field names, `include=licenses` and `audioformat` params, and `tags=lofi+chillout` against the adapter fixtures; also do the listening check.
+  evidence: The adapter fixtures were hand-written from Jamendo's documented shape (the response sample on its docs page is empty), because no client id existed at build time.
