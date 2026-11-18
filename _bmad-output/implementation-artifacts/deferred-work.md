@@ -231,3 +231,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-11-3-player-in-the-pomodoro-screen.md`
   summary: Update DESIGN.md `components.music-player` and its Do/Don't row to include the Change control, None and the search panel.
   evidence: Design reviewer found DESIGN.md still says "title, licence, pause, volume" only; Sprint Change 2026-11-18 added Change, so the doc is stale.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-5-cross-cutting-accessibility-microcopy-pass.md`
+  summary: Check that an invalid `underlineInput` field shows the error colour when focused, not the accent underline.
+  evidence: `focus-visible:border-b-accent` and `aria-[invalid=true]:border-b-error` set the same property; which wins depends on Tailwind output order. The pattern predates Story 5.5 (it was `focus:border-b-accent`), so it was not caused by this change. Settle it by focusing an invalid manual-row field in the browser.

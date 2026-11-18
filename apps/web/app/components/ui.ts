@@ -13,20 +13,20 @@ export const buttonPrimary =
 
 /** A paper pill on the panel: card surface, hairline border. */
 export const buttonSecondary =
-  "rounded-full border border-border bg-card px-6 py-3 text-body font-medium text-foreground shadow-low transition-state hover:border-foreground-tertiary hover:bg-row-hover focus-ring disabled:cursor-not-allowed disabled:opacity-60";
+  "rounded-full border border-border bg-card px-6 py-3 text-body font-medium text-foreground shadow-low transition-state hover:border-foreground-tertiary hover:bg-row-hover focus-ring disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border disabled:hover:bg-card";
 
 /** Danger action: error colour, never the accent. */
 export const buttonDanger =
-  "rounded-full border border-error bg-card px-6 py-3 text-body font-medium text-error transition-state hover:bg-row-hover focus-ring disabled:cursor-not-allowed disabled:opacity-40";
+  "rounded-full border border-error bg-card px-6 py-3 text-body font-medium text-error transition-state hover:bg-row-hover focus-ring disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-card";
 
 /** Quiet text-level action (e.g. Log out in Settings). */
 export const buttonQuiet =
-  "rounded-full px-4 py-2 text-body-sm font-medium text-foreground-secondary transition-state hover:bg-row-hover hover:text-foreground focus-ring disabled:cursor-not-allowed disabled:opacity-60";
+  "rounded-full px-4 py-2 text-body-sm font-medium text-foreground-secondary transition-state hover:bg-row-hover hover:text-foreground focus-ring disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-foreground-secondary";
 
 export const labelClass = "text-body-sm font-medium text-foreground-secondary";
 
 export const inputClass =
-  "w-full rounded-md border border-border bg-background px-4 py-3 text-body text-foreground transition-state placeholder:text-foreground-tertiary focus:border-accent focus:outline-2 focus:outline-offset-2 focus:outline-accent aria-[invalid=true]:border-error aria-[invalid=true]:focus:border-error";
+  "w-full rounded-md border border-border bg-background px-4 py-3 text-body text-foreground transition-state placeholder:text-foreground-tertiary focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent aria-[invalid=true]:border-error aria-[invalid=true]:focus-visible:border-error";
 
 export const fieldErrorClass = "break-words text-body-sm text-error";
 

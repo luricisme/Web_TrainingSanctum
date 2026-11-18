@@ -69,7 +69,7 @@ export function FlipCard({
       onPointerUp={onPointerUp}
       onPointerCancel={() => (start.current = null)}
       aria-label={ariaLabel}
-      className={`block w-full max-w-review-card rounded-lg perspective-review focus-ring cursor-pointer${
+      className={`block w-full max-w-review-card rounded-lg perspective-review focus-ring${
         className ? ` ${className}` : ""
       }`}
     >

@@ -11,7 +11,7 @@ const DIRECTION_LABEL: Record<SchedulingRecord["direction"], string> = {
 };
 
 const summary =
-  "flex cursor-pointer list-none items-center gap-3 rounded-md px-3 py-3 transition-state hover:bg-row-hover marker:hidden [&::-webkit-details-marker]:hidden focus-ring";
+  "flex list-none items-center gap-3 rounded-md px-3 py-3 transition-state hover:bg-row-hover marker:hidden [&::-webkit-details-marker]:hidden focus-ring";
 const chevron =
   "h-2 w-2 shrink-0 -rotate-45 border-b-2 border-r-2 border-current transition-transform duration-150 group-open:rotate-45 motion-reduce:transition-none";
 const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
