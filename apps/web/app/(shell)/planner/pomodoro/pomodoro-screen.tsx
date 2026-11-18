@@ -9,6 +9,7 @@ import {
   type PomodoroPill,
   type PomodoroSettings,
   type SessionSummary,
+  type TaskCategorySummary,
   type TaskSummary,
 } from "@training-sanctum/domain";
 import { ApiError, apiFetch } from "@/lib/api-client";
@@ -24,6 +25,7 @@ import {
 } from "@/app/components/ui";
 import { PLANNER_CATEGORIES_KEY } from "../categories-key";
 import { TaskModal } from "../task-modal";
+import { MusicPlayer } from "./music-player";
 import { PLANNER_OVERDUE_KEY, PLANNER_TASKS_KEY, localToday, plannerTasksKey } from "../tasks-key";
 
 const RUNNING_KEY = ["planner-running"] as const;
@@ -141,6 +143,10 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
   const settingsQuery = useQuery({
     queryKey: SETTINGS_KEY,
     queryFn: () => apiFetch<PomodoroSettings>("/api/planner/settings"),
+  });
+  const categoriesQuery = useQuery({
+    queryKey: PLANNER_CATEGORIES_KEY,
+    queryFn: () => apiFetch<TaskCategorySummary[]>("/api/planner/categories"),
   });
   const running = runningQuery.data ?? null;
   const elsewhere = running !== null && running.taskId !== taskId;
@@ -456,6 +462,27 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
           </p>
         ) : null}
       </div>
+
+      <MusicPlayer
+        taskId={taskId}
+        ownTrack={task.musicTrack}
+        categoryTrack={
+          categoriesQuery.data?.find((c) => c.id === task.category.id)?.musicTrack ?? null
+        }
+        categoryLoading={categoriesQuery.isPending}
+        categoryError={categoriesQuery.isError}
+        focus={
+          mine && mine.kind === "FOCUS"
+            ? { id: mine.id, endsAtMs: new Date(mine.startedAt).getTime() + mine.plannedMinutes * 60000 }
+            : null
+        }
+        onSaved={(saved) => {
+          queryClient.setQueryData<TaskWithSessions>(taskKey(taskId), (old) =>
+            old ? { ...old, task: saved } : old
+          );
+          void queryClient.invalidateQueries({ queryKey: PLANNER_TASKS_KEY });
+        }}
+      />
 
       {cardOpen ? (
         <div className="mx-auto mt-12 max-w-review-card rounded-lg border border-divider bg-card p-6 shadow-low">

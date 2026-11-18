@@ -8,10 +8,10 @@ import type { Track } from "@/lib/music/types";
 import { buttonQuiet, inputClass, labelClass, linkClass } from "@/app/components/ui";
 
 const LAST_PICK_KEY = "planner.music.lastPick";
-const UNAVAILABLE = "Music unavailable";
+export const UNAVAILABLE = "Music unavailable";
 
 /** The last picked track, per browser. Every access is guarded (private mode, blocked storage). */
-function readLastPick(): MusicTrackRef | null {
+export function readLastPick(): MusicTrackRef | null {
   try {
     const raw = window.localStorage.getItem(LAST_PICK_KEY);
     return raw ? parseMusicTrack(JSON.parse(raw)) : null;
@@ -20,7 +20,7 @@ function readLastPick(): MusicTrackRef | null {
   }
 }
 
-function writeLastPick(ref: MusicTrackRef) {
+export function writeLastPick(ref: MusicTrackRef) {
   try {
     window.localStorage.setItem(LAST_PICK_KEY, JSON.stringify(ref));
   } catch {
@@ -28,7 +28,7 @@ function writeLastPick(ref: MusicTrackRef) {
   }
 }
 
-function useTrack(ref: MusicTrackRef | null) {
+export function useTrack(ref: MusicTrackRef | null) {
   return useQuery({
     queryKey: ["planner-music-track", ref?.trackId],
     queryFn: () => apiFetch<Track>(`/api/planner/music/${encodeURIComponent(ref!.trackId)}`),
@@ -39,7 +39,7 @@ function useTrack(ref: MusicTrackRef | null) {
 }
 
 /** Title · artist · licence, the licence linked (it is a licence condition). */
-function Attribution({ track }: { track: Track }) {
+export function Attribution({ track }: { track: Track }) {
   return (
     <p className="break-words text-body-sm text-foreground">
       <span className="font-medium">{track.title}</span>
@@ -138,7 +138,7 @@ export function MusicField({
   );
 }
 
-function TrackSearch({
+export function TrackSearch({
   id,
   current,
   onPick,
