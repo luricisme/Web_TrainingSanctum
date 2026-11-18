@@ -280,7 +280,7 @@ A user sees the week as a time grid where each scheduled task is a block as long
 **Implementation notes:** no new tables; reads `Task` and `PomodoroSession`, block length from `planLengthMinutes` (AD-17). Conflicts drawn, never resolved. The `error`-on-tint conflict border is a non-text contrast to measure and record (UX-DR13).
 
 ### Epic 11: Planner — Music
-A user picks a Jamendo track per category (or per task); it fades in with each focus session, out at its end, stays silent in breaks, and shows its attribution. *Added by Sprint Change 2026-11-16.*
+A user picks a Jamendo track per category (or per task), or changes it from the Pomodoro screen; it fades in with each focus session, out at its end, stays silent in breaks, and shows its attribution. *Added by Sprint Change 2026-11-16; amended 2026-11-18.*
 **FRs covered:** FR-26
 **Implementation notes:** `MusicSource` adapter with one implementation (AD-18); `JAMENDO_CLIENT_ID` joins the Config schema in Story 11.1; `<audio>` playback; `musicTrack` JSON columns (additive migration). **Story 11.1 starts by verifying Jamendo's terms and catalogue and stops if either fails** — the forge's open crack.
 
@@ -1604,7 +1604,7 @@ So that it is a record, not a wish.
 
 ## Epic 11: Planner — Music
 
-A user picks a Jamendo track per category (or per task); it fades in with each focus session, out at its end, stays silent in breaks, and shows its attribution. *Added by Sprint Change 2026-11-16. Build order: 11.1 → 11.2 → 11.3.*
+A user picks a Jamendo track per category (or per task), or changes it from the Pomodoro screen; it fades in with each focus session, out at its end, stays silent in breaks, and shows its attribution. *Added by Sprint Change 2026-11-16; amended 2026-11-18. Build order: 11.1 → 11.2 → 11.3.*
 
 ### Story 11.1: Jamendo Adapter
 
@@ -1642,8 +1642,8 @@ So that starting a session picks the music for me.
 ### Story 11.3: Player in the Pomodoro Screen
 
 As a user,
-I want the music to follow the session,
-So that I never touch it.
+I want the music to follow the session and to change it without leaving the timer,
+So that I rarely have to touch it, and can when I want to. *(Amended by Sprint Change 2026-11-18.)*
 
 **Acceptance Criteria:**
 
@@ -1651,7 +1651,17 @@ So that I never touch it.
 **Then** an `<audio>` element plays it, fading in over 3 s; at the session's end it fades out over 3 s; breaks are silent
 
 **Given** the player (UX-DR30)
-**Then** it shows title · artist · licence link, pause and volume (remembered in `localStorage`), nothing else
+**Then** it shows title · artist · licence link, pause, volume (remembered in `localStorage`) and a quiet "Change" control, nothing else
+
+**Given** the user chooses "Change" in the player
+**Then** the same Jamendo search as the Music field (Story 11.2) opens in place, last picked first, with "None", without leaving the screen
+
+**Given** the user picks a track in the player
+**Then** it is saved as the Task's `musicTrack` override (`PATCH /api/planner/tasks/[id]`), never onto the Category; if a focus session is playing, the new track fades in over 3 s, otherwise it plays at the next focus session
+**And** choosing "None" clears the Task's override so the Task uses its Category's track again; pausing is how to silence the music
+
+**Given** the track change fails to save or Jamendo is unreachable
+**Then** the current music and the timer are unaffected and the one quiet line "Music unavailable — the timer continues." shows
 
 **Given** Jamendo or the stream is unreachable
 **Then** one quiet line "Music unavailable — the timer continues." shows and the session runs unchanged
