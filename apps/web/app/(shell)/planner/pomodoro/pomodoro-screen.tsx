@@ -31,7 +31,7 @@ import { PLANNER_OVERDUE_KEY, PLANNER_TASKS_KEY, localToday, plannerTasksKey } f
 const RUNNING_KEY = ["planner-running"] as const;
 const SETTINGS_KEY = ["planner", "settings"] as const;
 const taskKey = (id: string) => ["planner-task", id] as const;
-const subscribeNever = () => () => {};
+const subscribeNever =() => () => {};
 
 interface TaskWithSessions {
   task: TaskSummary;
@@ -177,13 +177,30 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
     if (expired) void refetchRunning();
   }, [expired, now, refetchRunning]);
 
+  // Auto-start (a Pomodoro setting): only a session that ran out on its own chains.
+  const autoNext = settingsQuery.data?.autoStartNext === true;
+  // Bumped when a session ran out; the effect below handles each bump once.
+  const [autoToken, setAutoToken] = useState(0);
+  const handledAutoToken = useRef(0);
+  const expiredRef = useRef(false);
+  useEffect(() => {
+    if (expired) expiredRef.current = true;
+  }, [expired]);
+
   // A session that disappears from `running` has ended (here or elsewhere).
   const previousRunning = useRef<string | null>(null);
   useEffect(() => {
     if (previousRunning.current !== null && runningId === null) {
-      void queryClient.invalidateQueries({ queryKey: ["planner-task"] });
-      void queryClient.invalidateQueries({ queryKey: PLANNER_TASKS_KEY });
-      void queryClient.invalidateQueries({ queryKey: ["cultivation"] });
+      const ranOut = expiredRef.current;
+      expiredRef.current = false;
+      // Wait for the refreshed history so the next step is the right one.
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["planner-task"] }),
+        queryClient.invalidateQueries({ queryKey: PLANNER_TASKS_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["cultivation"] }),
+      ]).then(() => {
+        if (ranOut) setAutoToken((n) => n + 1);
+      });
     }
     previousRunning.current = runningId;
   }, [runningId, queryClient]);
@@ -280,6 +297,12 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
     if (!next || (next.kind !== "FOCUS" && next.kind !== "BREAK")) return;
     start.mutate({ kind: next.kind, overrun: next.kind === "FOCUS" && next.overrun });
   }
+
+  useEffect(() => {
+    if (autoToken === handledAutoToken.current || taskQuery.isFetching || runningQuery.isFetching) return;
+    handledAutoToken.current = autoToken;
+    if (autoNext && startable && !busy) startNext();
+  });
 
   // Space starts or stops when nothing else has focus; Esc closes the Done card.
   const spaceRef = useRef<() => void>(() => {});

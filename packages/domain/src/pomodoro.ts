@@ -26,7 +26,7 @@ const minutesSetting = (label: string) =>
     .min(5, `${label} must be between 5 and 90 minutes.`)
     .max(90, `${label} must be between 5 and 90 minutes.`);
 
-export const pomodoroSettingsSchema = z.object({
+const settingsShape = {
   focus: minutesSetting("Focus"),
   shortBreak: minutesSetting("Short break"),
   longBreak: minutesSetting("Long break"),
@@ -35,6 +35,14 @@ export const pomodoroSettingsSchema = z.object({
     .int("Long break every must be a whole number.")
     .min(2, "Long break every must be between 2 and 8 sessions.")
     .max(8, "Long break every must be between 2 and 8 sessions."),
+  /** Start the next session by itself when one runs out. */
+  autoStartNext: z.boolean({ error: "Auto-start must be on or off." }),
+};
+
+/** Stored settings and old backups may lack `autoStartNext`; it reads as off. */
+export const pomodoroSettingsSchema = z.object({
+  ...settingsShape,
+  autoStartNext: settingsShape.autoStartNext.default(false),
 });
 
 export type PomodoroSettings = z.infer<typeof pomodoroSettingsSchema>;
@@ -44,10 +52,12 @@ export const DEFAULT_POMODORO_SETTINGS: Readonly<PomodoroSettings> = {
   shortBreak: 5,
   longBreak: 15,
   longBreakEvery: 4,
+  autoStartNext: false,
 };
 
 /** A partial update: at least one known key, unknown keys rejected. */
-export const updatePomodoroSettingsSchema = pomodoroSettingsSchema
+export const updatePomodoroSettingsSchema = z
+  .object(settingsShape)
   .partial()
   .strict()
   .refine((value) => Object.keys(value).length > 0, {

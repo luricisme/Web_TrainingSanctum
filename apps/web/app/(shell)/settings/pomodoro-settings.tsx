@@ -6,7 +6,7 @@ import { pomodoroSettingsSchema, type PomodoroSettings } from "@training-sanctum
 import { apiFetch } from "@/lib/api-client";
 import { fieldErrorClass, formErrorClass, inputClass, labelClass } from "@/app/components/ui";
 
-type Key = keyof PomodoroSettings;
+type Key = Exclude<keyof PomodoroSettings, "autoStartNext">;
 
 const SETTINGS_KEY = ["planner", "settings"] as const;
 
@@ -135,6 +135,40 @@ export function PomodoroSettingsControl() {
             </div>
           );
         })}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+        <span id="pomodoro-auto-start-label" className={labelClass}>
+          Start the next session automatically?
+        </span>
+        <div
+          role="radiogroup"
+          aria-labelledby="pomodoro-auto-start-label"
+          aria-busy={!data}
+          className="inline-flex gap-1 rounded-full bg-elevated p-1"
+        >
+          {([true, false] as const).map((value) => {
+            const active = (data?.autoStartNext ?? false) === value;
+            return (
+              <button
+                key={String(value)}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                disabled={!data}
+                onClick={() => {
+                  if (!active) save.mutate({ autoStartNext: value });
+                }}
+                className={`rounded-full px-4 py-1.5 text-body-sm font-semibold transition-state focus-ring disabled:cursor-wait ${
+                  active
+                    ? "bg-card text-foreground shadow-low"
+                    : "text-foreground-secondary hover:text-foreground"
+                }`}
+              >
+                {value ? "Yes" : "No"}
+              </button>
+            );
+          })}
+        </div>
       </div>
       <p aria-live="polite" className="min-h-5 text-body-sm text-foreground-tertiary">
         {status === "saved" ? "Saved" : ""}
