@@ -40,7 +40,7 @@ function Loading({ exitHref }: { exitHref: string }) {
 
 /**
  * spec-4-8b: every Card of the Flashcard as practice entries, oldest-created
- * first (the Cards list is newest first), each Card's studied directions
+ * first (the Cards list is oldest first too), each Card's studied directions
  * together, Term → Definition first (spec-4-9: only studied directions). The
  * ids only key the slots: practice never reaches the grade route.
  */
@@ -49,7 +49,7 @@ function practiceEntries(
   flashcardName: string,
   dirs: RecallDirection[]
 ): ReviewQueueEntry[] {
-  return [...cards].reverse().flatMap((card) =>
+  return cards.flatMap((card) =>
     dirs.map((direction) => ({
       schedulingRecordId: `practice:${card.id}:${direction}`,
       cardId: card.id,

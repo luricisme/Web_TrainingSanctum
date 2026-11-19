@@ -114,6 +114,14 @@ export interface NewCardWithSchedulingRecords {
   schedulingRecords: NewSchedulingRecord[];
 }
 
+/** SM-2 state of a brand-new record; creation and deck reset share it. */
+export const DEFAULT_SCHEDULING_STATE = {
+  easeFactor: 2.5,
+  repetitions: 0,
+  interval: 0,
+  firstGradedAt: null,
+} as const;
+
 /**
  * Two default records (one per Recall Direction) per learner, in learner
  * order: SM-2 defaults, due at the start of today in the timezone.
@@ -126,11 +134,8 @@ export function createDefaultSchedulingRecords(
   const record = (userId: string, direction: RecallDirectionName): NewSchedulingRecord => ({
     userId,
     direction,
-    easeFactor: 2.5,
-    repetitions: 0,
-    interval: 0,
+    ...DEFAULT_SCHEDULING_STATE,
     nextReviewDate: new Date(nextReviewDate),
-    firstGradedAt: null,
   });
   return learnerIds.flatMap((userId) => [
     record(userId, "TERM_TO_DEFINITION"),

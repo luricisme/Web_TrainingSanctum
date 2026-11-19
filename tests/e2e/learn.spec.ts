@@ -855,3 +855,80 @@ for (const theme of ["dark", "light"] as const) {
     });
   }
 }
+
+test("Reset returns the deck to new after confirmation and Learn starts at card 1", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { flashcard } = await seed(email, [
+    { ...NEW_A, learned: true, dueIn: [3, 3] },
+    { ...NEW_B, learned: true, dueIn: [3, 3] },
+  ]);
+  await page.goto(`/flashcards/${flashcard.id}`);
+  await expect(page.getByRole("link", { name: "Learn", exact: true })).toBeVisible();
+  // Card 1/N on the deck page is the card Learn asks first.
+  const viewer = page.getByRole("region", { name: "Card viewer" });
+  await expect(viewer.getByText("1 / 2")).toBeVisible();
+  await expect(viewer.getByText("drizzle", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
+  await page.getByRole("button", { name: "Reset deck" }).click();
+  await expect(page.getByRole("link", { name: "Learn · 2 new", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reset", exact: true })).toBeDisabled();
+
+  await page.getByRole("link", { name: "Learn · 2 new" }).click();
+  await expect(page).toHaveURL(`/flashcards/${flashcard.id}/learn`);
+  await expect(page.getByText("1 / 4")).toBeVisible();
+  await expect(page.getByText("drizzle", { exact: true }).first()).toBeVisible();
+});
+
+test("a failed Reset keeps the modal open and shows the error", async ({ page }) => {
+  const email = await register(page);
+  const { flashcard } = await seed(email, [{ ...NEW_A, learned: true, dueIn: [3, 3] }, NEW_B]);
+  await page.route(`**/api/flashcards/${flashcard.id}/reset`, (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: { code: "INTERNAL_ERROR", message: "Could not reset this deck. Nothing was changed." },
+      }),
+    })
+  );
+  await page.goto(`/flashcards/${flashcard.id}`);
+
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
+  await page.getByRole("button", { name: "Reset deck" }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("alert")).toContainText("Nothing was changed");
+  await expect(dialog).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reset deck" })).toBeEnabled();
+});
+
+for (const theme of ["dark", "light"] as const) {
+  test(`reset screenshots (${theme})`, async ({ page }) => {
+    mkdirSync("test-results/screenshots", { recursive: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const email = await register(page);
+    const { flashcard } = await seed(email, [
+      { ...NEW_A, learned: true, dueIn: [3, 3] },
+      NEW_B,
+    ]);
+    await page.goto(`/flashcards/${flashcard.id}`);
+    await page.evaluate((t) => {
+      if (t === "light") document.documentElement.dataset.theme = "light";
+      else delete document.documentElement.dataset.theme;
+    }, theme);
+    await expect(page.getByRole("button", { name: "Reset", exact: true })).toBeEnabled();
+    await page.screenshot({ path: `test-results/screenshots/reset-page-${theme}.png`, animations: "disabled" });
+    await page.getByRole("button", { name: "Reset", exact: true }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.screenshot({ path: `test-results/screenshots/reset-modal-${theme}.png`, animations: "disabled" });
+  });
+}

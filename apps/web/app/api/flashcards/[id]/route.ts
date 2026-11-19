@@ -27,7 +27,7 @@ function logDelete(entry: Record<string, unknown>): void {
 }
 
 /**
- * The Flashcard with its Cards, newest first, plus breadcrumb ancestors and
+ * The Flashcard with its Cards, oldest first (the order Learn asks them), plus breadcrumb ancestors and
  * what its Learn session holds (spec-4-8) and the user's study directions
  * (spec-4-9), so the viewer and the practice run need no extra fetch.
  */
@@ -60,7 +60,7 @@ export async function GET(
         },
       },
       cards: {
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         select: {
           id: true,
           term: true,
@@ -82,6 +82,11 @@ export async function GET(
     class: folder.class,
     cards: flashcard.cards,
     learn: await countLearn(userId, flashcard.id, dirs, new Date()),
+    hasProgress:
+      (await prisma.schedulingRecord.findFirst({
+        where: { userId, firstGradedAt: { not: null }, card: { flashcardId: flashcard.id } },
+        select: { id: true },
+      })) !== null,
     studyDirections: setting,
     isOwner,
     ownerName,

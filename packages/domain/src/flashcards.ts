@@ -106,6 +106,8 @@ export interface FlashcardCardsResponse {
   cards: CardSummary[];
   /** spec-4-8: what the Flashcard's Learn session holds right now. */
   learn: LearnCounts;
+  /** True once the viewer has graded any record of this deck; enables Reset. */
+  hasProgress: boolean;
   /** spec-4-9: the account's study directions, for the viewer and the practice run. */
   studyDirections: StudyDirections;
   /** Story 12.4: viewer role and Members, excluding the Owner. */

@@ -19,6 +19,7 @@ import { AddCardsPanel } from "./add-cards-panel";
 import { CardViewer } from "./card-viewer";
 import { DeleteCardModal } from "./delete-card-modal";
 import { EditCardModal } from "./edit-card-modal";
+import { ResetDeckModal } from "./reset-deck-modal";
 
 const crumbLink =
   "rounded-sm underline-offset-2 hover:text-foreground hover:underline focus-ring";
@@ -84,6 +85,7 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<CardSummary | null>(null);
   const [deleting, setDeleting] = useState<CardSummary | null>(null);
+  const [resetting, setResetting] = useState(false);
   const queryClient = useQueryClient();
   const listRef = useRef<HTMLUListElement>(null);
   const addRef = useRef<HTMLButtonElement>(null);
@@ -180,13 +182,21 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
           <CardViewer
             cards={cards}
             definitionFirst={isDefinitionFirst(studiedDirections(data.studyDirections))}
-            inactive={adding || !!editing || !!deleting}
+            inactive={adding || !!editing || !!deleting || resetting}
           />
           {/* EXPERIENCE.md Learn button: directly under the viewer, the page's one accent action. */}
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link href={`/flashcards/${flashcard.id}/learn`} className={buttonPrimary}>
               {learnLabel(data.learn)}
             </Link>
+            <button
+              type="button"
+              disabled={!data.hasProgress}
+              onClick={() => setResetting(true)}
+              className={buttonSecondary}
+            >
+              Reset
+            </button>
           </div>
         </>
       )}
@@ -268,6 +278,15 @@ export function FlashcardDetailView({ flashcardId }: { flashcardId: string }) {
             pendingFocus.current = { selector: "button[data-card-delete]", index };
             setFocusTick((t) => t + 1);
           }}
+        />
+      ) : null}
+
+      {resetting ? (
+        <ResetDeckModal
+          flashcardId={flashcard.id}
+          flashcardName={flashcard.name}
+          onClose={() => setResetting(false)}
+          onReset={() => setResetting(false)}
         />
       ) : null}
 
