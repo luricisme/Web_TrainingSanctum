@@ -9,7 +9,7 @@ export default function PlannerLayout({ children }: { children: React.ReactNode 
       <div className="mt-6">
         <PlannerSwitcher />
       </div>
-      <div className="mt-8">{children}</div>
+      <div className="mt-6">{children}</div>
     </div>
   );
 }

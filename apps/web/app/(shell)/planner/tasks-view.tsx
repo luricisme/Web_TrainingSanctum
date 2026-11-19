@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { OverdueSummary, TaskSummary } from "@training-sanctum/domain";
 import { apiFetch } from "@/lib/api-client";
-import { SectionMarker } from "@/app/components/section-marker";
 import {
   buttonPrimary,
   buttonQuiet,
   buttonSecondary,
-  inputClass,
   tintFor,
 } from "@/app/components/ui";
 import { RowMenu } from "../classes/row-menu";
@@ -32,7 +30,12 @@ const subscribeNever = () => () => {};
 type TaskDialog = { kind: "add" } | { kind: "edit"; task: TaskSummary } | null;
 
 const arrowClass =
-  "flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-low transition-state hover:bg-row-hover focus-ring";
+  "flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-low transition-state hover:bg-row-hover focus-ring disabled:cursor-not-allowed disabled:opacity-60";
+
+// Toolbar-sized pills: the page-level size dwarfs the Task rows.
+const compact = (cls: string) => cls.replace("px-6 py-3 text-body", "px-4 py-2 text-body-sm");
+const toolbarPrimary = compact(buttonPrimary);
+const toolbarSecondary = compact(buttonSecondary);
 
 /**
  * Planner -> Tasks body (Story 8.3): the day header, the day's Tasks, the
@@ -63,68 +66,69 @@ export function TasksView() {
   const isToday = day !== null && day === today;
   const dayLabel = day ? (isToday ? "today" : formatDay(day)) : "";
 
+  const doneCount = tasks.filter((t) => t.done).length;
+
   return (
     <section aria-labelledby="planner-tasks">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <SectionMarker as="h2" id="planner-tasks">
-          Tasks
-        </SectionMarker>
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={() => setCategoriesOpen(true)} className={buttonSecondary}>
-            Categories
+      <h2 id="planner-tasks" className="sr-only">
+        Tasks
+      </h2>
+
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            aria-label="Previous day"
+            disabled={!day}
+            onClick={() => day && setDay(shiftDay(day, -1))}
+            className={arrowClass}
+          >
+            <Arrow direction="left" />
           </button>
-          {tasks.length > 0 ? (
-            <button type="button" onClick={() => setDialog({ kind: "add" })} className={buttonPrimary}>
-              + Add task
+          <button
+            type="button"
+            aria-label="Next day"
+            disabled={!day}
+            onClick={() => day && setDay(shiftDay(day, 1))}
+            className={arrowClass}
+          >
+            <Arrow direction="right" />
+          </button>
+          <div className="ml-2 flex min-w-0 flex-col">
+            <p className="truncate text-heading-3 text-foreground" aria-live="polite">
+              {day ? (isToday ? "Today" : formatDay(day)) : " "}
+            </p>
+            {day ? (
+              <p className="truncate text-caption text-foreground-secondary">
+                {isToday ? formatDay(day) : null}
+                {isToday && tasks.length > 0 ? " · " : null}
+                {tasks.length > 0 ? `${doneCount} of ${tasks.length} done` : null}
+              </p>
+            ) : null}
+          </div>
+          <DayPicker day={day} onPick={setDay} />
+          {day && !isToday ? (
+            <button type="button" onClick={() => today && setDay(today)} className={buttonQuiet}>
+              Today
             </button>
           ) : null}
+        </div>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setCategoriesOpen(true)} className={toolbarSecondary}>
+            Categories
+          </button>
+          <button
+            type="button"
+            disabled={!day}
+            onClick={() => setDialog({ kind: "add" })}
+            className={toolbarPrimary}
+          >
+            + Add task
+          </button>
         </div>
       </div>
 
       {overdueCount > 0 ? <OverdueStrip count={overdueCount} /> : null}
-
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          aria-label="Previous day"
-          disabled={!day}
-          onClick={() => day && setDay(shiftDay(day, -1))}
-          className={arrowClass}
-        >
-          <Arrow direction="left" />
-        </button>
-        <div className="flex min-w-0 flex-col">
-          <p className="text-heading-3 text-foreground" aria-live="polite">
-            {day ? (isToday ? "Today" : formatDay(day)) : " "}
-          </p>
-          {day && isToday ? (
-            <p className="text-caption text-foreground-secondary">{formatDay(day)}</p>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          aria-label="Next day"
-          disabled={!day}
-          onClick={() => day && setDay(shiftDay(day, 1))}
-          className={arrowClass}
-        >
-          <Arrow direction="right" />
-        </button>
-        <input
-          type="date"
-          aria-label="Day"
-          value={day ?? ""}
-          onChange={(event) => {
-            if (/^\d{4}-\d{2}-\d{2}$/.test(event.target.value)) setDay(event.target.value);
-          }}
-          className={`${inputClass.replace("w-full", "w-44")}`}
-        />
-        {day && !isToday ? (
-          <button type="button" onClick={() => today && setDay(today)} className={buttonQuiet}>
-            Today
-          </button>
-        ) : null}
-      </div>
 
       <div className="mt-6">
         {day === null || isPending ? (
@@ -140,11 +144,8 @@ export function TasksView() {
             </button>
           </div>
         ) : empty ? (
-          <div className="flex flex-col items-start gap-4 py-6">
+          <div className="rounded-lg border border-dashed border-border px-6 py-10 text-center">
             <p className="text-body text-foreground-secondary">Nothing planned for {dayLabel}.</p>
-            <button type="button" onClick={() => setDialog({ kind: "add" })} className={buttonPrimary}>
-              + Add task
-            </button>
           </div>
         ) : (
           <ul className="divide-y divide-divider rounded-lg border border-divider bg-card">
@@ -185,14 +186,17 @@ function OverdueStrip({ count }: { count: number }) {
     },
   });
   return (
-    <div className="mt-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-elevated px-4 py-3">
-        <p className="text-body font-medium text-foreground">{count} overdue</p>
+    <div className="mt-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md border border-warning/30 bg-warning/10 py-1.5 pl-4 pr-1.5">
+        <p className="flex items-center gap-2 text-body-sm font-medium text-foreground">
+          <span aria-hidden="true" className="size-2 rounded-full bg-warning" />
+          {count} overdue
+        </p>
         <button
           type="button"
           disabled={move.isPending}
           onClick={() => move.mutate()}
-          className={buttonSecondary}
+          className={buttonQuiet}
         >
           Move all to today
         </button>
@@ -272,11 +276,12 @@ function TaskRow({
         </p>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-0.5 sm:flex-row sm:items-center sm:gap-4">
-        {task.startTime ? (
-          <span className="font-mono text-caption text-foreground-secondary">{task.startTime}</span>
-        ) : null}
+        {/* Fixed widths keep the time and minutes columns aligned across rows. */}
+        <span className="font-mono text-caption text-foreground-secondary sm:w-12 sm:text-right">
+          {task.startTime ?? ""}
+        </span>
         <span
-          className={`font-mono text-caption ${over ? "text-warning" : "text-foreground-secondary"}`}
+          className={`font-mono text-caption sm:min-w-20 sm:text-right ${over ? "text-warning" : "text-foreground-secondary"}`}
           aria-label={`${task.loggedMinutes} of ${task.estimateMinutes} minutes${over ? ", over estimate" : ""}`}
         >
           {task.loggedMinutes} / {task.estimateMinutes}
@@ -299,6 +304,46 @@ function TaskRow({
         ]}
       />
     </li>
+  );
+}
+
+/** A calendar icon that opens the native date picker; the input itself stays out of sight. */
+function DayPicker({ day, onPick }: { day: string | null; onPick: (day: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        aria-label="Pick a day"
+        disabled={!day}
+        onClick={() => {
+          const input = inputRef.current;
+          if (!input) return;
+          try {
+            input.showPicker();
+          } catch {
+            input.focus();
+          }
+        }}
+        className={`${arrowClass} border-transparent bg-transparent shadow-none`}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <path d="M16 2v4M8 2v4M3 10h18" />
+        </svg>
+      </button>
+      <input
+        ref={inputRef}
+        type="date"
+        aria-label="Day"
+        tabIndex={-1}
+        value={day ?? ""}
+        onChange={(event) => {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(event.target.value)) onPick(event.target.value);
+        }}
+        className="pointer-events-none absolute inset-0 opacity-0"
+      />
+    </div>
   );
 }
 
