@@ -157,7 +157,7 @@ motion:
   flip-duration: 520ms
   easing-entrance: cubic-bezier(0.16, 1, 0.3, 1)
   easing-state: ease-in-out
-  ambient: 'rays turn once per 40s (realm avatar, Bộ 3 and up only)'
+  ambient: 'realm avatar only: vortex turns once per 40s (Âm Hư up), rays and formation once per 60s'
 components:
   app-frame:
     background: '{colors.frame}'
@@ -392,23 +392,23 @@ Hover on a tile or card draws a darker border; nothing scales or lifts.
 - **Buttons.** Primary: accent fill, `{colors.on-accent}`, `{rounded.full}`, `{elevation.low}`; one per screen. Secondary: card fill, border, `{colors.text}`. Danger: card fill, error border and text. Quiet: text only, hover fill.
 - **Card viewer** (`components.card-viewer`). The review card at the top of Flashcard detail. Beneath it, outline circular ← and → buttons (card fill, border, `{elevation.low}`) flank a mono "X / N" counter; a disabled arrow drops to 0.4 opacity. The primary "Learn" button follows.
 - **Realm badge** (`components.realm-badge`). Right end of the app bar, on the frame: the realm avatar inside a 44px XP ring (a 2.5px circle: `{colors.on-frame}` fill showing progress, a 40% `{colors.on-frame-muted}` track), then the realm and stage in `{typography.body-small}` 700 `{colors.on-frame}` over the mono XP figure in `{typography.caption}`. Links to Cultivation. The fill is full at the final level. The 4px bar (track `{colors.elevated}` or `{colors.border}`, fill `{colors.accent}`) is still used on the Empty due-queue state and Cultivation page.
-- **Realm avatar** (`components.realm-avatar`). A seated cultivator drawn in SVG on a circular, radially shaded background, one **look per realm** (19 realms, Ngưng Khí to Đạp Thiên Cảnh). The look changes with the realm, not the stage. Each realm has its own palette (background, figure, aura), and layers are added at fixed realms so a higher realm always reads as stronger:
+- **Realm avatar** (`components.realm-avatar`). A xianxia cultivator portrait drawn in SVG (silver hair blowing in the wind, a dark robe with trim, glowing effects) on a circular, radially shaded background, one **look per realm** (19 realms, Ngưng Khí to Đạp Thiên Cảnh). The look changes with the realm, not the stage. Each realm has its own palette (background, figure, aura), and layers are added at fixed realms so a higher realm always reads as stronger:
 
   | Realm (position) | Layer added |
   |---|---|
   | Ngưng Khí (1) | plain figure, slate background |
   | Trúc Cơ (2) | aura behind the body |
-  | Kết Đan (3) | the core, a pill in the belly |
-  | Nguyên Anh (4) | ring around the core |
-  | Hóa Thần (5) | halo behind the head, rim on the avatar |
-  | Âm Hư (8) | two flying swords |
-  | Khuy Niết (10, Nhị Bộ) | four swords |
-  | Tịnh Niết (11) | second halo ring |
-  | Không Niết (14, Tam Bộ) | slow-turning rays, third eye, six swords, heavier rim |
-  | Không Kiếp (17) | crown, eight swords |
+  | Kết Đan (3) | the core at the belt, spirit motes (more with each realm) |
+  | Nguyên Anh (4) | ring around the core, a billowing cape |
+  | Hóa Thần (5) | formation circle behind the head, pauldrons, rim on the avatar |
+  | Âm Hư (8) | a turning vortex behind the head, two flying swords |
+  | Khuy Niết (10, Nhị Bộ) | four swords, lightning in the sky |
+  | Tịnh Niết (11) | the formation circle doubles and turns |
+  | Không Niết (14, Tam Bộ) | slow-turning rays, third eye, glowing eyes, a held sword with lightning, six swords, heavier rim |
+  | Không Kiếp (17) | gold hair crown, eight swords, a golden dragon coiled around |
   | Đạp Thiên Cảnh (19, Tứ Bộ) | gold figure on black, full radiance, heaviest rim |
 
-  Purely decorative (`aria-hidden`); it never carries information the realm label does not. Rays turn once per 40s and stop under reduced motion. At the 34px badge size the swords and third eye are hard to see; palette, rim and halo carry the difference.
+  Purely decorative (`aria-hidden`); it never carries information the realm label does not. The lightning grows with the realm: two bolts at Khuy Niết; forked bolts down the sides from Tịnh Niết; crimson lightning, sky flashes and a crackling sword from Không Niết; a ring of lightning around the head and double strikes from Không Linh; a bolt striking the sword and bolts at the feet from Không Kiếp; golden lightning and a second ring at Đạp Thiên Cảnh. The vortex, rays and formation turn slowly and stop under reduced motion. At the 34px badge size the small details are hard to see; palette, glow, rim and the vortex carry the difference.
 - **Section bullet.** A 7px dot in `{colors.accent}` before a section overline.
 - **Modal** (`components.modal`). Centred, `{rounded.lg}`, `{elevation.high}`, 40% scrim with blur. Used for deletions, move-flashcard, restore and admin user actions (see EXPERIENCE.md for the wording). Delete user uses `{colors.error}`.
 - **Admin table** (`components.admin-table`) — *not built (Epic 7).* The user list on the existing tile/card surface; each row is clickable (pointer cursor) and shows the realm as a small Realm badge. Read-only.

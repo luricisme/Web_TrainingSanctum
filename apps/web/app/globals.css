@@ -142,7 +142,8 @@
   --radius-frame: 28px;
   --radius-panel: 22px;
 
-  --font-sans: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  --font-sans:
+    var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
   --font-mono: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
 
@@ -296,6 +297,160 @@
   border-top: 1px solid color-mix(in srgb, var(--color-gold) 85%, white);
 }
 
+/* Realm avatar motion (realm-avatar.tsx). Every piece rests in a visible
+   pose, so the reduced-motion rule below leaves a still, complete portrait.
+   SVG transform origins are in viewBox units unless `fill-box` is set. */
+@keyframes ra-halo {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 calc(var(--ra-halo) * 1px) var(--ra-glow))
+      drop-shadow(0 0 calc(var(--ra-halo) * 3px) var(--ra-glow));
+  }
+  50% {
+    filter: drop-shadow(0 0 calc(var(--ra-halo) * 2px) var(--ra-glow))
+      drop-shadow(0 0 calc(var(--ra-halo) * 6px) var(--ra-glow));
+  }
+}
+@keyframes ra-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+@keyframes ra-sway {
+  0%,
+  100% {
+    transform: rotate(-2.5deg);
+  }
+  50% {
+    transform: rotate(2.5deg);
+  }
+}
+@keyframes ra-flutter {
+  0%,
+  100% {
+    transform: rotate(-6deg) scaleX(0.94);
+  }
+  50% {
+    transform: rotate(5deg) scaleX(1.04);
+  }
+}
+@keyframes ra-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes ra-float {
+  0% {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-16px);
+    opacity: 0;
+  }
+}
+/* Lightning: one strike per cycle. Between strikes a bolt dims to
+   --ra-bolt-rest, which rises with the storm. */
+@keyframes ra-flicker {
+  0%,
+  16%,
+  100% {
+    opacity: var(--ra-bolt-rest, 0.15);
+  }
+  3%,
+  9% {
+    opacity: 1;
+  }
+  6% {
+    opacity: 0.3;
+  }
+}
+/* The fiercer storm: a second, harder strike in the same cycle. */
+@keyframes ra-flicker-double {
+  0%,
+  16%,
+  48%,
+  66%,
+  100% {
+    opacity: var(--ra-bolt-rest, 0.15);
+  }
+  3%,
+  9%,
+  51%,
+  54%,
+  58% {
+    opacity: 1;
+  }
+  6%,
+  52.5%,
+  56% {
+    opacity: 0.3;
+  }
+}
+
+/* The sky flashing white with a strike; rests invisible. */
+@keyframes ra-strike {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  2% {
+    opacity: var(--ra-strike);
+  }
+  4% {
+    opacity: 0;
+  }
+  6% {
+    opacity: calc(var(--ra-strike) * 0.6);
+  }
+  10% {
+    opacity: 0;
+  }
+}
+
+.ra-strike {
+  animation: ra-strike 4s linear infinite;
+}
+.ra-halo {
+  animation: ra-halo 3.2s ease-in-out infinite;
+}
+.ra-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ra-pulse 3.2s ease-in-out infinite;
+}
+.ra-sway {
+  animation: ra-sway 4s ease-in-out infinite;
+}
+.ra-flutter {
+  animation: ra-flutter 2.6s ease-in-out infinite;
+}
+.ra-bob {
+  animation: ra-bob 3s ease-in-out infinite;
+}
+.ra-float {
+  animation: ra-float 4.5s ease-out infinite;
+}
+.ra-flicker {
+  animation: ra-flicker 2.4s linear infinite;
+}
+.ra-flicker-double {
+  animation-name: ra-flicker-double;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -309,8 +464,13 @@
 body {
   background: var(--color-backdrop);
   color: var(--color-text);
-  font-family: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, sans-serif;
+  font-family:
+    var(--font-jakarta),
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
 }
 
 /* spec-4-5 focus mode, before hydration: a server-rendered session stage
