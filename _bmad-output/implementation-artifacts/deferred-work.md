@@ -235,3 +235,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-5-cross-cutting-accessibility-microcopy-pass.md`
   summary: Check that an invalid `underlineInput` field shows the error colour when focused, not the accent underline.
   evidence: `focus-visible:border-b-accent` and `aria-[invalid=true]:border-b-error` set the same property; which wins depends on Tailwind output order. The pattern predates Story 5.5 (it was `focus:border-b-accent`), so it was not caused by this change. Settle it by focusing an invalid manual-row field in the browser.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-reset-flashcard-deck.md`
+  summary: Add "reset deck" to the Modal uses listed in DESIGN.md Components and the matching wording in EXPERIENCE.md.
+  evidence: Design review found the new Reset deck modal outside the documented list ("deletions, move-flashcard, restore and admin user actions"); documentation only, no styling violation.

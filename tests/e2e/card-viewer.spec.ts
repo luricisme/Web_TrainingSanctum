@@ -18,7 +18,7 @@ const TERMS = ["alpha", "bravo", "charlie"];
 
 /**
  * Seeds IELTS / Speaking / Weather idioms with `count` Cards. The list is
- * newest first, so creation times run backwards: the list (and the viewer)
+ * oldest first, so creation times run forwards: the list (and the viewer)
  * reads alpha, bravo, charlie. Card 1 is learned, the rest are new.
  */
 async function seedCards(email: string, count = 3) {
@@ -50,7 +50,7 @@ async function seedCards(email: string, count = 3) {
         definition: `definition of ${TERMS[i] ?? i}`,
         example: i === 0 ? "An alpha example." : null,
         partOfSpeech: i === 0 ? "noun" : null,
-        createdAt: new Date(now - i * 60_000),
+        createdAt: new Date(now - (count - i) * 60_000),
         flashcardId: flashcard.id,
         userId: user.id,
         schedulingRecords: {
@@ -311,7 +311,7 @@ test("adding a Card keeps the viewer on the Card it shows", async ({ page }) => 
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();
 
-  await expect(counter("3 / 4")).toBeVisible();
+  await expect(counter("2 / 4")).toBeVisible();
   await expectShowing(card, "bravo");
 });
 

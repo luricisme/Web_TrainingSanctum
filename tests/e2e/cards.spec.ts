@@ -113,8 +113,8 @@ test("add rows with the keyboard, save Unicode, mixed rows, discard prompt", asy
   await expect(dialog).toBeHidden();
 
   await expect(page.getByText("3 cards", { exact: true })).toBeVisible();
-  await expect(page.getByText("/ˈkɒl.ə.keɪt/")).toBeVisible();
-  await expect(page.getByText("café 日本語")).toBeVisible();
+  await expect(page.getByText("/ˈkɒl.ə.keɪt/").first()).toBeVisible();
+  await expect(page.getByText("café 日本語").first()).toBeVisible();
   const cards = await prisma.card.findMany({
     where: { flashcardId: flashcard.id },
     include: { schedulingRecords: true },
