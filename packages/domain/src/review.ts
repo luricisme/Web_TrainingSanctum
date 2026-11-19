@@ -7,7 +7,7 @@
  * react or prisma imports.
  */
 import { z } from "zod";
-import { REVIEW_GRADES } from "./sm2";
+import { MIN_EASE_FACTOR, REVIEW_GRADES } from "./sm2";
 
 export const RECALL_DIRECTIONS = [
   "TERM_TO_DEFINITION",
@@ -26,6 +26,44 @@ export const gradeRequestSchema = z.object({
 
 export type GradeRequest = z.infer<typeof gradeRequestSchema>;
 
+/** SM-2 state of a Scheduling Record before a grade, so the grade can be undone. */
+export interface GradePrevious {
+  interval: number;
+  repetitions: number;
+  easeFactor: number;
+  /** ISO 8601 UTC instant. */
+  nextReviewDate: string;
+  /** ISO 8601 UTC instant, or null while the Card is still Unlearned. */
+  firstGradedAt: string | null;
+  /** ISO 8601 UTC instant; restored so "reviewed today" facts are not inflated. */
+  updatedAt: string;
+}
+
+/**
+ * `POST /api/review/undo` (spec-session-back-to-previous-card): restores the
+ * state a grade replaced. The write only happens while the record's current
+ * `nextReviewDate` still equals `expectedNextReviewDate`.
+ */
+const isoInstant = (message: string) =>
+  z.iso.datetime({ error: message });
+
+export const undoRequestSchema = z.object({
+  schedulingRecordId: z
+    .string({ error: "Choose a card to undo." })
+    .min(1, "Choose a card to undo."),
+  previous: z.object({
+    interval: z.number().int().min(0).max(100_000),
+    repetitions: z.number().int().min(0).max(100_000),
+    easeFactor: z.number().min(MIN_EASE_FACTOR).max(10),
+    nextReviewDate: isoInstant("Previous review date must be a date."),
+    firstGradedAt: isoInstant("Previous first grade must be a date.").nullable(),
+    updatedAt: isoInstant("Previous update time must be a date."),
+  }),
+  expectedNextReviewDate: isoInstant("Expected review date must be a date."),
+});
+
+export type UndoRequest = z.infer<typeof undoRequestSchema>;
+
 /** The Scheduling Record after a grade, as `POST /api/review/grade` returns it. */
 export interface GradeResult {
   id: string;
@@ -36,6 +74,8 @@ export interface GradeResult {
   easeFactor: number;
   /** ISO 8601 UTC instant: the start of the user's local day it is next due. */
   nextReviewDate: string;
+  /** The state this grade replaced, for `POST /api/review/undo`. */
+  previous: GradePrevious;
 }
 
 /**

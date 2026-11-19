@@ -53,6 +53,7 @@ export async function POST(request: Request): Promise<Response> {
           easeFactor: true,
           nextReviewDate: true,
           firstGradedAt: true,
+          updatedAt: true,
           user: { select: { timezone: true } },
         },
       });
@@ -95,6 +96,14 @@ export async function POST(request: Request): Promise<Response> {
       const graded: GradeResult = {
         ...updated,
         nextReviewDate: updated.nextReviewDate.toISOString(),
+        previous: {
+          interval: record.interval,
+          repetitions: record.repetitions,
+          easeFactor: record.easeFactor,
+          nextReviewDate: record.nextReviewDate.toISOString(),
+          firstGradedAt: record.firstGradedAt?.toISOString() ?? null,
+          updatedAt: record.updatedAt.toISOString(),
+        },
       };
       return graded;
     });

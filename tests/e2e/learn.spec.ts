@@ -572,3 +572,286 @@ for (const theme of ["dark", "light"] as const) {
     });
   }
 }
+
+// Back to the previous card, with a real SM-2 undo.
+const backButton = (page: Page) => page.getByRole("button", { name: "Previous card" });
+
+async function recordsOf(cardId: string) {
+  return prisma.schedulingRecord.findMany({
+    where: { cardId, direction: "TERM_TO_DEFINITION" },
+  });
+}
+
+async function repetitionsOf(id: string) {
+  return (await prisma.schedulingRecord.findUniqueOrThrow({ where: { id } })).repetitions;
+}
+
+test("Back after a grade restores the record, and a regrade counts once", async ({ page }) => {
+  const email = await register(page);
+  const {
+    cards: [a],
+    flashcard,
+  } = await seed(email, [NEW_A]);
+  const [fwd] = await recordsOf(a.id);
+  const posts = await recordGrades(page);
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  await expect(page.getByText("1 / 2")).toBeVisible();
+
+  // First slot: Back is disabled and ArrowLeft does nothing.
+  await expect(backButton(page)).toBeDisabled();
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByText("1 / 2")).toBeVisible();
+
+  await page.keyboard.press("Space");
+  await page.keyboard.press("3");
+  await expect(page.getByText("2 / 2")).toBeVisible();
+  await expect.poll(() => repetitionsOf(fwd.id)).toBe(1);
+  await expect(backButton(page)).toBeEnabled();
+
+  await backButton(page).click();
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(page.getByText(hint)).toBeVisible();
+  const restored = await prisma.schedulingRecord.findUniqueOrThrow({ where: { id: fwd.id } });
+  expect(restored).toMatchObject({ interval: 0, repetitions: 0, easeFactor: 2.5, firstGradedAt: null });
+  expect(restored.nextReviewDate.getTime()).toBe(fwd.nextReviewDate.getTime());
+
+  await page.keyboard.press("Space");
+  await page.keyboard.press("3");
+  await expect(page.getByText("2 / 2")).toBeVisible();
+  await expect.poll(() => repetitionsOf(fwd.id)).toBe(1);
+  expect(posts).toEqual([`${fwd.id}:good`, `${fwd.id}:good`]);
+});
+
+test("Back after Again removes the practice copy and ArrowLeft works", async ({ page }) => {
+  const email = await register(page);
+  const {
+    cards: [a],
+    flashcard,
+  } = await seed(email, [NEW_A]);
+  const [fwd] = await recordsOf(a.id);
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  await expect(page.getByText("1 / 2")).toBeVisible();
+
+  await page.keyboard.press("Space");
+  await page.keyboard.press("1");
+  await expect(page.getByText("2 / 3")).toBeVisible();
+  await expect
+    .poll(async () => (await prisma.schedulingRecord.findUniqueOrThrow({ where: { id: fwd.id } })).interval)
+    .toBe(1);
+
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(page.getByText(hint)).toBeVisible();
+  await expect
+    .poll(async () => prisma.schedulingRecord.findUniqueOrThrow({ where: { id: fwd.id } }))
+    .toMatchObject({ interval: 0, repetitions: 0, firstGradedAt: null });
+});
+
+test("Back while the grade POST is pending waits for it, then undoes", async ({ page }) => {
+  const email = await register(page);
+  const {
+    cards: [a],
+    flashcard,
+  } = await seed(email, [NEW_A]);
+  const [fwd] = await recordsOf(a.id);
+  const undos: string[] = [];
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  let grades = 0;
+  await page.route("**/api/review/grade", async (route) => {
+    grades++;
+    await held;
+    await route.continue();
+  });
+  await page.route("**/api/review/undo", async (route) => {
+    undos.push(route.request().postDataJSON().schedulingRecordId);
+    await route.continue();
+  });
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("3");
+  await expect(page.getByText("2 / 2")).toBeVisible();
+
+  await backButton(page).click();
+  await page.waitForTimeout(300);
+  expect(undos).toEqual([]);
+  await expect(page.getByText("2 / 2")).toBeVisible();
+
+  // Keys during the undo are ignored: no second grade, no second undo.
+  await page.keyboard.press("Space");
+  await page.keyboard.press("3");
+  await page.keyboard.press("ArrowLeft");
+  await page.waitForTimeout(300);
+  expect(undos).toEqual([]);
+  expect(grades).toBe(1);
+  await expect(page.getByText("2 / 2")).toBeVisible();
+
+  release();
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  expect(undos).toEqual([fwd.id]);
+  const restored = await prisma.schedulingRecord.findUniqueOrThrow({ where: { id: fwd.id } });
+  expect(restored).toMatchObject({ repetitions: 0, firstGradedAt: null });
+});
+
+test("Back twice undoes two grades and restores both records", async ({ page }) => {
+  const email = await register(page);
+  const { flashcard } = await seed(email, [NEW_A, NEW_B]);
+  const all = () => prisma.schedulingRecord.findMany({ where: { card: { flashcardId: flashcard.id } } });
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  await expect(page.getByText("1 / 4")).toBeVisible();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("3");
+  await expect(page.getByText("2 / 4")).toBeVisible();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("3");
+  await expect(page.getByText("3 / 4")).toBeVisible();
+  await expect
+    .poll(async () => (await all()).filter((r) => r.repetitions === 1).length)
+    .toBe(2);
+
+  await backButton(page).click();
+  await expect(page.getByText("2 / 4")).toBeVisible();
+  await backButton(page).click();
+  await expect(page.getByText("1 / 4")).toBeVisible();
+  await expect(backButton(page)).toBeDisabled();
+
+  const rows = await all();
+  expect(rows.length).toBe(4);
+  for (const r of rows) {
+    expect(r).toMatchObject({ interval: 0, repetitions: 0, firstGradedAt: null });
+  }
+});
+
+test("a grade that fails after Back was clicked keeps the card and sends no undo", async ({
+  page,
+}) => {
+  const email = await register(page);
+  const { flashcard } = await seed(email, [NEW_A]);
+  let undos = 0;
+  let fail!: () => void;
+  const held = new Promise<void>((resolve) => (fail = resolve));
+  await page.route("**/api/review/grade", async (route) => {
+    await held;
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "INTERNAL_ERROR", message: "boom" } }),
+    });
+  });
+  await page.route("**/api/review/undo", (route) => {
+    undos++;
+    return route.continue();
+  });
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("3");
+  await expect(page.getByText("2 / 2")).toBeVisible();
+
+  await backButton(page).click();
+  fail();
+
+  await expect(page.getByRole("alert").filter({ hasText: "grade" })).toHaveText(
+    "Your grade wasn't saved. Grade this card again."
+  );
+  await expect(page.getByText("Weather idioms · Term → Definition").first()).toBeVisible();
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  expect(undos).toBe(0);
+});
+
+test("a failed undo shows the error line and keeps the card", async ({ page }) => {
+  const email = await register(page);
+  const { flashcard } = await seed(email, [NEW_A]);
+  await page.route("**/api/review/undo", (route) =>
+    route.fulfill({
+      status: 409,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "CONFLICT", message: "graded elsewhere" } }),
+    })
+  );
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("3");
+  await expect(page.getByText("2 / 2")).toBeVisible();
+
+  await backButton(page).click();
+  await expect(page.getByRole("alert").filter({ hasText: "go back" })).toHaveText("Couldn't go back, so this card stays. Try again.");
+  await expect(page.getByText("2 / 2")).toBeVisible();
+});
+
+test("Back after a failed grade sends no undo", async ({ page }) => {
+  const email = await register(page);
+  const { flashcard } = await seed(email, [NEW_A]);
+  let undos = 0;
+  await page.route("**/api/review/grade", (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "INTERNAL_ERROR", message: "boom" } }),
+    })
+  );
+  await page.route("**/api/review/undo", (route) => {
+    undos++;
+    return route.continue();
+  });
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("3");
+  await expect(page.getByRole("alert").filter({ hasText: "grade" })).toHaveText(
+    "Your grade wasn't saved. Grade this card again."
+  );
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(backButton(page)).toBeDisabled();
+  await page.keyboard.press("ArrowLeft");
+  expect(undos).toBe(0);
+});
+
+test("Back in a practice run is local only", async ({ page }) => {
+  const email = await register(page);
+  const { flashcard } = await seed(email, [{ ...LEARNED_DUE, dueIn: [1, 1] }]);
+  let requests = 0;
+  await page.route("**/api/review/{grade,undo}", (route) => {
+    requests++;
+    return route.continue();
+  });
+  await page.goto(`/flashcards/${flashcard.id}/learn`);
+  await page.getByRole("button", { name: "Study all cards again" }).click();
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("3");
+  await expect(page.getByText("2 / 2")).toBeVisible();
+  await backButton(page).click();
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(page.getByText(hint)).toBeVisible();
+  expect(requests).toBe(0);
+});
+
+for (const theme of ["dark", "light"] as const) {
+  for (const width of [1280, 390]) {
+    test(`learn Back screenshots (${theme}, ${width}px)`, async ({ page }) => {
+      mkdirSync("test-results/screenshots", { recursive: true });
+      await page.setViewportSize({ width, height: 900 });
+      const email = await register(page);
+      const { flashcard } = await seed(email, [NEW_A, NEW_B]);
+      await page.goto(`/flashcards/${flashcard.id}/learn`);
+      await expect(page.getByText("1 / 4")).toBeVisible();
+      await page.evaluate((t) => {
+        if (t === "light") document.documentElement.dataset.theme = "light";
+        else delete document.documentElement.dataset.theme;
+      }, theme);
+      const shot = (name: string) =>
+        page.screenshot({
+          path: `test-results/screenshots/learn-back-${name}-${theme}-${width}.png`,
+          animations: "disabled",
+        });
+      await shot("disabled");
+      await page.keyboard.press("Space");
+      await page.keyboard.press("3");
+      await expect(page.getByText("2 / 4")).toBeVisible();
+      await shot("enabled");
+    });
+  }
+}

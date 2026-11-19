@@ -4,6 +4,7 @@ import {
   gradeRequestSchema,
   learnQueueQuerySchema,
   reviewQueueQuerySchema,
+  undoRequestSchema,
 } from "@training-sanctum/domain";
 
 describe("gradeRequestSchema (spec-4-2)", () => {
@@ -28,6 +29,60 @@ describe("gradeRequestSchema (spec-4-2)", () => {
     expect(gradeRequestSchema.safeParse({ schedulingRecordId: 7, grade: "good" }).success).toBe(
       false
     );
+  });
+});
+
+describe("undoRequestSchema", () => {
+  const previous = {
+    interval: 6,
+    repetitions: 2,
+    easeFactor: 2.5,
+    nextReviewDate: "2026-11-19T00:00:00.000Z",
+    firstGradedAt: "2026-11-10T08:00:00.000Z",
+    updatedAt: "2026-11-13T08:00:00.000Z",
+  };
+  const base = {
+    schedulingRecordId: "r1",
+    previous,
+    expectedNextReviewDate: "2026-11-25T00:00:00.000Z",
+  };
+
+  it("accepts a full previous state, with firstGradedAt null too", () => {
+    expect(undoRequestSchema.safeParse(base).success).toBe(true);
+    expect(
+      undoRequestSchema.safeParse({ ...base, previous: { ...previous, firstGradedAt: null } })
+        .success
+    ).toBe(true);
+  });
+
+  it("rejects a missing previous, a missing field or a missing expected date", () => {
+    expect(undoRequestSchema.safeParse({ ...base, previous: undefined }).success).toBe(false);
+    const { updatedAt: _u, ...partial } = previous;
+    expect(undoRequestSchema.safeParse({ ...base, previous: partial }).success).toBe(false);
+    expect(
+      undoRequestSchema.safeParse({ ...base, expectedNextReviewDate: undefined }).success
+    ).toBe(false);
+    expect(undoRequestSchema.safeParse({ ...base, schedulingRecordId: "" }).success).toBe(false);
+  });
+
+  it("rejects out-of-range or malformed values", () => {
+    for (const bad of [
+      { easeFactor: 1.2 },
+      { easeFactor: 11 },
+      { interval: -1 },
+      { interval: 1.5 },
+      { repetitions: -3 },
+      { nextReviewDate: "soon" },
+      { nextReviewDate: "1" },
+      { updatedAt: "2026-11-13" },
+      { updatedAt: 5 },
+      { firstGradedAt: "never" },
+    ]) {
+      expect(
+        undoRequestSchema.safeParse({ ...base, previous: { ...previous, ...bad } }).success,
+        JSON.stringify(bad)
+      ).toBe(false);
+    }
   });
 });
 
