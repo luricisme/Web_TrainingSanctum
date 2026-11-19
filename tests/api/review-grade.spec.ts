@@ -136,6 +136,14 @@ test.describe("POST /api/review/grade", () => {
       repetitions: 1,
       easeFactor: 2.5,
       nextReviewDate: tomorrow.toISOString(),
+      previous: {
+        interval: 0,
+        repetitions: 0,
+        easeFactor: 2.5,
+        nextReviewDate: forward.nextReviewDate.toISOString(),
+        firstGradedAt: null,
+        updatedAt: forward.updatedAt.toISOString(),
+      },
     });
 
     const stored = await prisma.schedulingRecord.findUniqueOrThrow({ where: { id: forward.id } });

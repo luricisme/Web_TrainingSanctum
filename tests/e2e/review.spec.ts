@@ -718,3 +718,30 @@ for (const theme of ["dark", "light"] as const) {
     });
   }
 }
+
+test("Back returns to the previous card and undoes its grade", async ({ page }) => {
+  const email = await register(page);
+  const { card } = await seedCard(email);
+  await page.goto("/review");
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  const back = page.getByRole("button", { name: "Previous card" });
+  await expect(back).toBeDisabled();
+
+  await page.keyboard.press("Space");
+  await page.keyboard.press("3");
+  await expect(page.getByText("2 / 2")).toBeVisible();
+  await expect
+    .poll(async () =>
+      (await prisma.schedulingRecord.findMany({ where: { cardId: card.id } })).map((r) => r.repetitions)
+    )
+    .toContain(1);
+
+  await back.click();
+  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(page.getByText("Click the card, or press Space, to reveal")).toBeVisible();
+  await expect
+    .poll(async () =>
+      (await prisma.schedulingRecord.findMany({ where: { cardId: card.id } })).map((r) => r.repetitions)
+    )
+    .toEqual([0, 0]);
+});
