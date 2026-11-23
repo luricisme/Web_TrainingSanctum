@@ -154,6 +154,7 @@ export async function buildBackupExport(userId: string): Promise<BackupExport | 
         xpAwardedAt: t.xpAwardedAt ? iso(t.xpAwardedAt) : null,
         loggedMinutes: t.loggedMinutes,
         musicTrack: parseMusicTrack(t.musicTrack),
+        sortOrder: t.sortOrder,
         createdAt: iso(t.createdAt),
         updatedAt: iso(t.updatedAt),
       })),

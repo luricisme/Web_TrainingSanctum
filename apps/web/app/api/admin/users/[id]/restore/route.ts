@@ -233,6 +233,7 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
     xpAwardedAt: t.xpAwardedAt ? at(t.xpAwardedAt) : null,
     loggedMinutes: t.loggedMinutes,
     musicTrack: t.musicTrack ?? Prisma.JsonNull,
+    sortOrder: t.sortOrder,
     createdAt: at(t.createdAt),
     updatedAt: at(t.updatedAt),
   }));

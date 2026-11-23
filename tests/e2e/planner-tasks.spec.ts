@@ -312,3 +312,57 @@ test("music: category modal picks, saves and clears a track; a task inherits it"
   await page.getByRole("menuitem", { name: "Rename" }).click();
   await expect(modal.getByText("No music")).toBeVisible();
 });
+
+test("drag a task by its handle to change its priority; arrow keys move it too", async ({ page }) => {
+  const email = await register(page);
+  const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+  const today = await page.evaluate(() => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  });
+  const category = await prisma.taskCategory.create({
+    data: { userId: user.id, name: "Work", color: "LAVENDER" },
+  });
+  for (const [i, title] of ["First", "Second", "Third"].entries()) {
+    await prisma.task.create({
+      data: {
+        userId: user.id,
+        categoryId: category.id,
+        title,
+        localDay: new Date(`${today}T00:00:00.000Z`),
+        estimateMinutes: 30,
+        createdAt: new Date(Date.now() - (3 - i) * 60_000),
+      },
+    });
+  }
+  await page.goto("/planner");
+  const titles = () => page.locator("ul li p.text-body").allTextContents();
+  await expect.poll(titles).toEqual(["First", "Second", "Third"]);
+
+  // Drag Third above First.
+  const handle = page.getByRole("button", { name: "Reorder Third" });
+  const target = await page.getByRole("button", { name: "Reorder First" }).boundingBox();
+  const from = await handle.boundingBox();
+  await page.mouse.move(from!.x + from!.width / 2, from!.y + from!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from!.x + from!.width / 2, target!.y, { steps: 8 });
+  await shoot(page, "planner-tasks-dragging");
+  await page.mouse.up();
+  await expect.poll(titles).toEqual(["Third", "First", "Second"]);
+  await expect
+    .poll(async () =>
+      (await prisma.task.findMany({ where: { userId: user.id }, orderBy: { sortOrder: "asc" } })).map((t) => t.title)
+    )
+    .toEqual(["Third", "First", "Second"]);
+
+  // The order survives a reload; Arrow Down moves the focused handle's task one step.
+  await page.reload();
+  await expect.poll(titles).toEqual(["Third", "First", "Second"]);
+  await page.getByRole("button", { name: "Reorder Third" }).focus();
+  await page.keyboard.press("ArrowDown");
+  await expect.poll(titles).toEqual(["First", "Third", "Second"]);
+  await expect(page.getByRole("button", { name: "Reorder Third" })).toBeFocused();
+  await expect(page.getByRole("status").filter({ hasText: "Third moved to position 2 of 3." })).toBeAttached();
+  await shoot(page, "planner-tasks-reordered");
+});

@@ -379,6 +379,9 @@ model Task {
   loggedMinutes   Int          @default(0)
   /// Story 11.2: overrides the Category's track; null inherits it.
   musicTrack      Json?
+  /// Priority within its day, set by dragging in Tasks (0 = top). Null until
+  /// the day is first reordered, and again after the Task moves to another day.
+  sortOrder       Int?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 

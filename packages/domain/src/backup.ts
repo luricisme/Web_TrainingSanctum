@@ -64,6 +64,7 @@ export const backupPlannerSchema = z.object({
       xpAwardedAt: isoTimestamp.nullable(),
       loggedMinutes: z.number().int(),
       musicTrack: musicTrackSchema.nullable().default(null),
+      sortOrder: z.number().int().nullable().default(null),
       createdAt: isoTimestamp,
       updatedAt: isoTimestamp,
     })
