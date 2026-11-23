@@ -51,6 +51,7 @@ export function MusicPlayer({
   categoryError = false,
   focus,
   onSaved,
+  className = "flex flex-col gap-3",
 }: {
   taskId: string;
   /** The Task's own override, or null. */
@@ -63,6 +64,8 @@ export function MusicPlayer({
   /** The running focus session of this Task, or null (idle, break, or another Task). */
   focus: { id: string; endsAtMs: number } | null;
   onSaved: (task: TaskSummary) => void;
+  /** Surface classes; the screen embeds the strip in its own card. */
+  className?: string;
 }) {
   const panelId = useId();
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -216,10 +219,7 @@ export function MusicPlayer({
   }
 
   return (
-    <section
-      aria-label="Music"
-      className="mx-auto mt-8 flex max-w-review-card flex-col gap-3 rounded-md border border-divider bg-card p-4 shadow-low"
-    >
+    <section aria-label="Music" className={className}>
       <audio
         ref={audioRef}
         preload="none"
@@ -231,55 +231,60 @@ export function MusicPlayer({
         }}
       />
 
-      <div className="text-left">
-        {track ? (
-          <Attribution track={track} />
-        ) : unresolved ? (
-          <p className="text-body-sm text-foreground-tertiary">Loading track</p>
-        ) : effective === null ? (
-          categoryUnavailable ? null : (
-            <p className="text-body-sm text-foreground-tertiary">No music</p>
-          )
-        ) : trackQuery.isPending ? (
-          <p className="text-body-sm text-foreground-tertiary">Loading track</p>
-        ) : null}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        {track !== null ? (
-          <>
-            <button
-              type="button"
-              onClick={togglePause}
-              className={buttonQuiet}
-            >
-              {paused ? "Play" : "Pause"}
-            </button>
-            <label className="flex items-center gap-2 px-2 text-body-sm font-medium text-foreground-secondary">
-              Volume
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={volume}
-                onChange={(event) => changeVolume(Number(event.target.value))}
-                aria-valuetext={`${Math.round(volume * 100)}%`}
-                className="h-1 w-28 cursor-pointer accent-foreground focus-ring"
-              />
-            </label>
-          </>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-controls={panelId}
-          disabled={save.isPending || unresolved}
-          className={`${buttonQuiet} ${track !== null ? "ml-auto" : ""}`}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span
+          aria-hidden="true"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-elevated text-foreground-secondary"
         >
-          {effective === null ? "Choose a track" : "Change"}
-        </button>
+          <NoteIcon />
+        </span>
+        <div className="min-w-0 flex-1 text-left">
+          {track ? (
+            <Attribution track={track} />
+          ) : unresolved ? (
+            <p className="text-body-sm text-foreground-tertiary">Loading track</p>
+          ) : effective === null ? (
+            categoryUnavailable ? null : (
+              <p className="text-body-sm text-foreground-tertiary">No music</p>
+            )
+          ) : trackQuery.isPending ? (
+            <p className="text-body-sm text-foreground-tertiary">Loading track</p>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+          {track !== null ? (
+            <>
+              <button type="button" onClick={togglePause} className={buttonQuiet}>
+                {paused ? "Play" : "Pause"}
+              </button>
+              <label className="flex items-center gap-2 px-2 text-body-sm font-medium text-foreground-secondary">
+                <span className="sr-only">Volume</span>
+                <VolumeIcon />
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volume}
+                  onChange={(event) => changeVolume(Number(event.target.value))}
+                  aria-valuetext={`${Math.round(volume * 100)}%`}
+                  className="h-1 w-24 cursor-pointer accent-foreground focus-ring"
+                />
+              </label>
+            </>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-controls={panelId}
+            disabled={save.isPending || unresolved}
+            className={buttonQuiet}
+          >
+            {effective === null ? "Choose a track" : "Change"}
+          </button>
+        </div>
       </div>
 
       {open ? (
@@ -306,5 +311,24 @@ export function MusicPlayer({
         {unavailable ? UNAVAILABLE_LINE : ""}
       </p>
     </section>
+  );
+}
+
+function NoteIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18V5l12-2v13" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="18" cy="16" r="3" />
+    </svg>
+  );
+}
+
+function VolumeIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M11 5 6 9H2v6h4l5 4V5z" />
+      <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+    </svg>
   );
 }
