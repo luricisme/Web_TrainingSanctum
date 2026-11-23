@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -15,6 +15,7 @@ import {
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { isTextField } from "@/lib/keyboard";
 import { SectionMarker } from "@/app/components/section-marker";
+import { useFocusMode } from "../../focus-mode";
 import {
   buttonPrimary,
   buttonQuiet,
@@ -130,6 +131,12 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
   const [cardHidden, setCardHidden] = useState(false);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Focus mode: Start opens a full-screen layer with only the clock; it stays
+  // between sessions until the user leaves it (Exit, Esc) or the plan needs a
+  // decision (the Done card, an exhausted estimate, a done Task).
+  const [focusWanted, setFocusWanted] = useState(false);
+  const [loadSynced, setLoadSynced] = useState(false);
+  const enteredFullscreen = useRef(false);
 
   const taskQuery = useQuery({
     queryKey: taskKey(taskId),
@@ -293,9 +300,78 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
     runningQuery.isSuccess && !mine && !running && !!task && !task.done && !cardOpen && (next?.kind === "FOCUS" || next?.kind === "BREAK");
   const busy = start.isPending || stop.isPending || done.isPending;
 
+  // Opening the page on a session already running here goes straight to focus.
+  if (!loadSynced && runningQuery.isSuccess && taskQuery.isSuccess) {
+    setLoadSynced(true);
+    if (mine) setFocusWanted(true);
+  }
+  const focusBlocked =
+    !task || task.done || cardOpen || (!mine && next?.kind !== "FOCUS" && next?.kind !== "BREAK");
+  if (focusWanted && focusBlocked && task && next) setFocusWanted(false);
+  const focusOn = focusWanted && !focusBlocked;
+  useFocusMode(focusOn);
+
+  /** A user gesture (click, Space) may take the whole screen; refusal is fine. */
+  function enterFocus() {
+    setFocusWanted(true);
+    const root = document.documentElement;
+    if (document.fullscreenElement || typeof root.requestFullscreen !== "function") return;
+    root
+      .requestFullscreen({ navigationUI: "hide" })
+      .then(() => {
+        enteredFullscreen.current = true;
+      })
+      .catch(() => {});
+  }
+
+  function leaveFocus() {
+    setFocusWanted(false);
+  }
+
+  // Leaving focus (any reason) gives the screen back; leaving fullscreen with
+  // the browser's own Esc leaves focus too. The page behind does not scroll.
+  useEffect(() => {
+    if (!focusOn) {
+      if (enteredFullscreen.current && document.fullscreenElement) {
+        void document.exitFullscreen().catch(() => {});
+      }
+      enteredFullscreen.current = false;
+      return;
+    }
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onFullscreenChange() {
+      if (!document.fullscreenElement && enteredFullscreen.current) {
+        enteredFullscreen.current = false;
+        setFocusWanted(false);
+      }
+    }
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => {
+      document.body.style.overflow = overflow;
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  }, [focusOn]);
+
+  // Unmounting (Change task, another Planner tab) leaves fullscreen.
+  useEffect(
+    () => () => {
+      if (enteredFullscreen.current && document.fullscreenElement) {
+        void document.exitFullscreen().catch(() => {});
+      }
+    },
+    []
+  );
+
   function startNext() {
     if (!next || (next.kind !== "FOCUS" && next.kind !== "BREAK")) return;
     start.mutate({ kind: next.kind, overrun: next.kind === "FOCUS" && next.overrun });
+  }
+
+  /** Start pressed by the user (not auto-start): it also opens focus mode. */
+  function startByUser() {
+    enterFocus();
+    startNext();
   }
 
   useEffect(() => {
@@ -310,7 +386,7 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
     spaceRef.current = () => {
       if (busy) return;
       if (mine) stop.mutate(mine.id);
-      else if (startable) startNext();
+      else if (startable) startByUser();
     };
   });
   useEffect(() => {
@@ -319,6 +395,11 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
       if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
       if (editing || isTextField(event.target)) return;
       if (event.key === "Escape") {
+        if (focusOn) {
+          event.preventDefault();
+          setFocusWanted(false);
+          return;
+        }
         if (!cardOpen) return;
         event.preventDefault();
         setNotYet(false);
@@ -333,7 +414,7 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [cardOpen, editing]);
+  }, [cardOpen, editing, focusOn]);
 
   if (taskQuery.isError && taskQuery.error instanceof ApiError && taskQuery.error.status === 404) {
     return <TaskPicker notice="That Task could not be found. Choose another." />;
@@ -395,6 +476,32 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
       ? `${label} · ${formatClock(clockMs)}`
       : "";
   const warn = plan.over || mine?.overrun === true;
+  const progress = mine ? 1 - clockMs / (mine.plannedMinutes * 60000) : 0;
+  const ringTone = warn ? "text-warning" : mine?.kind === "BREAK" ? "text-success" : "text-foreground";
+  const endsAt = mine
+    ? new Date(new Date(mine.startedAt).getTime() + mine.plannedMinutes * 60000).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+  const tint = tintFor(task.category.color);
+  const logged = task.estimateMinutes > 0 ? Math.min(task.loggedMinutes / task.estimateMinutes, 1) : 0;
+
+  const chip = (
+    <span
+      className={`inline-flex w-fit max-w-40 shrink-0 items-center truncate rounded-full border px-3 py-0.5 text-caption text-foreground ${tint}`}
+    >
+      {task.category.name}
+    </span>
+  );
+  const minutes = (
+    <span
+      className={`shrink-0 font-mono text-caption ${plan.over ? "text-warning" : "text-foreground-secondary"}`}
+      aria-label={`${task.loggedMinutes} of ${task.estimateMinutes} minutes${plan.over ? ", over estimate" : ""}`}
+    >
+      {task.loggedMinutes} / {task.estimateMinutes} min
+    </span>
+  );
 
   return (
     <section aria-labelledby="planner-pomodoro">
@@ -407,159 +514,223 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
         </Link>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <span
-          className={`inline-flex w-fit max-w-40 shrink-0 items-center truncate rounded-full border px-3 py-0.5 text-caption text-foreground ${tintFor(task.category.color)}`}
-        >
-          {task.category.name}
-        </span>
-        <h3 className="min-w-0 break-words text-heading-3 text-foreground">{task.title}</h3>
-        <span
-          className={`font-mono text-caption ${plan.over ? "text-warning" : "text-foreground-secondary"}`}
-          aria-label={`${task.loggedMinutes} of ${task.estimateMinutes} minutes${plan.over ? ", over estimate" : ""}`}
-        >
-          {task.loggedMinutes} / {task.estimateMinutes}
-        </span>
-      </div>
+      {/* One tree for both layouts, so the music player keeps playing when the
+          screen switches between the card and the full-screen focus layer. */}
+      <div
+        role={focusOn ? "dialog" : undefined}
+        aria-modal={focusOn ? true : undefined}
+        aria-label={focusOn ? `Focus: ${task.title}` : undefined}
+        className={
+          focusOn
+            ? "fixed inset-0 z-50 flex flex-col overflow-y-auto bg-background focus-enter"
+            : "mx-auto mt-6 max-w-panel overflow-hidden rounded-lg border border-divider bg-card shadow-low"
+        }
+      >
+        {focusOn ? (
+          <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">
+            <div
+              className={`absolute left-1/2 top-1/2 size-[min(115vmin,64rem)] rounded-full opacity-70 blur-3xl focus-glow ${tint.split(" ")[0]}`}
+            />
+          </div>
+        ) : null}
 
-      {elsewhere && running ? (
-        <p className="mt-6 rounded-md bg-elevated px-4 py-3 text-body text-foreground">
-          A session is running on {elsewhereTask.data?.task.title ?? "another Task"} —{" "}
-          <span className="font-mono">{formatClock(remainingMs(running, now))}</span> left.{" "}
-          <Link href={`/planner/pomodoro?task=${running.taskId}`} className={linkClass}>
-            Go to it
-          </Link>
-        </p>
-      ) : null}
+        {/* Task header */}
+        <div className={focusOn ? "relative px-4 pt-5 sm:px-8 sm:pt-6" : "px-5 pt-5 sm:px-6 sm:pt-6"}>
+          <div className="flex items-start gap-3">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
+              {chip}
+              <h3
+                className={`min-w-0 break-words text-foreground ${focusOn ? "text-body font-semibold" : "text-heading-3"}`}
+              >
+                {task.title}
+              </h3>
+            </div>
+            {focusOn ? (
+              <p className="hidden shrink-0 pt-2.5 text-caption text-foreground-tertiary md:block">
+                Space to {mine ? "stop" : "start"} · Esc to leave
+              </p>
+            ) : null}
+            {focusOn ? (
+              <button type="button" onClick={leaveFocus} className={`${buttonQuiet} shrink-0`}>
+                <span className="inline-flex items-center gap-2">
+                  <ShrinkIcon />
+                  Exit focus
+                </span>
+              </button>
+            ) : (
+              <div className="shrink-0 pt-1">{minutes}</div>
+            )}
+          </div>
+          {focusOn ? null : (
+            <div
+              aria-hidden="true"
+              className="mt-4 h-1.5 overflow-hidden rounded-full bg-elevated"
+            >
+              <div
+                className={`h-full rounded-full transition-[width] duration-500 ${plan.over ? "bg-warning" : "bg-foreground"}`}
+                style={{ width: `${logged * 100}%` }}
+              />
+            </div>
+          )}
 
-      <PlanStrip pills={plan.pills} tint={tintFor(task.category.color)} />
-
-      <div className="mx-auto mt-12 flex max-w-review-card flex-col items-center gap-6 text-center">
-        <div className="flex flex-col items-center gap-2">
-          <p className="min-h-5 text-overline uppercase text-foreground-tertiary">{caption}</p>
-          <p
-            role="timer"
-            aria-label={`${label}, ${formatClock(clockMs)} left`}
-            className={`font-mono text-display font-semibold tabular-nums ${warn ? "text-warning" : "text-foreground"}`}
-          >
-            {formatClock(clockMs)}
-          </p>
+          {elsewhere && running ? (
+            <p className="mt-4 rounded-md bg-elevated px-4 py-3 text-body-sm text-foreground">
+              A session is running on {elsewhereTask.data?.task.title ?? "another Task"} —{" "}
+              <span className="font-mono">{formatClock(remainingMs(running, now))}</span> left.{" "}
+              <Link href={`/planner/pomodoro?task=${running.taskId}`} className={linkClass}>
+                Go to it
+              </Link>
+            </p>
+          ) : null}
         </div>
 
-        {mine ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => stop.mutate(mine.id)}
-            aria-keyshortcuts="Space"
-            className={buttonSecondary}
+        {/* Clock */}
+        <div
+          className={`relative flex flex-col items-center text-center ${focusOn ? "flex-1 justify-center gap-6 px-4 py-6" : "gap-6 px-5 pb-8 pt-8 sm:px-6"}`}
+        >
+          <ClockRing
+            progress={progress}
+            tone={ringTone}
+            className={focusOn ? "size-[min(50vmin,30rem)]" : "size-60"}
           >
-            Stop
-          </button>
-        ) : cardOpen ? null : (
-          <button
-            type="button"
-            disabled={!startable || busy}
-            onClick={startNext}
-            aria-keyshortcuts="Space"
-            className={startable ? buttonPrimary : buttonSecondary}
-          >
-            Start
-          </button>
-        )}
+            <p
+              className={`min-h-5 text-overline uppercase ${focusOn ? "text-foreground-secondary" : "text-foreground-tertiary"}`}
+            >
+              {caption}
+            </p>
+            <p
+              role="timer"
+              aria-label={`${label}, ${formatClock(clockMs)} left`}
+              className={`font-sans font-bold leading-none tracking-tight tabular-nums ${focusOn ? "text-[min(12vmin,7rem)]" : "text-[3.75rem]"} ${warn ? "text-warning" : "text-foreground"}`}
+            >
+              {formatClock(clockMs)}
+            </p>
+            <p className="min-h-5 text-body-sm text-foreground-tertiary">
+              {endsAt ? `Ends ${endsAt}` : null}
+            </p>
+          </ClockRing>
 
-        {task.done ? (
-          <p className="text-body text-foreground-secondary">This Task is done.</p>
-        ) : next.kind === "EXHAUSTED" && !cardOpen ? (
-          <p className="text-body text-foreground-secondary">
-            Edit the estimate to continue.{" "}
-            <button type="button" onClick={() => setEditing(true)} className={linkClass}>
-              Edit
-            </button>
-          </p>
-        ) : null}
-
-        {error ? (
-          <p role="alert" className={`${formErrorClass} text-left`}>
-            {error}
-          </p>
-        ) : null}
-      </div>
-
-      <MusicPlayer
-        taskId={taskId}
-        ownTrack={task.musicTrack}
-        categoryTrack={
-          categoriesQuery.data?.find((c) => c.id === task.category.id)?.musicTrack ?? null
-        }
-        categoryLoading={categoriesQuery.isPending}
-        categoryError={categoriesQuery.isError}
-        focus={
-          mine && mine.kind === "FOCUS"
-            ? { id: mine.id, endsAtMs: new Date(mine.startedAt).getTime() + mine.plannedMinutes * 60000 }
-            : null
-        }
-        onSaved={(saved) => {
-          queryClient.setQueryData<TaskWithSessions>(taskKey(taskId), (old) =>
-            old ? { ...old, task: saved } : old
-          );
-          void queryClient.invalidateQueries({ queryKey: PLANNER_TASKS_KEY });
-        }}
-      />
-
-      {cardOpen ? (
-        <div className="mx-auto mt-12 max-w-review-card rounded-lg border border-divider bg-card p-6 shadow-low">
-          <h3 className="text-heading-3 text-foreground">Done?</h3>
-          {notYet ? (
-            <div className="mt-4 flex flex-wrap items-center gap-4">
-              {next.kind === "FOCUS" && next.overrun ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={startNext}
-                  className={buttonPrimary}
-                >
-                  +1 session ({plan.overrunLeft} of {MAX_OVERRUN_SESSIONS} left)
-                </button>
+          {cardOpen ? (
+            <div className="w-full max-w-sm rounded-lg border border-divider bg-background p-5 text-left">
+              <h3 className="text-heading-3 text-foreground">Done?</h3>
+              {notYet ? (
+                <div className="mt-4 flex flex-wrap items-center gap-4">
+                  {next.kind === "FOCUS" && next.overrun ? (
+                    <button type="button" disabled={busy} onClick={startByUser} className={buttonPrimary}>
+                      +1 session ({plan.overrunLeft} of {MAX_OVERRUN_SESSIONS} left)
+                    </button>
+                  ) : (
+                    <p className="text-body text-foreground-secondary">
+                      Edit the estimate to continue.{" "}
+                      <button type="button" onClick={() => setEditing(true)} className={linkClass}>
+                        Edit
+                      </button>
+                    </p>
+                  )}
+                </div>
               ) : (
-                <p className="text-body text-foreground-secondary">
-                  Edit the estimate to continue.{" "}
-                  <button type="button" onClick={() => setEditing(true)} className={linkClass}>
-                    Edit
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button type="button" disabled={busy} onClick={() => done.mutate()} className={buttonPrimary}>
+                    Done
                   </button>
-                </p>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setNotYet(true)}
+                    className={buttonSecondary}
+                  >
+                    Not yet
+                  </button>
+                </div>
               )}
             </div>
           ) : (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => done.mutate()}
-                className={buttonPrimary}
-              >
-                Done
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setNotYet(true)}
-                className={buttonSecondary}
-              >
-                Not yet
-              </button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {mine ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => stop.mutate(mine.id)}
+                  aria-keyshortcuts="Space"
+                  className={`${buttonSecondary} min-w-32`}
+                >
+                  Stop
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!startable || busy}
+                  onClick={startByUser}
+                  aria-keyshortcuts="Space"
+                  className={`${startable ? buttonPrimary : buttonSecondary} min-w-32`}
+                >
+                  Start
+                </button>
+              )}
+              {mine && !focusOn ? (
+                <button type="button" onClick={enterFocus} className={buttonQuiet}>
+                  <span className="inline-flex items-center gap-2">
+                    <ExpandIcon />
+                    Focus mode
+                  </span>
+                </button>
+              ) : null}
             </div>
           )}
-        </div>
-      ) : null}
 
-      {cardHidden && !mine && !task.done && next.kind === "DONE_CARD" ? (
-        <div className="mx-auto mt-12 max-w-review-card text-center">
-          <button type="button" onClick={() => setCardHidden(false)} className={buttonQuiet}>
-            Is this Task done?
-          </button>
+          {task.done ? (
+            <p className="text-body text-foreground-secondary">This Task is done.</p>
+          ) : next.kind === "EXHAUSTED" && !cardOpen ? (
+            <p className="text-body text-foreground-secondary">
+              Edit the estimate to continue.{" "}
+              <button type="button" onClick={() => setEditing(true)} className={linkClass}>
+                Edit
+              </button>
+            </p>
+          ) : null}
+
+          {cardHidden && !mine && !task.done && next.kind === "DONE_CARD" ? (
+            <button type="button" onClick={() => setCardHidden(false)} className={buttonQuiet}>
+              Is this Task done?
+            </button>
+          ) : null}
+
+          {error ? (
+            <p role="alert" className={`${formErrorClass} text-left`}>
+              {error}
+            </p>
+          ) : null}
+
+          <PlanStrip pills={plan.pills} tint={tint} />
+
         </div>
-      ) : null}
+
+        <MusicPlayer
+          className={
+            focusOn
+              ? "relative mx-auto mb-6 flex w-[calc(100%-2rem)] max-w-2xl flex-col gap-3 rounded-lg border border-divider bg-card/80 p-3 shadow-medium backdrop-blur"
+              : "flex flex-col gap-3 border-t border-divider bg-background/60 px-5 py-4 sm:px-6"
+          }
+          taskId={taskId}
+          ownTrack={task.musicTrack}
+          categoryTrack={
+            categoriesQuery.data?.find((c) => c.id === task.category.id)?.musicTrack ?? null
+          }
+          categoryLoading={categoriesQuery.isPending}
+          categoryError={categoriesQuery.isError}
+          focus={
+            mine && mine.kind === "FOCUS"
+              ? { id: mine.id, endsAtMs: new Date(mine.startedAt).getTime() + mine.plannedMinutes * 60000 }
+              : null
+          }
+          onSaved={(saved) => {
+            queryClient.setQueryData<TaskWithSessions>(taskKey(taskId), (old) =>
+              old ? { ...old, task: saved } : old
+            );
+            void queryClient.invalidateQueries({ queryKey: PLANNER_TASKS_KEY });
+          }}
+        />
+      </div>
 
       {editing ? (
         <TaskModal
@@ -577,10 +748,64 @@ function TaskPomodoro({ taskId }: { taskId: string }) {
   );
 }
 
+/** The countdown ring: a hairline track and an arc for the time already spent. */
+function ClockRing({
+  progress,
+  tone,
+  className,
+  children,
+}: {
+  progress: number;
+  tone: string;
+  className: string;
+  children: ReactNode;
+}) {
+  const p = Math.min(Math.max(progress, 0), 1);
+  return (
+    <div className={`relative grid shrink-0 place-items-center ${className}`}>
+      <svg viewBox="0 0 100 100" aria-hidden="true" className={`absolute inset-0 size-full -rotate-90 ${tone}`}>
+        <circle cx="50" cy="50" r="47" fill="none" stroke="var(--color-divider)" strokeWidth="1.25" />
+        {p > 0 ? (
+          <circle
+            cx="50"
+            cy="50"
+            r="47"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            pathLength={100}
+            strokeDasharray="100"
+            strokeDashoffset={100 - p * 100}
+            className="transition-[stroke-dashoffset] duration-1000 ease-linear"
+          />
+        ) : null}
+      </svg>
+      <div className="relative flex flex-col items-center gap-3">{children}</div>
+    </div>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+    </svg>
+  );
+}
+
+function ShrinkIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
+    </svg>
+  );
+}
+
 function PlanStrip({ pills, tint }: { pills: PomodoroPill[]; tint: string }) {
   if (pills.length === 0) return null;
   return (
-    <ol aria-label="Plan" className="mt-6 flex flex-wrap items-center gap-2">
+    <ol aria-label="Plan" className="flex flex-wrap items-center justify-center gap-2">
       {pills.map((pill, index) => {
         const current = pill.state === "current";
         const surface = current

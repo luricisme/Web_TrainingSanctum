@@ -372,3 +372,65 @@ test.describe("/api/planner/tasks overdue", () => {
     expect((await (await other.request.get(`${base}/api/planner/tasks/overdue`)).json()).data).toEqual({ count: 1 });
   });
 });
+
+// Drag to reorder: a day's open Tasks get a priority; new and moved Tasks join the end.
+test.describe("PUT /api/planner/tasks/reorder", () => {
+  test("signed-out requests return 401", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const ctx = await playwright.request.newContext();
+    const res = await ctx.put(`${base}/api/planner/tasks/reorder`, { data: { day: DAY, ids: ["x"] } });
+    expect(res.status()).toBe(401);
+  });
+
+  test("orders the day, overrides start times, and new or moved tasks join the end", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    const a = await add(s, base, { title: "A", startTime: "08:00" });
+    const b = await add(s, base, { title: "B" });
+    const c = await add(s, base, { title: "C" });
+    const titles = async () =>
+      ((await (await s.request.get(`${base}/api/planner/tasks?day=${DAY}`)).json()).data as Task[]).map(
+        (t) => t.title
+      );
+    expect(await titles()).toEqual(["A", "B", "C"]);
+
+    const res = await s.request.put(`${base}/api/planner/tasks/reorder`, {
+      data: { day: DAY, ids: [c.id, a.id, b.id] },
+    });
+    expect(res.status()).toBe(200);
+    expect(((await res.json()).data as Task[]).map((t) => t.title)).toEqual(["C", "A", "B"]);
+    expect(await titles()).toEqual(["C", "A", "B"]);
+
+    // A new Task joins the end; a done one still sinks below the open ones.
+    await add(s, base, { title: "D" });
+    await markDone(s, base, c.id);
+    expect(await titles()).toEqual(["A", "B", "D", "C"]);
+
+    // Moving a Task to another day and back drops its old place.
+    await s.request.patch(`${base}/api/planner/tasks/${a.id}`, { data: { localDay: "2026-11-18" } });
+    await s.request.patch(`${base}/api/planner/tasks/${a.id}`, { data: { localDay: DAY } });
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: a.id } })).sortOrder).toBeNull();
+    expect(await titles()).toEqual(["B", "A", "D", "C"]);
+  });
+
+  test("refuses ids from another day or another user, and duplicates", async ({ playwright, baseURL }) => {
+    const base = baseURL ?? "http://localhost:3100";
+    const s = await newUser(playwright, base);
+    const other = await newUser(playwright, base);
+    const mine = await add(s, base);
+    const elsewhere = await add(s, base, { localDay: "2026-11-18" });
+    const theirs = await add(other, base);
+
+    const put = (ids: string[]) =>
+      s.request.put(`${base}/api/planner/tasks/reorder`, { data: { day: DAY, ids } });
+    expect((await put([mine.id, elsewhere.id])).status()).toBe(409);
+    expect((await put([mine.id, theirs.id])).status()).toBe(409);
+    expect((await put([mine.id, mine.id])).status()).toBe(400);
+    expect((await put([])).status()).toBe(400);
+    const untouched = await prisma.task.findMany({ where: { id: { in: [mine.id, theirs.id] } } });
+    expect(untouched.every((t) => t.sortOrder === null)).toBe(true);
+  });
+});

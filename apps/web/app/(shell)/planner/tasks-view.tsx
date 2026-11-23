@@ -1,6 +1,14 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import {
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent,
+  type PointerEvent,
+  type Ref,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { OverdueSummary, TaskSummary } from "@training-sanctum/domain";
@@ -67,6 +75,91 @@ export function TasksView() {
   const dayLabel = day ? (isToday ? "today" : formatDay(day)) : "";
 
   const doneCount = tasks.filter((t) => t.done).length;
+  const queryClient = useQueryClient();
+
+  // Drag to reorder: the open Tasks are the sortable part; done ones stay below.
+  // `local` shows a drop at once and holds until the server's list replaces
+  // the data it was made from (so the rows never jump back for a frame).
+  const [local, setLocal] = useState<{ ids: string[]; base: TaskSummary[] | undefined } | null>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const [announce, setAnnounce] = useState("");
+  const rowRefs = useRef(new Map<string, HTMLLIElement>());
+  const handleRefs = useRef(new Map<string, HTMLButtonElement>());
+  const hintId = useId();
+
+  const reorder = useMutation({
+    mutationFn: (ids: string[]) =>
+      apiFetch<TaskSummary[]>("/api/planner/tasks/reorder", { method: "PUT", json: { day, ids } }),
+    onSuccess: (list) => {
+      if (day) queryClient.setQueryData(plannerTasksKey(day), list);
+      void queryClient.invalidateQueries({ queryKey: PLANNER_TASKS_KEY });
+    },
+    onError: () => {
+      setLocal(null);
+      void queryClient.invalidateQueries({ queryKey: PLANNER_TASKS_KEY });
+    },
+  });
+  if (local && data !== local.base && !reorder.isPending) setLocal(null);
+
+  const serverOpen = tasks.filter((t) => !t.done);
+  const openTasks = local
+    ? [
+        ...local.ids.flatMap((id) => serverOpen.filter((t) => t.id === id)),
+        ...serverOpen.filter((t) => !local.ids.includes(t.id)),
+      ]
+    : serverOpen;
+  const shown = [...openTasks, ...tasks.filter((t) => t.done)];
+
+  function commitOrder(ids: string[], movedId: string) {
+    setLocal({ ids, base: data });
+    reorder.mutate(ids);
+    const task = openTasks.find((t) => t.id === movedId);
+    if (task) setAnnounce(`${task.title} moved to position ${ids.indexOf(movedId) + 1} of ${ids.length}.`);
+  }
+
+  function beginDrag(id: string, event: PointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0 || openTasks.length < 2) return;
+    const from = openTasks.findIndex((t) => t.id === id);
+    const rects = openTasks.map((t) => rowRefs.current.get(t.id)?.getBoundingClientRect());
+    if (from < 0 || rects.some((r) => !r)) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDrag({
+      id,
+      from,
+      to: from,
+      dy: 0,
+      startY: event.clientY,
+      tops: rects.map((r) => r!.top),
+      heights: rects.map((r) => r!.height),
+    });
+  }
+
+  function moveDrag(event: PointerEvent<HTMLButtonElement>) {
+    if (!drag) return;
+    const dy = event.clientY - drag.startY;
+    setDrag({ ...drag, dy, to: dropIndex(drag, dy) });
+  }
+
+  function endDrag() {
+    if (!drag) return;
+    if (drag.to !== drag.from) {
+      commitOrder(moveItem(openTasks.map((t) => t.id), drag.from, drag.to), drag.id);
+    }
+    setDrag(null);
+  }
+
+  function keyMove(id: string, event: KeyboardEvent<HTMLButtonElement>) {
+    const step = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    const from = openTasks.findIndex((t) => t.id === id);
+    const to = from + step;
+    if (from < 0 || to < 0 || to >= openTasks.length) return;
+    commitOrder(moveItem(openTasks.map((t) => t.id), from, to), id);
+    // The row moves in the DOM; keep the keyboard on its handle.
+    requestAnimationFrame(() => handleRefs.current.get(id)?.focus());
+  }
 
   return (
     <section aria-labelledby="planner-tasks">
@@ -148,17 +241,56 @@ export function TasksView() {
             <p className="text-body text-foreground-secondary">Nothing planned for {dayLabel}.</p>
           </div>
         ) : (
-          <ul className="divide-y divide-divider rounded-lg border border-divider bg-card">
-            {tasks.map((task) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                onEdit={() => setDialog({ kind: "edit", task })}
-                onDelete={() => setDeleting(task)}
-              />
-            ))}
-          </ul>
+          <>
+            <ul className="divide-y divide-divider rounded-lg border border-divider bg-card">
+              {shown.map((task, index) => {
+                const sortable = !task.done && openTasks.length > 1;
+                return (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    onEdit={() => setDialog({ kind: "edit", task })}
+                    onDelete={() => setDeleting(task)}
+                    rowRef={(el) => {
+                      if (el) rowRefs.current.set(task.id, el);
+                      else rowRefs.current.delete(task.id);
+                    }}
+                    offset={drag && !task.done ? rowOffset(drag, index) : 0}
+                    dragging={drag?.id === task.id}
+                    settling={drag !== null}
+                    handleRef={(el) => {
+                      if (el) handleRefs.current.set(task.id, el);
+                      else handleRefs.current.delete(task.id);
+                    }}
+                    handle={
+                      sortable
+                        ? {
+                            hintId,
+                            onPointerDown: (e) => beginDrag(task.id, e),
+                            onPointerMove: moveDrag,
+                            onPointerUp: endDrag,
+                            onPointerCancel: () => setDrag(null),
+                            onKeyDown: (e) => keyMove(task.id, e),
+                          }
+                        : null
+                    }
+                  />
+                );
+              })}
+            </ul>
+            <p id={hintId} className="sr-only">
+              Drag, or press Arrow Up or Arrow Down, to change the priority of the task.
+            </p>
+            {reorder.isError ? (
+              <p role="alert" className="mt-2 text-caption text-error">
+                Could not save the new order.
+              </p>
+            ) : null}
+          </>
         )}
+        <p role="status" aria-live="polite" className="sr-only">
+          {announce}
+        </p>
       </div>
 
       {categoriesOpen ? <CategoriesModal onClose={() => setCategoriesOpen(false)} /> : null}
@@ -210,14 +342,75 @@ function OverdueStrip({ count }: { count: number }) {
   );
 }
 
+interface DragState {
+  id: string;
+  from: number;
+  to: number;
+  dy: number;
+  startY: number;
+  /** Viewport tops and heights of the open rows when the drag began. */
+  tops: number[];
+  heights: number[];
+}
+
+/** Where the dragged row would land: past the midpoint of a neighbour, it takes its place. */
+function dropIndex(drag: DragState, dy: number): number {
+  const { from, tops, heights } = drag;
+  const center = tops[from]! + heights[from]! / 2 + dy;
+  let to = from;
+  for (let j = from + 1; j < tops.length; j++) if (center > tops[j]! + heights[j]! / 2) to = j;
+  for (let j = from - 1; j >= 0; j--) if (center < tops[j]! + heights[j]! / 2) to = j;
+  return to;
+}
+
+/** The dragged row follows the pointer; the rows it passes step aside by its height. */
+function rowOffset(drag: DragState, index: number): number {
+  const { from, to, dy, heights } = drag;
+  if (index === from) return dy;
+  const span = heights[from]!;
+  if (from < to && index > from && index <= to) return -span;
+  if (to < from && index >= to && index < from) return span;
+  return 0;
+}
+
+function moveItem<T>(list: T[], from: number, to: number): T[] {
+  const next = [...list];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item!);
+  return next;
+}
+
+interface DragHandle {
+  hintId: string;
+  onPointerDown: (event: PointerEvent<HTMLButtonElement>) => void;
+  onPointerMove: (event: PointerEvent<HTMLButtonElement>) => void;
+  onPointerUp: () => void;
+  onPointerCancel: () => void;
+  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
+}
+
 function TaskRow({
   task,
   onEdit,
   onDelete,
+  rowRef,
+  handleRef,
+  handle,
+  offset,
+  dragging,
+  settling,
 }: {
   task: TaskSummary;
   onEdit: () => void;
   onDelete: () => void;
+  rowRef: Ref<HTMLLIElement>;
+  handleRef: Ref<HTMLButtonElement>;
+  /** Null for a done Task, or when there is nothing to reorder. */
+  handle: DragHandle | null;
+  offset: number;
+  dragging: boolean;
+  /** A drag is in progress: the other rows glide aside. */
+  settling: boolean;
 }) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -249,7 +442,37 @@ function TaskRow({
   const over = task.loggedMinutes > task.estimateMinutes;
 
   return (
-    <li className={`flex items-center gap-3 py-3 pl-4 pr-2`}>
+    <li
+      ref={rowRef}
+      style={offset !== 0 ? { transform: `translateY(${offset}px)` } : undefined}
+      className={`flex items-center gap-2 py-3 pl-1.5 pr-2 sm:gap-3 ${
+        dragging
+          ? "relative z-10 rounded-md bg-card shadow-medium ring-1 ring-border"
+          : settling
+            ? "transition-transform duration-150 ease-out motion-reduce:transition-none"
+            : ""
+      }`}
+    >
+      {handle ? (
+        <button
+          type="button"
+          ref={handleRef}
+          aria-label={`Reorder ${task.title}`}
+          aria-describedby={handle.hintId}
+          onPointerDown={handle.onPointerDown}
+          onPointerMove={handle.onPointerMove}
+          onPointerUp={handle.onPointerUp}
+          onPointerCancel={handle.onPointerCancel}
+          onKeyDown={handle.onKeyDown}
+          className={`flex h-8 w-6 shrink-0 touch-none items-center justify-center rounded-sm transition-state hover:bg-row-hover hover:text-foreground focus-ring ${
+            dragging ? "cursor-grabbing text-foreground" : "cursor-grab text-foreground-tertiary"
+          }`}
+        >
+          <GripIcon />
+        </button>
+      ) : (
+        <span aria-hidden="true" className="w-6 shrink-0" />
+      )}
       <input
         type="checkbox"
         checked={optimistic ?? task.done}
@@ -344,6 +567,19 @@ function DayPicker({ day, onPick }: { day: string | null; onPick: (day: string) 
         className="pointer-events-none absolute inset-0 opacity-0"
       />
     </div>
+  );
+}
+
+function GripIcon() {
+  return (
+    <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" aria-hidden="true">
+      <circle cx="3.5" cy="3" r="1.4" />
+      <circle cx="8.5" cy="3" r="1.4" />
+      <circle cx="3.5" cy="8" r="1.4" />
+      <circle cx="8.5" cy="8" r="1.4" />
+      <circle cx="3.5" cy="13" r="1.4" />
+      <circle cx="8.5" cy="13" r="1.4" />
+    </svg>
   );
 }
 

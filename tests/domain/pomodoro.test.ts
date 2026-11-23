@@ -151,6 +151,23 @@ describe("task day and order (spec-8-3)", () => {
       [true, 1],
     ]);
   });
+  it("puts ordered tasks first by their order, then the rest; done still last", () => {
+    const t = (title: string, sortOrder: number | null, done = false, start: string | null = null) => ({
+      title,
+      done,
+      sortOrder,
+      startAt: start ? new Date(start) : null,
+      createdAt: new Date(0),
+    });
+    const list = [
+      t("new timed", null, false, "2026-11-17T01:00:00Z"),
+      t("done", 0, true),
+      t("second", 1),
+      t("first", 0),
+    ];
+    list.sort(compareTasks);
+    expect(list.map((x) => x.title)).toEqual(["first", "second", "new timed", "done"]);
+  });
 });
 
 describe("planNextSession (spec-9-2)", () => {

@@ -72,6 +72,18 @@ export const updateTaskSchema = z
 
 export const taskDayQuerySchema = z.object({ day: localDaySchema });
 
+/** Drag to reorder: a day's open Tasks, top first. */
+export const reorderTasksSchema = z.object({
+  day: localDaySchema,
+  ids: z
+    .array(z.string().min(1).max(64))
+    .min(1)
+    .max(500)
+    .refine((ids) => new Set(ids).size === ids.length, "Each Task can appear once."),
+});
+
+export type ReorderTasksInput = z.infer<typeof reorderTasksSchema>;
+
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 
@@ -112,11 +124,22 @@ interface Sortable {
   done: boolean;
   startAt: Date | null;
   createdAt: Date;
+  /** Priority set by dragging; absent or null when never ordered. */
+  sortOrder?: number | null;
 }
 
-/** Open Tasks first by start time (untimed after timed), then creation; done last. */
+/**
+ * Done last. Among the rest, Tasks the user has put in order come first, by
+ * that order; the others follow by start time (untimed after timed), then
+ * creation, so a newly added Task joins at the bottom of an ordered day.
+ */
 export function compareTasks(a: Sortable, b: Sortable): number {
   if (a.done !== b.done) return a.done ? 1 : -1;
+  const ao = a.sortOrder ?? null;
+  const bo = b.sortOrder ?? null;
+  if (ao !== null && bo !== null && ao !== bo) return ao - bo;
+  if (ao !== null && bo === null) return -1;
+  if (ao === null && bo !== null) return 1;
   if (a.startAt && b.startAt && a.startAt.getTime() !== b.startAt.getTime()) {
     return a.startAt.getTime() - b.startAt.getTime();
   }

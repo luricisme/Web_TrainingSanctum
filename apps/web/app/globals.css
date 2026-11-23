@@ -451,6 +451,39 @@
   animation-name: ra-flicker-double;
 }
 
+/* Pomodoro focus mode: the full-screen layer fades in, its category glow
+   breathes slowly behind the clock. Reduced motion keeps both still. */
+/* Opacity only: a transform here would pin the fixed glow to the scroller. */
+@keyframes focus-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility focus-enter {
+  animation: focus-enter 320ms var(--ease-entrance) both;
+}
+
+@keyframes focus-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
+@utility focus-glow {
+  transform: translate(-50%, -50%);
+  animation: focus-glow 9s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

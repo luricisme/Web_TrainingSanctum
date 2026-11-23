@@ -28,13 +28,17 @@ export async function PATCH(request: Request): Promise<Response> {
     // Untimed Tasks move in one statement; timed ones each need their own start instant.
     // Every write re-applies the overdue filter, so a Task completed or deleted meanwhile is skipped.
     let count = (
-      await tx.task.updateMany({ where: { ...where, startAt: null }, data: { localDay: todayDate } })
+      await tx.task.updateMany({
+        where: { ...where, startAt: null },
+        data: { localDay: todayDate, sortOrder: null },
+      })
     ).count;
     for (const row of timed) {
       const { count: n } = await tx.task.updateMany({
         where: { ...where, id: row.id },
         data: {
           localDay: todayDate,
+          sortOrder: null,
           startAt: startAtFor(today, formatLocalTime(row.startAt!, tz), tz),
         },
       });

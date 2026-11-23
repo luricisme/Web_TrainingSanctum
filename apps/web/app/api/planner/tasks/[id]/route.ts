@@ -53,6 +53,8 @@ export async function PATCH(request: Request, { params }: Context): Promise<Resp
           : null;
     data.localDay = new Date(`${day}T00:00:00.000Z`);
     data.startAt = startAtFor(day, time, tz);
+    // Its place in the old day means nothing on the new one: join the end.
+    if (data.localDay.getTime() !== existing.localDay.getTime()) data.sortOrder = null;
   }
 
   const updated = await prisma.task.update({ where: { id }, data, include: taskInclude });
