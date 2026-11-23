@@ -605,7 +605,13 @@ test.describe("restore with Planner data", () => {
       expect(await prisma.task.count({ where: { userId: user.id } })).toBe(0);
       expect(await prisma.pomodoroSession.count({ where: { userId: user.id } })).toBe(0);
       const after = await exportOf(admin, base, user.id);
-      expect(after.planner.settings).toEqual({ focus: 25, shortBreak: 5, longBreak: 15, longBreakEvery: 4 });
+      expect(after.planner.settings).toEqual({
+        focus: 25,
+        shortBreak: 5,
+        longBreak: 15,
+        longBreakEvery: 4,
+        autoStartNext: false,
+      });
     } finally {
       await prisma.user.deleteMany({ where: { id: user.id } });
     }

@@ -4,7 +4,7 @@ import { prisma } from "@training-sanctum/db";
 
 const PASSWORD = "correct-horse-battery";
 const FALLBACK_BASE = "http://localhost:3100";
-const DEFAULTS = { focus: 25, shortBreak: 5, longBreak: 15, longBreakEvery: 4 };
+const DEFAULTS = { focus: 25, shortBreak: 5, longBreak: 15, longBreakEvery: 4, autoStartNext: false };
 
 async function newUser(
   playwright: { request: { newContext: () => Promise<APIRequestContext> } },
@@ -51,6 +51,8 @@ test.describe("/api/planner/settings", () => {
     expect((await res2.json()).data).toEqual({ ...DEFAULTS, focus: 30, longBreakEvery: 2 });
     const read = await request.get(`${base}/api/planner/settings`);
     expect((await read.json()).data).toEqual({ ...DEFAULTS, focus: 30, longBreakEvery: 2 });
+    const res3 = await request.patch(`${base}/api/planner/settings`, { data: { autoStartNext: true } });
+    expect((await res3.json()).data).toEqual({ ...DEFAULTS, focus: 30, longBreakEvery: 2, autoStartNext: true });
   });
 
   test("invalid bodies return 400 with fields and save nothing", async ({ playwright, baseURL }) => {
@@ -63,6 +65,7 @@ test.describe("/api/planner/settings", () => {
       [{ longBreak: "20" }, "longBreak"],
       [{ longBreakEvery: 1 }, "longBreakEvery"],
       [{ longBreakEvery: 9 }, "longBreakEvery"],
+      [{ autoStartNext: "yes" }, "autoStartNext"],
       [{ nope: 1 }, "nope"],
       [{}, "body"],
     ];
@@ -112,7 +115,13 @@ test.describe("/api/planner/settings", () => {
     ]);
     for (const r of responses) expect(r.status()).toBe(200);
     const read = await request.get(`${base}/api/planner/settings`);
-    expect((await read.json()).data).toEqual({ focus: 30, shortBreak: 10, longBreak: 20, longBreakEvery: 3 });
+    expect((await read.json()).data).toEqual({
+      focus: 30,
+      shortBreak: 10,
+      longBreak: 20,
+      longBreakEvery: 3,
+      autoStartNext: false,
+    });
   });
 });
 

@@ -358,7 +358,14 @@ test.describe("GET /api/admin/users/[id]/export", () => {
       const res = await request.get(`${base}/api/admin/users/${user.id}/export`);
       expect(res.status()).toBe(200);
       const parsed = backupExportSchema.parse(await res.json());
-      expect(parsed.planner.settings).toEqual({ focus: 30, shortBreak: 10, longBreak: 20, longBreakEvery: 3 });
+      // The stored settings predate autoStartNext, so it reads as off.
+      expect(parsed.planner.settings).toEqual({
+        focus: 30,
+        shortBreak: 10,
+        longBreak: 20,
+        longBreakEvery: 3,
+        autoStartNext: false,
+      });
       expect(parsed.planner.categories.map((c) => c.name)).toEqual(["Study"]);
       expect(parsed.planner.tasks.map((t) => [t.title, t.localDay, t.loggedMinutes])).toEqual([["Read", "2026-11-17", 25]]);
       expect(parsed.planner.categories[0]!.musicTrack).toEqual({ source: "jamendo", trackId: "111" });
